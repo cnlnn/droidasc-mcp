@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import io
+import json
 import os
 import signal
 import subprocess
 import sys
-import tempfile
 import threading
+import time
+from collections import OrderedDict
+from concurrent.futures import Future
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -35,7 +41,37 @@ class LinePage:
             "offset": self.offset,
             "limit": self.limit,
             "truncated": self.offset + len(self.items) < self.total,
+            "next_offset": (
+                self.offset + len(self.items)
+                if self.offset + len(self.items) < self.total
+                else None
+            ),
         }
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    created_at: float
+    lines: tuple[str, ...]
+    size_bytes: int
+
+    @classmethod
+    def build(cls, data: bytes, *, sort: bool, budget: int) -> Snapshot:
+        # Account for decoded strings and tuple pointers, not just wire bytes.
+        lines = []
+        used = sys.getsizeof(())
+        if used > budget:
+            raise DroidAscError("Decoded snapshot exceeds memory budget; narrow the query")
+        pointer_bytes = sys.getsizeof((None,)) - sys.getsizeof(())
+        for raw in io.BytesIO(data):
+            line = raw.rstrip(b"\r\n").decode("utf-8", errors="replace")
+            used += sys.getsizeof(line) + pointer_bytes
+            if used > budget:
+                raise DroidAscError("Decoded snapshot exceeds memory budget; narrow the query")
+            lines.append(line)
+        if sort:
+            lines.sort()
+        return cls(time.monotonic(), tuple(lines), used)
 
 
 class DroidAscRunner:
@@ -52,9 +88,31 @@ class DroidAscRunner:
         self.python_executable = python_executable or sys.executable
         self.module_name = module_name
         self._slots = threading.BoundedSemaphore(settings.max_parallel)
+        self._cache_lock = threading.Lock()
+        self._cache = OrderedDict()
+        self._inflight: dict[tuple, Future] = {}
 
     def get_manifest(self, apk: Path, *, offset: int, limit: int) -> LinePage:
         return self._run_paged(["getmanifest", str(apk)], offset=offset, limit=limit)
+
+    def apk_info(self, apk: Path, include_sha256: bool) -> dict:
+        with self._acquire(self._slots):
+            data = self._execute(
+                [str(apk), "sha256" if include_sha256 else "no-hash"],
+                module_name="droidasc_mcp.info_worker",
+            )
+        if len(data) > 256 * 1024:
+            raise DroidAscError("APK metadata exceeds response budget")
+        return json.loads(data)
+
+    @contextmanager
+    def _acquire(self, lock):
+        if not lock.acquire(timeout=self.settings.timeout_seconds):
+            raise DroidAscError("Analysis queue timed out; retry later")
+        try:
+            yield
+        finally:
+            lock.release()
 
     def list_classes(
         self,
@@ -120,22 +178,95 @@ class DroidAscRunner:
         parsed = [_parse_reference(line) for line in page.items]
         result = page.as_dict()
         result["items"] = parsed
+        result["format"] = "cli-text-best-effort"
+        result["warning"] = (
+            "CLI text may contain embedded newlines; "
+            "total counts output lines, not semantic references."
+        )
         return result
 
     def _run_paged(self, args: list[str], *, offset: int, limit: int) -> LinePage:
         offset, limit = self._page_bounds(offset, limit)
-        with self._slots, tempfile.TemporaryDirectory(prefix="droidasc-mcp-") as directory:
-            output = Path(directory) / "result.txt"
-            self._execute([*args, "-o", str(output)])
-            if not output.is_file():
-                raise DroidAscError("Droid ASC completed without creating its output file")
-            size = output.stat().st_size
-            if size > self.settings.max_output_bytes:
-                raise DroidAscError(
-                    f"Droid ASC output exceeds {self.settings.max_output_bytes} bytes; "
-                    "narrow the query with a prefix or a more specific reference"
+        snapshot = self._get_snapshot(args)
+        items = []
+        used = 0
+        for line in snapshot.lines[offset : offset + limit]:
+            size = len(json.dumps(line, ensure_ascii=True).encode()) * 3 + 256
+            if used + size > 256 * 1024:
+                if not items:
+                    raise DroidAscError(
+                        "A single line exceeds the response budget; narrow the query"
+                    )
+                break
+            items.append(line)
+            used += size
+        return LinePage(items, len(snapshot.lines), offset, limit)
+
+    def _get_snapshot(self, args: list[str]) -> Snapshot:
+        apk = next(Path(arg) for arg in args if Path(arg).suffix.lower() == ".apk")
+        stat = apk.stat()
+        key = (
+            tuple(args),
+            stat.st_dev,
+            stat.st_ino,
+            stat.st_size,
+            stat.st_mtime_ns,
+            stat.st_ctime_ns,
+        )
+        with self._acquire(self._cache_lock):
+            now = time.monotonic()
+            for old in list(self._cache):
+                if now - self._cache[old].created_at > 60:
+                    del self._cache[old]
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+            pending = self._inflight.get(key)
+            leader = pending is None
+            if leader:
+                pending = Future()
+                self._inflight[key] = pending
+        # Only identical queries wait for one another. No subprocess runs under the cache lock.
+        if not leader:
+            try:
+                return pending.result(timeout=self.settings.timeout_seconds)
+            except FutureTimeoutError as exc:
+                raise DroidAscError("Snapshot wait timed out; retry later") from exc
+        try:
+            with self._acquire(self._slots):
+                data = self._execute(args)
+                after = apk.stat()
+                if (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns) != (
+                    after.st_dev,
+                    after.st_ino,
+                    after.st_size,
+                    after.st_mtime_ns,
+                    after.st_ctime_ns,
+                ):
+                    raise DroidAscError("APK changed during analysis; retry the query")
+                snapshot = Snapshot.build(
+                    data, sort=args[0] == "findrefs", budget=self.settings.max_output_bytes
                 )
-            return _read_line_page(output, offset=offset, limit=limit)
+                del data
+            with self._acquire(self._cache_lock):
+                while (
+                    self._cache
+                    and sum(entry.size_bytes for entry in self._cache.values())
+                    + snapshot.size_bytes
+                    > self.settings.max_output_bytes
+                ):
+                    self._cache.popitem(last=False)
+                if len(self._cache) >= 8:
+                    self._cache.popitem(last=False)
+                self._cache[key] = snapshot
+            pending.set_result(snapshot)
+            return snapshot
+        except BaseException as exc:
+            pending.set_exception(exc)
+            raise
+        finally:
+            with self._cache_lock:
+                self._inflight.pop(key, None)
 
     def _page_bounds(self, offset: int, limit: int) -> tuple[int, int]:
         if offset < 0:
@@ -144,53 +275,86 @@ class DroidAscRunner:
             raise ValueError("limit must be greater than zero")
         return offset, min(limit, self.settings.max_page_size)
 
-    def _execute(self, args: list[str]) -> None:
-        command = [self.python_executable, "-m", self.module_name, *args]
+    def _execute(self, args: list[str], *, module_name: str | None = None) -> bytes:
+        command = [self.python_executable, "-m", module_name or self.module_name, *args]
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         process = subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
             env=env,
             start_new_session=os.name != "nt",
             creationflags=creationflags,
         )
+        exceeded = threading.Event()
+        read_errors = []
+        buffers = [bytearray(), bytearray()]
+
+        def drain(stream, buffer, cap):
+            try:
+                while chunk := stream.read(8192):
+                    remaining = cap - len(buffer)
+                    buffer.extend(chunk[:remaining])
+                    if len(chunk) > remaining:
+                        exceeded.set()
+                        return
+            except Exception as exc:
+                read_errors.append(exc)
+            finally:
+                try:
+                    stream.close()
+                except Exception as exc:
+                    read_errors.append(exc)
+
+        readers = [
+            threading.Thread(target=drain, args=(stream, buffer, cap), daemon=True)
+            for stream, buffer, cap in (
+                (process.stdout, buffers[0], self.settings.max_output_bytes),
+                (process.stderr, buffers[1], 65536),
+            )
+        ]
+        deadline = time.monotonic() + self.settings.timeout_seconds
+        started = []
         try:
-            _, stderr = process.communicate(timeout=self.settings.timeout_seconds)
-        except subprocess.TimeoutExpired as exc:
+            for reader in readers:
+                reader.start()
+                started.append(reader)
+            while True:
+                if exceeded.is_set():
+                    raise DroidAscError("Droid ASC output exceeds configured stream limit")
+                if read_errors:
+                    raise DroidAscError("Droid ASC stream read failed") from read_errors[0]
+                if process.poll() is not None and not any(r.is_alive() for r in readers):
+                    break
+                if time.monotonic() >= deadline:
+                    raise DroidAscError(
+                        f"Droid ASC timed out after {self.settings.timeout_seconds} seconds"
+                    )
+                time.sleep(0.01)
+            # Readers may finish between the loop's flag check and completion check.
+            if exceeded.is_set():
+                raise DroidAscError("Droid ASC output exceeds configured stream limit")
+            if read_errors:
+                raise DroidAscError("Droid ASC stream read failed") from read_errors[0]
+            if process.returncode != 0:
+                detail = _clean_error(buffers[1].decode("utf-8", errors="replace"))
+                raise DroidAscError(f"Droid ASC failed: {detail or process.returncode}")
+            return bytes(buffers[0])
+        finally:
             _terminate_process_tree(process)
-            _, stderr = process.communicate()
-            detail = _clean_error(stderr)
-            suffix = f": {detail}" if detail else ""
-            raise DroidAscError(
-                f"Droid ASC timed out after {self.settings.timeout_seconds} seconds{suffix}"
-            ) from exc
-        if process.returncode != 0:
-            detail = _clean_error(stderr) or f"exit code {process.returncode}"
-            raise DroidAscError(f"Droid ASC failed: {detail}")
+            for reader in started:
+                reader.join(timeout=1)
+            with suppress(subprocess.TimeoutExpired):
+                process.wait(timeout=2)
 
 
 def _threads(value: int) -> int:
     if value <= 0:
         raise ValueError("threads must be greater than zero")
     return min(value, 32)
-
-
-def _read_line_page(path: Path, *, offset: int, limit: int) -> LinePage:
-    items: list[str] = []
-    total = 0
-    with path.open("r", encoding="utf-8", errors="replace") as handle:
-        for total, line in enumerate(handle, start=1):
-            index = total - 1
-            if offset <= index < offset + limit:
-                items.append(line.rstrip("\r\n"))
-    return LinePage(items=items, total=total, offset=offset, limit=limit)
 
 
 def _parse_reference(line: str) -> dict[str, str]:
@@ -212,19 +376,15 @@ def _clean_error(value: str | None) -> str:
 
 
 def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
-    if process.poll() is not None:
-        return
     if os.name == "nt":  # pragma: no cover - exercised by Windows CI only
         subprocess.run(
             ["taskkill", "/PID", str(process.pid), "/T", "/F"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
+            timeout=5,
         )
         return
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-        process.wait(timeout=2)
-    except (ProcessLookupError, subprocess.TimeoutExpired):
-        if process.poll() is None:
-            os.killpg(process.pid, signal.SIGKILL)
+    # The group can outlive its leader. Never gate cleanup on parent.poll().
+    with suppress(ProcessLookupError):
+        os.killpg(process.pid, signal.SIGKILL)

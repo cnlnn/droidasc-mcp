@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "droidasc-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "A safe, structured MCP server for the Droid ASC Android decompiler"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,7 +15,7 @@ authors = [
 keywords = ["android", "apk", "decompiler", "mcp", "reverse-engineering"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -31,6 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "psutil>=7",
     "pytest>=8.3",
     "pytest-cov>=6",
     "ruff>=0.12",

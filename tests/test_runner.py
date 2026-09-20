@@ -23,12 +23,17 @@ def fake_droidasc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
             import time
 
             args = sys.argv[1:]
+            if "longline" in args:
+                print("x" * 100000)
+                raise SystemExit(0)
+            if "stderr-flood" in args:
+                sys.stderr.write("x" * 100000)
+                raise SystemExit(0)
             if any(item.endswith("sleep.apk") for item in args):
                 time.sleep(10)
             if any(item.endswith("failure.apk") for item in args):
                 print("synthetic failure", file=sys.stderr)
                 raise SystemExit(3)
-            output = pathlib.Path(args[args.index("-o") + 1])
             command = args[0]
             if command == "getmanifest":
                 text = "<manifest>\n  <application />\n</manifest>\n"
@@ -43,7 +48,7 @@ def fake_droidasc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
                 )
             else:
                 raise SystemExit(4)
-            output.write_text(text, encoding="utf-8")
+            print(text, end="")
             """
         ),
         encoding="utf-8",
@@ -173,3 +178,67 @@ def test_timeout_terminates_worker(settings: Settings, tmp_path: Path, fake_droi
     )
     with pytest.raises(DroidAscError, match="timed out after 1 seconds"):
         runner(restricted, fake_droidasc).get_manifest(apk, offset=0, limit=10)
+
+
+def test_cache_reuses_snapshot(settings, apk_file, fake_droidasc, monkeypatch):
+    subject = runner(settings, fake_droidasc)
+    first = subject.get_manifest(apk_file, offset=0, limit=1)
+
+    def fail(*args, **kwargs):
+        raise AssertionError("should reuse snapshot")
+
+    monkeypatch.setattr(subject, "_execute", fail)
+    second = subject.get_manifest(apk_file, offset=1, limit=1)
+    assert first.total == second.total == 3
+    assert first.items != second.items
+
+
+def test_long_line_is_rejected(settings, apk_file, fake_droidasc):
+    with pytest.raises(DroidAscError, match="response budget"):
+        runner(settings, fake_droidasc).list_classes(
+            apk_file, prefix="longline", threads=1, offset=0, limit=1
+        )
+
+
+def test_stderr_budget(settings, apk_file, fake_droidasc):
+    with pytest.raises(DroidAscError, match="output exceeds"):
+        runner(settings, fake_droidasc).list_classes(
+            apk_file, prefix="stderr-flood", threads=1, offset=0, limit=1
+        )
+
+
+def test_reference_sorting(settings, apk_file, monkeypatch):
+    subject = runner(settings, "unused")
+    monkeypatch.setattr(subject, "_execute", lambda args: b"z\na\nm\n")
+    assert subject._run_paged(["findrefs", str(apk_file)], offset=0, limit=2).items == ["a", "m"]
+
+
+def test_cleanup_signals_group_after_leader_exit(monkeypatch):
+    import os
+    import signal
+    from types import SimpleNamespace
+
+    from droidasc_mcp.runner import _terminate_process_tree
+
+    if os.name == "nt":
+        pytest.skip("POSIX process groups")
+    signals = []
+    monkeypatch.setattr(os, "killpg", lambda pid, sig: signals.append((pid, sig)))
+    _terminate_process_tree(SimpleNamespace(pid=12345, poll=lambda: 0))
+    assert signals == [(12345, signal.SIGKILL)]
+
+
+def test_cache_invalidated_on_file_change(settings, apk_file, monkeypatch):
+    subject = runner(settings, "unused")
+    calls = []
+
+    def execute(args):
+        calls.append(args)
+        return b"a\n"
+
+    monkeypatch.setattr(subject, "_execute", execute)
+    subject.get_manifest(apk_file, offset=0, limit=1)
+    with apk_file.open("ab") as handle:
+        handle.write(b"changed")
+    subject.get_manifest(apk_file, offset=0, limit=1)
+    assert len(calls) == 2

@@ -7,8 +7,8 @@ __pycache__/
 .venv/
 build/
 dist/
+artifacts/
 
 # APKs may be proprietary or contain secrets. Never commit samples by default.
 *.apk
 *.xapk
-

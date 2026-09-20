@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
-import re
-import zipfile
 from importlib.metadata import PackageNotFoundError, version
 
 from . import __version__
 from .config import Settings
 from .runner import DroidAscRunner, ReferenceKind
-
-_DEX_NAME = re.compile(r"^classes(?:\d+)?\.dex$")
 
 
 class DroidAscService:
@@ -36,17 +31,7 @@ class DroidAscService:
 
     def apk_info(self, apk_path: str, *, include_sha256: bool = True) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
-        with zipfile.ZipFile(apk) as archive:
-            names = archive.namelist()
-        result: dict[str, object] = {
-            "apk_path": str(apk),
-            "size_bytes": apk.stat().st_size,
-            "dex_entries": sorted(name for name in names if _DEX_NAME.fullmatch(name)),
-            "has_manifest": "AndroidManifest.xml" in names,
-        }
-        if include_sha256:
-            result["sha256"] = _sha256(apk)
-        return result
+        return self.runner.apk_info(apk, include_sha256)
 
     def get_manifest(self, apk_path: str, *, offset: int, limit: int) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
@@ -138,19 +123,7 @@ def _normalize_class_name(value: str) -> str:
     value = value.strip()
     if not value:
         raise ValueError("class_name cannot be empty")
-    if value.startswith("L") and value.endswith(";") and "/" in value:
+    if value.startswith("L") and value.endswith(";"):
         return value
     value = value.replace(".", "/")
-    if not value.startswith("L"):
-        value = f"L{value}"
-    if not value.endswith(";"):
-        value = f"{value};"
-    return value
-
-
-def _sha256(path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    return f"L{value};"

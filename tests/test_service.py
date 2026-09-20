@@ -16,5 +16,8 @@ def test_apk_info_reports_provenance(settings: Settings, apk_file: Path):
 
 
 def test_normalize_class_name():
+    assert _normalize_class_name("Login") == "LLogin;"
+    assert _normalize_class_name("Local.Main") == "LLocal/Main;"
+    assert _normalize_class_name("LLogin;") == "LLogin;"
     assert _normalize_class_name("com.example.Main") == "Lcom/example/Main;"
     assert _normalize_class_name("Lcom/example/Main;") == "Lcom/example/Main;"

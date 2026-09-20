@@ -1,0 +1,214 @@
+"""Real subprocess, transport, and optional real-APK acceptance checks."""
+
+import os
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+from dataclasses import replace
+from pathlib import Path
+
+import psutil
+import pytest
+from mcp import Client
+from mcp.client.stdio import StdioServerParameters
+
+from droidasc_mcp.runner import DroidAscError, DroidAscRunner
+
+
+@pytest.fixture
+def process_runner(settings, monkeypatch):
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
+    return DroidAscRunner(
+        replace(settings, timeout_seconds=2, max_output_bytes=32768), module_name="process_fixture"
+    )
+
+
+def alive(pid):
+    # Zombies have no executable workload; Linux PID 1 may reap them later.
+    path = Path(f"/proc/{pid}/stat")
+    return path.exists() and path.read_text().split(") ", 1)[1][0] != "Z"
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process-state verification")
+def test_real_orphan_cleanup(process_runner, tmp_path):
+    start = time.monotonic()
+    try:
+        with pytest.raises(DroidAscError, match="timed out"):
+            process_runner._execute(["orphan", str(tmp_path)])
+        pid = int((tmp_path / "child.pid").read_text())
+        deadline = time.monotonic() + 2
+        while alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert not alive(pid)
+        elapsed = time.monotonic() - start
+        assert elapsed < 5
+        print(f"orphan_cleanup elapsed={elapsed:.3f}s child_executing=false")
+    finally:
+        if (tmp_path / "child.pid").exists():
+            pid = int((tmp_path / "child.pid").read_text())
+            if alive(pid):
+                os.kill(pid, signal.SIGKILL)
+
+
+@pytest.mark.parametrize("stream", ["stdout", "stderr"])
+def test_real_stream_limit(process_runner, tmp_path, stream):
+    started = time.monotonic()
+    owner = psutil.Process()
+    baseline = owner.memory_info().rss
+    samples = [baseline]
+    stopped = threading.Event()
+
+    def sample():
+        while not stopped.wait(0.002):
+            samples.append(owner.memory_info().rss)
+
+    sampler = threading.Thread(target=sample)
+    sampler.start()
+    try:
+        with pytest.raises(DroidAscError, match="output exceeds"):
+            process_runner._execute([stream, str(tmp_path)])
+    finally:
+        stopped.set()
+        sampler.join(timeout=2)
+    elapsed = time.monotonic() - started
+    assert elapsed < 2
+    assert not list(tmp_path.iterdir())
+    delta = max(samples) - baseline
+    assert delta < 16 * 1024 * 1024
+    print(f"{stream}_limit elapsed={elapsed:.3f}s result_files=0 host_rss_delta={delta}")
+
+
+def test_real_reordered_output_pages(process_runner, tmp_path, apk_file, monkeypatch):
+    execute = process_runner._execute
+    monkeypatch.setattr(process_runner, "_execute", lambda args: execute(["refs", str(tmp_path)]))
+    args = ["findrefs", str(apk_file)]
+    full = process_runner._run_paged(args, offset=0, limit=100)
+    pages = [process_runner._run_paged(args, offset=i, limit=2) for i in (0, 2, 4)]
+    assert [line for page in pages for line in page.items] == full.items
+    assert len(set(full.items)) == full.total == 6
+    assert (tmp_path / "count").read_text() == "1"
+    # Expire the real snapshot without waiting 60 seconds.
+    key = next(iter(process_runner._cache))
+    process_runner._cache[key] = replace(
+        process_runner._cache[key], created_at=time.monotonic() - 61
+    )
+    renewed = process_runner._run_paged(args, offset=0, limit=100)
+    assert renewed.items == full.items
+    assert (tmp_path / "count").read_text() == "2"
+    print("reordered_pages rows=6 duplicates=0 missing=0 initial_executions=1 expired_executions=2")
+
+
+def test_metadata_uses_worker_and_semaphore(process_runner, tmp_path, monkeypatch):
+    execute = process_runner._execute
+    monkeypatch.setattr(
+        process_runner, "_execute", lambda args, **kwargs: execute(["info", str(tmp_path)])
+    )
+    assert process_runner.apk_info(tmp_path, False)["pid"] != os.getpid()
+    for _ in range(process_runner.settings.max_parallel):
+        process_runner._slots.acquire()
+    try:
+        with pytest.raises(DroidAscError, match="queue timed out"):
+            process_runner.apk_info(tmp_path, False)
+    finally:
+        for _ in range(process_runner.settings.max_parallel):
+            process_runner._slots.release()
+
+
+@pytest.fixture
+def http_endpoint(tmp_path):
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        port = listener.getsockname()[1]
+    env = os.environ.copy()
+    env["DROIDASC_MCP_ALLOWED_ROOTS"] = os.getenv("ASC_TEST_ROOT", str(tmp_path))
+    with (tmp_path / "http.log").open("wb") as log:
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "droidasc_mcp",
+                "--transport",
+                "streamable-http",
+                "--port",
+                str(port),
+            ],
+            env=env,
+            stdout=log,
+            stderr=log,
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    pytest.fail("HTTP startup failed: " + (tmp_path / "http.log").read_text())
+                try:
+                    with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                        break
+                except OSError:
+                    time.sleep(0.05)
+            else:
+                pytest.fail("HTTP readiness timed out")
+            yield f"http://127.0.0.1:{port}/mcp"
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+
+
+@pytest.mark.anyio
+async def test_http_roundtrip(http_endpoint, apk_file):
+    async with Client(http_endpoint) as client:
+        tools = await client.list_tools()
+        assert len(tools.tools) == 6
+        result = await client.call_tool("asc_ping", {})
+        assert not result.is_error
+        result = await client.call_tool("asc_apk_info", {"apk_path": str(apk_file)})
+        assert not result.is_error, result
+        assert result.structured_content["has_manifest"]
+        denied = await client.call_tool("asc_apk_info", {"apk_path": "/not-an-apk.txt"})
+        assert denied.is_error
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
+    apk = os.getenv("ASC_TEST_APK")
+    if not apk:
+        pytest.skip("Set ASC_TEST_APK to a local APK; samples are never committed")
+    apk = str(Path(apk).resolve())
+    monkeypatch.setenv("ASC_TEST_ROOT", str(Path(apk).parent))
+    env = os.environ.copy()
+    env["DROIDASC_MCP_ALLOWED_ROOTS"] = str(Path(apk).parent)
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+
+        async def call(name, args):
+            result = await client.call_tool(name, args)
+            assert not result.is_error, result
+            return result.structured_content
+
+        assert (await call("asc_ping", {}))["status"] == "ok"
+        info = await call("asc_apk_info", {"apk_path": apk})
+        assert len(info["sha256"]) == 64
+        manifest = await call("asc_get_manifest", {"apk_path": apk, "limit": 2})
+        assert "manifest" in manifest["xml"]
+        classes = await call("asc_list_classes", {"apk_path": apk, "limit": 2})
+        source = await call(
+            "asc_get_class_source", {"apk_path": apk, "class_name": classes["items"][0], "limit": 2}
+        )
+        assert source["source"]
+        refs = await call(
+            "asc_find_refs", {"apk_path": apk, "kind": "string", "value": "android", "limit": 2}
+        )
+        assert "total" in refs
+        print(f"real_apk transport={transport} tools=6 classes={classes['total']}")
