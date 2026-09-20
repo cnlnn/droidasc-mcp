@@ -24,8 +24,9 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Python 3.10 or newer is required. Linux is the validated platform for 0.1.1;
-Windows and macOS are experimental, not covered by the current CI.
+Python 3.10 or newer is required. The 0.1.1 release was validated on Linux.
+Current CI checks Linux and native Windows runners on Python 3.10-3.13, including
+stdio/HTTP metadata roundtrips and package installation. macOS remains unverified.
 
 ```bash
 git clone https://github.com/cnlnn/droidasc-mcp.git
@@ -127,7 +128,8 @@ content-addressed evidence store. Do not modify APK files between pages.
 ASC and its dependencies still parse untrusted binary input. Use a container or disposable VM for
 hostile APKs. This adapter is a process boundary, not a malware sandbox.
 
-Windows process-tree cleanup is best effort and is not validated by the current Ubuntu-only CI.
+Windows process-tree cleanup is best effort. CI checks timeout cleanup while the parent is
+alive; cleanup after the parent has already exited remains unverified on Windows.
 There is no worker memory limit; use OS/container resource limits for hostile samples.
 Capture buffers, snapshots being built, and active pages can coexist with the cache; this budget
 is not a hard total-RSS cap. Dense outputs may hit the decoded-memory budget before the wire cap.

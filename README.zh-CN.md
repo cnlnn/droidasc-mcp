@@ -21,7 +21,8 @@
 
 ## 安装
 
-需要 Python 3.10 或更高版本。0.1.1 已验证的平台是 Linux；Windows、macOS 暂属实验支持：
+需要 Python 3.10 或更高版本。0.1.1 发布时验证了 Linux。当前 CI 覆盖 Linux 和原生
+Windows runner 的 Python 3.10-3.13，包含 stdio/HTTP 元数据调用与发布包安装；macOS 尚未验证。
 
 ```bash
 git clone https://github.com/cnlnn/droidasc-mcp.git
@@ -94,7 +95,8 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 - stdout 在采集期间限制大小，stderr 上限 64 KiB；不再写入无上限的临时结果文件。
 - 页内容保守限制在 256 KiB 预算内；APK 信息和哈希也在受监管的独立进程中执行。
 - POSIX 下无论父进程是否已经退出，结束时都会清理进程组；排队和进程等待均有超时。
-- Windows 进程树清理仍属尽力处理，当前 CI 未验证。客户端取消尚不能立即终止同步工具。
+- Windows 进程树清理仍属尽力处理：CI 检查父进程仍存活时的超时清理，父进程提前退出后的
+  孤儿进程清理尚未验证。客户端取消尚不能立即终止同步工具。
 - 未限制解析器自身内存，应使用操作系统或容器资源限制处理不可信样本。
 - 捕获缓冲区、正在构建的快照和活跃页面可与缓存同时存在；缓存预算不等于总 RSS 硬上限。
 

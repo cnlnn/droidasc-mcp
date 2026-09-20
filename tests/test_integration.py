@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
@@ -30,6 +31,29 @@ def alive(pid):
     # Zombies have no executable workload; Linux PID 1 may reap them later.
     path = Path(f"/proc/{pid}/stat")
     return path.exists() and path.read_text().split(") ", 1)[1][0] != "Z"
+
+
+def test_real_live_tree_timeout_cleanup(process_runner, tmp_path):
+    start = time.monotonic()
+    try:
+        with pytest.raises(DroidAscError, match="timed out"):
+            process_runner._execute(["tree", str(tmp_path)])
+        processes = []
+        for name in ("parent.pid", "child.pid"):
+            pid = int((tmp_path / name).read_text())
+            with suppress(psutil.NoSuchProcess):
+                processes.append(psutil.Process(pid))
+        _, running = psutil.wait_procs(processes, timeout=2)
+        for process in running:
+            with suppress(psutil.NoSuchProcess):
+                assert process.status() == psutil.STATUS_ZOMBIE
+        assert time.monotonic() - start < 8
+    finally:
+        for name in ("child.pid", "parent.pid"):
+            path = tmp_path / name
+            if path.exists():
+                with suppress(psutil.NoSuchProcess):
+                    psutil.Process(int(path.read_text())).kill()
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux process-state verification")
@@ -162,8 +186,16 @@ def http_endpoint(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_http_roundtrip(http_endpoint, apk_file):
-    async with Client(http_endpoint) as client:
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_transport_roundtrip(transport, request, apk_file):
+    env = os.environ.copy()
+    env["DROIDASC_MCP_ALLOWED_ROOTS"] = str(apk_file.parent)
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
         tools = await client.list_tools()
         assert len(tools.tools) == 6
         result = await client.call_tool("asc_ping", {})

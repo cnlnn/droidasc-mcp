@@ -32,6 +32,20 @@ gitignored. Real-APK checks are explicitly skipped unless `ASC_TEST_APK` is supp
 The local JUnit output is `artifacts/validation/0.1.1.xml` (gitignored). Initial hardening results
 below are retained as historical observations; timings and RSS deltas are workload-specific.
 
+## Cross-platform CI
+
+- GitHub Actions runs the test suite on `ubuntu-latest` and `windows-latest`, each with
+  Python 3.10, 3.11, 3.12, and 3.13. Every test job uploads its JUnit results, including skips.
+- Both operating systems build and install the sdist and wheel on Python 3.13, then rerun
+  the tests outside the original checkout. The distribution command uses Bash for glob expansion.
+- Always-on checks include stdio and loopback HTTP discovery, ping, synthetic ZIP metadata,
+  rejected input, finite stdout/stderr limits, and timeout cleanup of a live parent and child.
+- CI does not receive a private APK. The two full six-tool real-APK checks remain optional;
+  metadata ZIP fixtures do not establish actual DEX decompilation compatibility on Windows.
+- The Linux-only orphan test is explicitly skipped on Windows. The live-parent tree test is
+  not a replacement for it: Windows cleanup after the parent exits remains unverified.
+- The matrix defines coverage, not a success claim. Inspect the commit's Actions run for results.
+
 ## Initial hardening observations (Linux, Python 3.13)
 
 The local full suite passed 32 tests with an APK supplied. Both stdio and Streamable HTTP exercised
@@ -59,7 +73,7 @@ The original orphan-cleanup implementation was not run because its unbounded pip
 - A killed Linux child may remain a zombie until its reaper runs; the test checks that it cannot
   execute, not that the PID instantly disappears.
 - The order test uses controlled output; it does not demonstrate a real ASC scheduling race.
-- Windows tree cleanup, immediate client cancellation, immutable content-addressed pagination,
+- Windows orphan cleanup, immediate client cancellation, immutable content-addressed pagination,
   and lossless parsing of embedded newlines in ASC text remain unsupported or unverified.
 - HTTP is loopback-only in these tests; there is no authenticated remote-deployment acceptance.
 - Local measurements do not imply remote CI success; inspect the commit's GitHub Actions checks.

@@ -15,8 +15,11 @@ def main():
         (root / "child.pid").write_text(str(os.getpid()))
         time.sleep(15)
         return
-    if mode == "orphan":
+    if mode in {"orphan", "tree"}:
+        (root / "parent.pid").write_text(str(os.getpid()))
         subprocess.Popen([sys.executable, "-m", "process_fixture", "child", str(root)])
+        if mode == "tree":
+            time.sleep(15)
         return
     if mode in {"stdout", "stderr"}:
         stream = sys.stdout.buffer if mode == "stdout" else sys.stderr.buffer

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import textwrap
 from pathlib import Path
 
@@ -53,8 +54,8 @@ def fake_droidasc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
         ),
         encoding="utf-8",
     )
-    old_path = __import__("os").environ.get("PYTHONPATH", "")
-    value = str(package_root) if not old_path else f"{package_root}:{old_path}"
+    old_path = os.environ.get("PYTHONPATH", "")
+    value = str(package_root) if not old_path else f"{package_root}{os.pathsep}{old_path}"
     monkeypatch.setenv("PYTHONPATH", value)
     return "fake_droidasc"
 
