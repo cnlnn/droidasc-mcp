@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "droidasc-mcp"
+version = "0.1.0"
+description = "A safe, structured MCP server for the Droid ASC Android decompiler"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+    { name = "cnlnn" },
+]
+keywords = ["android", "apk", "decompiler", "mcp", "reverse-engineering"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Disassemblers",
+]
+dependencies = [
+    "droidasc>=0.1.1.post1,<0.2",
+    "mcp>=2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6",
+    "ruff>=0.12",
+]
+
+[project.scripts]
+droidasc-mcp = "droidasc_mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/cnlnn/droidasc-mcp"
+Issues = "https://github.com/cnlnn/droidasc-mcp/issues"
+Source = "https://github.com/cnlnn/droidasc-mcp"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["droidasc_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
