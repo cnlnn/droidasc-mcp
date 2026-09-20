@@ -261,7 +261,7 @@ async def assert_fixture_tools(call, apk):
     info = await call("asc_apk_info", {"apk_path": apk})
     assert info["sha256"] == hashlib.sha256(Path(apk).read_bytes()).hexdigest()
     assert info["size_bytes"] == Path(apk).stat().st_size
-    assert info["dex_entries"] == ["classes.dex"]
+    assert info["dex_entries"] == ["classes.dex", "classes2.dex"]
     assert info["has_manifest"]
 
     manifest = await call("asc_get_manifest", {"apk_path": apk, "limit": 1000})
@@ -275,13 +275,14 @@ async def assert_fixture_tools(call, apk):
 
     query = {"apk_path": apk, "prefix": package}
     classes = await call("asc_list_classes", {**query, "limit": 100})
-    assert set(classes["items"]) == {probe, activity}
-    assert classes["total"] == 2
-    first = await call("asc_list_classes", {**query, "limit": 1})
-    assert first["next_offset"] == 1
-    second = await call("asc_list_classes", {**query, "limit": 1, "offset": first["next_offset"]})
-    assert second["next_offset"] is None
-    assert first["items"] + second["items"] == classes["items"]
+    assert set(classes["items"]) == {probe, activity, "Lorg/example/droidascfixture/R;"}
+    assert classes["total"] == 3
+    paged = []
+    for offset in range(classes["total"]):
+        page = await call("asc_list_classes", {**query, "limit": 1, "offset": offset})
+        assert page["next_offset"] == (offset + 1 if offset < classes["total"] - 1 else None)
+        paged.extend(page["items"])
+    assert paged == classes["items"]
 
     source = await call(
         "asc_get_class_source",
@@ -304,7 +305,7 @@ async def assert_fixture_tools(call, apk):
         assert refs["total"] > 0, (kind, refs)
         assert refs["next_offset"] is None
         assert any(
-            caller in item.get("method", "") and item.get("dex") == "classes.dex"
+            caller in item.get("method", "") and item.get("dex") == "classes2.dex"
             for item in refs["items"]
         ), (kind, refs)
         if kind == "string":

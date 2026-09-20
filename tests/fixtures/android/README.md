@@ -29,7 +29,8 @@ the analyzed artifact's SHA-256 rather than requiring byte-identical APK rebuild
 ## Expected evidence
 
 - Manifest package: `org.example.droidascfixture`; no requested permissions.
-- DEX classes: `MainActivity` and `Probe` in that package.
+- DEX classes: `MainActivity`, `Probe`, and the Android-generated `R` in that package.
+- Pinned debug build layout: generated `R` in `classes.dex`; app classes in `classes2.dex`.
 - Decompiled `Probe`: `marker`, `visits`, and `ASC_FIXTURE_MARKER_v1`.
 - String reference: the marker in `Probe.marker`.
 - Type reference: `Probe` in `MainActivity.onCreate`.
@@ -41,5 +42,6 @@ requiring a particular decompiler formatting style. `ASC_TEST_EXPECT_FIXTURE=1` 
 missing APK an error. It is only for this fixture; arbitrary local APKs can still use
 `ASC_TEST_APK` alone for the generic smoke checks.
 
-This small single-DEX app does not cover obfuscation, multidex, Kotlin, native libraries,
-malformed APKs, Android UI execution, or Windows orphan-process cleanup.
+This small two-DEX debug app checks discovery beyond the first DEX. It does not cover
+large multidex workloads, obfuscation, Kotlin, native libraries, malformed APKs, Android
+UI execution, or Windows orphan-process cleanup.

@@ -52,7 +52,7 @@ below are retained as historical observations; timings and RSS deltas are worklo
 - The Linux-only orphan test is explicitly skipped on Windows. The live-parent tree test is
   not a replacement for it: Windows cleanup after the parent exits remains unverified.
 - The matrix defines coverage, not a success claim. Inspect the commit's Actions run for results.
-- This fixture is a small single-DEX Java app, not an obfuscated/multidex/Kotlin/native-code corpus
+- This fixture is a small two-DEX Java app, not an obfuscated/large-multidex/Kotlin/native-code corpus
   or an Android runtime/UI test.
 
 ## Initial hardening observations (Linux, Python 3.13)
