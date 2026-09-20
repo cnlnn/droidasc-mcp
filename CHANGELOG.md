@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add native Windows and Linux Python 3.10-3.13 acceptance, using an original source-built APK
+  for all six tools over both transports and after sdist/wheel installation.
+- Replace Windows taskkill cleanup with a kill-on-close Job Object and a startup handshake;
+  the CLI cannot start before assignment. Failed Job setup stops the waiting worker.
+- Test orphan/grandchild cleanup, successful and failed operation cleanup, reader termination,
+  startup failure paths, and repeated-operation resource release. Strict CI rejects skipped tests.
+- Explicitly depend on the tested Windows-only pywin32 version; include the new worker modules
+  in Python distributions. Reader-construction failure now also releases the worker and pipes.
+
 ## 0.1.1
 
 - Bound stdout/stderr capture during execution and propagate stream-reader failures. Recheck

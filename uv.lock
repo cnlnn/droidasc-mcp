@@ -468,6 +468,7 @@ source = { editable = "." }
 dependencies = [
     { name = "droidasc" },
     { name = "mcp" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 
 [package.optional-dependencies]
@@ -485,6 +486,7 @@ requires-dist = [
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==312" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12" },
 ]
 provides-extras = ["dev"]

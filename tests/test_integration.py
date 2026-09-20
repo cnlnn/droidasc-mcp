@@ -59,25 +59,62 @@ def test_real_live_tree_timeout_cleanup(process_runner, tmp_path):
                     psutil.Process(int(path.read_text())).kill()
 
 
-def test_real_orphan_cleanup(process_runner, tmp_path):
+@pytest.mark.parametrize("mode", ["orphan", "orphan-tree"])
+def test_real_orphan_cleanup(process_runner, tmp_path, mode):
     start = time.monotonic()
     try:
         with pytest.raises(DroidAscError, match="timed out"):
-            process_runner._execute(["orphan", str(tmp_path)])
-        pid = int((tmp_path / "child.pid").read_text())
+            process_runner._execute([mode, str(tmp_path)])
+        names = ["parent.pid", "child.pid"]
+        if mode == "orphan-tree":
+            names.append("grandchild.pid")
+        pids = [int((tmp_path / name).read_text()) for name in names]
         deadline = time.monotonic() + 2
-        while alive(pid) and time.monotonic() < deadline:
+        while any(alive(pid) for pid in pids) and time.monotonic() < deadline:
             time.sleep(0.01)
-        assert not alive(pid)
+        assert not any(alive(pid) for pid in pids)
+        assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
         elapsed = time.monotonic() - start
         assert elapsed < 5
         print(f"orphan_cleanup elapsed={elapsed:.3f}s child_executing=false")
     finally:
-        if (tmp_path / "child.pid").exists():
-            pid = int((tmp_path / "child.pid").read_text())
+        for path in tmp_path.glob("*.pid"):
+            pid = int(path.read_text())
             if alive(pid):
                 with suppress(psutil.NoSuchProcess):
                     psutil.Process(pid).kill()
+
+
+@pytest.mark.parametrize("mode", ["detached", "tree-stdout"])
+def test_descendant_cleanup_on_success_and_overflow(process_runner, tmp_path, mode):
+    try:
+        if mode == "detached":
+            assert process_runner._execute([mode, str(tmp_path)]).strip() == b"ok"
+        else:
+            with pytest.raises(DroidAscError, match="output exceeds"):
+                process_runner._execute([mode, str(tmp_path)])
+        pids = [int((tmp_path / name).read_text()) for name in ("parent.pid", "child.pid")]
+        deadline = time.monotonic() + 2
+        while any(alive(pid) for pid in pids) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert not any(alive(pid) for pid in pids)
+        assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
+    finally:
+        for path in tmp_path.glob("*.pid"):
+            with suppress(psutil.NoSuchProcess):
+                psutil.Process(int(path.read_text())).kill()
+
+
+def test_repeated_operations_release_resources(process_runner, tmp_path):
+    owner = psutil.Process()
+    count = owner.num_handles if os.name == "nt" else owner.num_fds
+    # Warm imports and the platform backend before measuring per-operation resources.
+    process_runner._execute(["info", str(tmp_path)])
+    baseline = count()
+    for _ in range(12):
+        process_runner._execute(["info", str(tmp_path)])
+    assert count() <= baseline + 2
+    assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
 
 
 @pytest.mark.parametrize("stream", ["stdout", "stderr"])

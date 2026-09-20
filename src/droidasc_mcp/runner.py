@@ -75,7 +75,7 @@ class Snapshot:
 
 
 class DroidAscRunner:
-    """Runs each ASC operation in an isolated process group."""
+    """Runs each ASC operation in a supervised process tree."""
 
     def __init__(
         self,
@@ -279,16 +279,10 @@ class DroidAscRunner:
         command = [self.python_executable, "-m", module_name or self.module_name, *args]
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=env,
-            start_new_session=os.name != "nt",
-            creationflags=creationflags,
-        )
+        try:
+            process, job = _start_process(command, env)
+        except Exception as exc:
+            raise DroidAscError("Could not start supervised Droid ASC worker") from exc
         exceeded = threading.Event()
         read_errors = []
         buffers = [bytearray(), bytearray()]
@@ -309,16 +303,23 @@ class DroidAscRunner:
                 except Exception as exc:
                     read_errors.append(exc)
 
-        readers = [
-            threading.Thread(target=drain, args=(stream, buffer, cap), daemon=True)
-            for stream, buffer, cap in (
-                (process.stdout, buffers[0], self.settings.max_output_bytes),
-                (process.stderr, buffers[1], 65536),
-            )
-        ]
         deadline = time.monotonic() + self.settings.timeout_seconds
         started = []
         try:
+            readers = [
+                threading.Thread(
+                    target=drain,
+                    args=(stream, buffer, cap),
+                    daemon=True,
+                    name=f"droidasc-reader-{index}",
+                )
+                for index, (stream, buffer, cap) in enumerate(
+                    (
+                        (process.stdout, buffers[0], self.settings.max_output_bytes),
+                        (process.stderr, buffers[1], 65536),
+                    )
+                )
+            ]
             for reader in readers:
                 reader.start()
                 started.append(reader)
@@ -344,11 +345,17 @@ class DroidAscRunner:
                 raise DroidAscError(f"Droid ASC failed: {detail or process.returncode}")
             return bytes(buffers[0])
         finally:
-            _terminate_process_tree(process)
-            for reader in started:
-                reader.join(timeout=1)
-            with suppress(subprocess.TimeoutExpired):
-                process.wait(timeout=2)
+            try:
+                _terminate_process_tree(process, job)
+            finally:
+                for reader in started:
+                    reader.join(timeout=1)
+                with suppress(subprocess.TimeoutExpired):
+                    process.wait(timeout=2)
+                if not any(reader.is_alive() for reader in started):
+                    for stream in (process.stdout, process.stderr):
+                        with suppress(OSError):
+                            stream.close()
 
 
 def _threads(value: int) -> int:
@@ -375,16 +382,27 @@ def _clean_error(value: str | None) -> str:
     return text[-8000:]
 
 
-def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
-    if os.name == "nt":  # pragma: no cover - exercised by Windows CI only
-        subprocess.run(
-            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=5,
-        )
+def _start_process(command, env):
+    if os.name == "nt":
+        from .windows_job import start_process
+
+        return start_process(command, env)
+    return subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        start_new_session=True,
+    ), None
+
+
+def _terminate_process_tree(process: subprocess.Popen, job=None) -> None:
+    if job is not None:
+        job.close()
         return
+    if os.name == "nt":
+        raise DroidAscError("Windows worker has no Job Object")
     # The group can outlive its leader. Never gate cleanup on parent.poll().
     with suppress(ProcessLookupError):
         os.killpg(process.pid, signal.SIGKILL)

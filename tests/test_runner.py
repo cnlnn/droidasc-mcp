@@ -222,12 +222,10 @@ def test_cleanup_signals_group_after_leader_exit(monkeypatch):
     from droidasc_mcp.runner import _terminate_process_tree
 
     if os.name == "nt":
-        import subprocess
-
         calls = []
-        monkeypatch.setattr(subprocess, "run", lambda args, **kwargs: calls.append(args))
-        _terminate_process_tree(SimpleNamespace(pid=12345, poll=lambda: 0))
-        assert calls == [["taskkill", "/PID", "12345", "/T", "/F"]]
+        job = SimpleNamespace(close=lambda: calls.append("close"))
+        _terminate_process_tree(SimpleNamespace(pid=12345, poll=lambda: 0), job)
+        assert calls == ["close"]
         return
     signals = []
     monkeypatch.setattr(os, "killpg", lambda pid, sig: signals.append((pid, sig)))

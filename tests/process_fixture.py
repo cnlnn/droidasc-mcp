@@ -15,6 +15,35 @@ def main():
         (root / "child.pid").write_text(str(os.getpid()))
         time.sleep(15)
         return
+    if mode == "grandchild":
+        (root / "grandchild.pid").write_text(str(os.getpid()))
+        time.sleep(15)
+        return
+    if mode == "branch":
+        (root / "child.pid").write_text(str(os.getpid()))
+        subprocess.Popen([sys.executable, "-m", "process_fixture", "grandchild", str(root)])
+        time.sleep(15)
+        return
+    if mode == "orphan-tree":
+        (root / "parent.pid").write_text(str(os.getpid()))
+        subprocess.Popen([sys.executable, "-m", "process_fixture", "branch", str(root)])
+        return
+    if mode in {"detached", "tree-stdout"}:
+        (root / "parent.pid").write_text(str(os.getpid()))
+        subprocess.Popen(
+            [sys.executable, "-m", "process_fixture", "child", str(root)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        deadline = time.monotonic() + 5
+        while not (root / "child.pid").exists():
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Child readiness timed out")
+            time.sleep(0.01)
+        if mode == "detached":
+            print("ok")
+            return
+        mode = "stdout"
     if mode in {"orphan", "tree"}:
         (root / "parent.pid").write_text(str(os.getpid()))
         subprocess.Popen([sys.executable, "-m", "process_fixture", "child", str(root)])
@@ -40,6 +69,9 @@ def main():
         return
     if mode == "info":
         print(json.dumps({"pid": os.getpid()}))
+    if mode == "touch":
+        (root / "touched").write_text("started")
+        assert sys.stdin.read() == ""
 
 
 if __name__ == "__main__":

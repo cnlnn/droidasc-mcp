@@ -49,11 +49,32 @@ below are retained as historical observations; timings and RSS deltas are worklo
   artifact's SHA-256, parsed manifest/package, known DEX classes, pagination, decompiled marker,
   and string/type/method/field reference callers. Missing fixture input is a test-session error.
   The same checks run after both source and wheel installation via `verify_dist.py --fixture-apk`.
-- The Linux-only orphan test is explicitly skipped on Windows. The live-parent tree test is
-  not a replacement for it: Windows cleanup after the parent exits remains unverified.
+- Process-state checks use psutil on both platforms. The cleanup-after-leader-exit unit test
+  checks the platform's lifetime primitive; real orphan tests execute on both platforms.
+  Strict fixture-mode CI fails if any test is skipped, including distribution acceptance.
 - The matrix defines coverage, not a success claim. Inspect the commit's Actions run for results.
 - This fixture is a small two-DEX Java app, not an obfuscated/large-multidex/Kotlin/native-code corpus
   or an Android runtime/UI test.
+
+## Windows orphan regression
+
+The pre-fix [native Actions run](https://github.com/cnlnn/droidasc-mcp/actions/runs/35515384740)
+at `434925e` executed the previously skipped tests: every Windows Python job reported
+42 passed, 1 failed, 0 skipped. The actual failure was a child still running after the
+supervisor timed out; Linux passed. This is distinct from a platform-incompatible test.
+
+Windows now uses `pywin32` Job Objects with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. A trusted
+bootstrap waits for a one-byte startup handshake before importing the target CLI module.
+The supervisor assigns the process to its Job before sending that byte. The Job handle is
+unnamed and non-inheritable; closing it cleans up associated descendants after their parent exits.
+Failed assignment closes the Job and kills the waiting bootstrap; it does not fall back to an
+unsupervised operation. The bootstrap restores the CLI's argv and stdin-at-EOF behavior.
+
+Regression coverage includes a live parent, an exited parent, a grandchild holding inherited
+pipes, successful completion with a detached-output child, output overflow, joined reader
+threads, and repeated-operation handle/descriptor counts. Portable fault-injection tests check
+Job configuration/assignment failures and startup gating; those mocks are not the native-kernel
+acceptance evidence. A separate regression checks cleanup if reader construction fails.
 
 ## Initial hardening observations (Linux, Python 3.13)
 
@@ -82,7 +103,7 @@ The original orphan-cleanup implementation was not run because its unbounded pip
 - A killed Linux child may remain a zombie until its reaper runs; the test checks that it cannot
   execute, not that the PID instantly disappears.
 - The order test uses controlled output; it does not demonstrate a real ASC scheduling race.
-- Windows orphan cleanup, immediate client cancellation, immutable content-addressed pagination,
+- Immediate client cancellation, immutable content-addressed pagination,
   and lossless parsing of embedded newlines in ASC text remain unsupported or unverified.
 - HTTP is loopback-only in these tests; there is no authenticated remote-deployment acceptance.
 - Local measurements do not imply remote CI success; inspect the commit's GitHub Actions checks.

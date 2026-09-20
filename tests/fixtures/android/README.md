@@ -44,4 +44,4 @@ missing APK an error. It is only for this fixture; arbitrary local APKs can stil
 
 This small two-DEX debug app checks discovery beyond the first DEX. It does not cover
 large multidex workloads, obfuscation, Kotlin, native libraries, malformed APKs, Android
-UI execution, or Windows orphan-process cleanup.
+UI execution. Process cleanup is covered by separate supervisor integration tests.

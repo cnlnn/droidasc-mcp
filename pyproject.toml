@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [
     "droidasc>=0.1.1.post1,<0.2",
     "mcp>=2,<3",
+    "pywin32==312; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

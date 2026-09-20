@@ -117,20 +117,22 @@ content-addressed evidence store. Do not modify APK files between pages.
 
 ## Design
 
-- Uses `python -m droidasc`; it does not import ASC private internals.
+- Uses the public `droidasc` CLI module entry point; it does not import ASC private internals.
 - Never invokes a shell and does not expose a generic command tool.
 - Drains stdout and stderr concurrently with hard capture caps; no bulk output files are created.
 - Caps stderr at 64 KiB and budgets page content conservatively within 256 KiB.
 - Runs ZIP inspection and hashing in a supervised worker under the same concurrency budget.
 - On POSIX, kills the operation's process group on completion or failure, even if its leader exited.
+- On Windows, assigns the worker to a kill-on-close Job Object before starting ASC. Cleanup
+  includes descendants even after the worker exits; Job setup failure prevents analysis from starting.
 - Bounds queue waits and process waits. Client cancellation does not yet immediately stop sync tools.
 - Resolves symlinks before checking the allowed-root policy.
 
 ASC and its dependencies still parse untrusted binary input. Use a container or disposable VM for
 hostile APKs. This adapter is a process boundary, not a malware sandbox.
 
-Windows process-tree cleanup is best effort. CI checks timeout cleanup while the parent is
-alive; cleanup after the parent has already exited remains unverified on Windows.
+Native Windows CI checks live-parent and orphan cleanup, including grandchildren, successful
+completion, output overflow, reader termination, and repeated-operation handle counts.
 There is no worker memory limit; use OS/container resource limits for hostile samples.
 Capture buffers, snapshots being built, and active pages can coexist with the cache; this budget
 is not a hard total-RSS cap. Dense outputs may hit the decoded-memory budget before the wire cap.

@@ -12,6 +12,26 @@ from droidasc_mcp import runner as module
 from droidasc_mcp.runner import DroidAscError, DroidAscRunner
 
 
+def test_reader_construction_failure_releases_worker(settings, monkeypatch):
+    events = []
+    process = SimpleNamespace(
+        stdout=io.BytesIO(),
+        stderr=io.BytesIO(),
+        wait=lambda **kw: 0,
+    )
+    job = SimpleNamespace(close=lambda: events.append("job.close"))
+    monkeypatch.setattr(module, "_start_process", lambda *a: (process, job))
+
+    def fail(*args, **kwargs):
+        raise OSError("reader construction failed")
+
+    monkeypatch.setattr(module.threading, "Thread", fail)
+    with pytest.raises(OSError, match="construction"):
+        DroidAscRunner(settings)._execute(["unused"])
+    assert events == ["job.close"]
+    assert process.stdout.closed and process.stderr.closed
+
+
 def test_late_overflow_is_not_returned_as_success(settings, monkeypatch):
     tasks = []
 
@@ -42,8 +62,8 @@ def test_late_overflow_is_not_returned_as_success(settings, monkeypatch):
         wait=lambda **kw: 0,
     )
     monkeypatch.setattr(module.threading, "Thread", ControlledThread)
-    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: process)
-    monkeypatch.setattr(module, "_terminate_process_tree", lambda p: None)
+    monkeypatch.setattr(module, "_start_process", lambda *a: (process, None))
+    monkeypatch.setattr(module, "_terminate_process_tree", lambda *a: None)
     with pytest.raises(DroidAscError, match="output exceeds"):
         DroidAscRunner(settings)._execute(["unused"])
 
@@ -60,8 +80,8 @@ def test_reader_failure_is_not_success(settings, monkeypatch):
         returncode=0,
         wait=lambda **kw: 0,
     )
-    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **kw: process)
-    monkeypatch.setattr(module, "_terminate_process_tree", lambda p: None)
+    monkeypatch.setattr(module, "_start_process", lambda *a: (process, None))
+    monkeypatch.setattr(module, "_terminate_process_tree", lambda *a: None)
     with pytest.raises(DroidAscError, match="read"):
         DroidAscRunner(settings)._execute(["unused"])
 
