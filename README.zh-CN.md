@@ -21,16 +21,26 @@
 
 ## 安装
 
-需要 Python 3.10 或更高版本。0.1.1 发布时验证了 Linux。当前 CI 覆盖 Linux 和原生
+需要 Python 3.10 或更高版本。CI 覆盖 Linux 和原生
 Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fixtures/android/README.md)
 验收 stdio/HTTP 全部 6 个工具及发布包安装；macOS 尚未验证。
 
+Linux 安装固定版本的 GitHub 发布包：
+
 ```bash
-git clone https://github.com/cnlnn/droidasc-mcp.git
-cd droidasc-mcp
 python -m venv .venv
-.venv/bin/pip install -e .
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
 ```
+
+Windows（PowerShell）：
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+```
+
+Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
+运行 `uv sync --locked --extra dev`。
 
 ## 接入 Codex
 
@@ -116,7 +126,7 @@ uv run ruff check .
 uv run pytest --cov --cov-report=term-missing
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.1.tar.gz dist/droidasc_mcp-0.1.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.2.tar.gz dist/droidasc_mcp-0.1.2-py3-none-any.whl
 ```
 
 ## 许可证

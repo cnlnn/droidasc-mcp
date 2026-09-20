@@ -9,7 +9,7 @@ ASC_TEST_APK=/absolute/path/to/a/local.apk uv run pytest -q -s \
   --junitxml=artifacts/validation/with-apk.xml -o junit_logging=all
 uv run ruff check .
 uv build
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.1.tar.gz dist/droidasc_mcp-0.1.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.2.tar.gz dist/droidasc_mcp-0.1.2-py3-none-any.whl
 ```
 
 User-supplied APKs are read locally, never uploaded or included in test artifacts. Tests print
@@ -38,8 +38,10 @@ below are retained as historical observations; timings and RSS deltas are worklo
 
 - GitHub Actions runs the test suite on `ubuntu-latest` and `windows-latest`, each with
   Python 3.10, 3.11, 3.12, and 3.13. Every test job uploads its JUnit results, including skips.
-- Both operating systems build and install the sdist and wheel on Python 3.13, then rerun
-  the tests outside the original checkout. The distribution command uses Bash for glob expansion.
+- A single Ubuntu job builds the sdist and wheel and uploads `python-distributions`.
+  Both operating systems install these same artifacts on Python 3.13, then rerun the tests
+  outside the original checkout. The distribution command uses Bash for glob expansion.
+  GitHub Releases publish those artifacts from the successful tag run, without rebuilding them.
 - An Ubuntu job builds the original test app with JDK 17, Gradle 8.13, AGP 8.9.2, Android SDK 35,
   and Build Tools 35.0.0. The same `acceptance-apk` artifact goes to every test/distribution job.
   No third-party APK download or private sample is involved.

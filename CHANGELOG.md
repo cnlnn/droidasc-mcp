@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Add native Windows and Linux Python 3.10-3.13 acceptance, using an original source-built APK
   for all six tools over both transports and after sdist/wheel installation.
@@ -10,6 +10,8 @@
   startup failure paths, and repeated-operation resource release. Strict CI rejects skipped tests.
 - Explicitly depend on the tested Windows-only pywin32 version; include the new worker modules
   in Python distributions. Reader-construction failure now also releases the worker and pipes.
+- Build distributions once in CI and validate the same artifacts on Linux and Windows before
+  publishing them to GitHub Releases. Add version-pinned installation commands for both platforms.
 
 ## 0.1.1
 

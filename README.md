@@ -24,19 +24,26 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Python 3.10 or newer is required. The 0.1.1 release was validated on Linux.
-Current CI checks Linux and native Windows runners on Python 3.10-3.13, including
+Python 3.10 or newer is required. CI checks Linux and native Windows runners on Python 3.10-3.13, including
 all six tools over stdio/HTTP against a source-built [acceptance APK](tests/fixtures/android/README.md)
 and package installation. macOS remains unverified.
 
+Install the version-pinned GitHub release on Linux:
+
 ```bash
-git clone https://github.com/cnlnn/droidasc-mcp.git
-cd droidasc-mcp
 python -m venv .venv
-.venv/bin/pip install -e .
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
 ```
 
-Windows uses `.venv\Scripts\python.exe` and `.venv\Scripts\droidasc-mcp.exe`.
+Windows (PowerShell):
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+```
+
+Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
+clone this repository and run `uv sync --locked --extra dev` instead.
 
 ## Connect
 
@@ -148,7 +155,7 @@ uv run ruff check .
 uv run pytest --cov --cov-report=term-missing
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.1.tar.gz dist/droidasc_mcp-0.1.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.2.tar.gz dist/droidasc_mcp-0.1.2-py3-none-any.whl
 ```
 
 ## License
