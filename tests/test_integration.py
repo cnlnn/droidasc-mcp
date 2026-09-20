@@ -17,7 +17,12 @@ import pytest
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 
-from droidasc_mcp.runner import DroidAscError, DroidAscRunner
+from droidasc_mcp.runner import (
+    DroidAscError,
+    DroidAscRunner,
+    _start_process,
+    _terminate_process_tree,
+)
 
 
 @pytest.fixture
@@ -115,6 +120,33 @@ def test_repeated_operations_release_resources(process_runner, tmp_path):
         process_runner._execute(["info", str(tmp_path)])
     assert count() <= baseline + 2
     assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
+
+
+def test_operation_cleanup_does_not_kill_another_tree(tmp_path):
+    operations = []
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent)}
+    try:
+        for index in range(2):
+            root = tmp_path / str(index)
+            root.mkdir()
+            operations.append(
+                _start_process([sys.executable, "-m", "process_fixture", "child", str(root)], env)
+            )
+        deadline = time.monotonic() + 5
+        while not all((tmp_path / str(i) / "child.pid").exists() for i in range(2)):
+            assert time.monotonic() < deadline, "Workers did not start"
+            time.sleep(0.01)
+        first, first_job = operations[0]
+        second, _ = operations[1]
+        _terminate_process_tree(first, first_job)
+        first.wait(timeout=2)
+        assert second.poll() is None
+    finally:
+        for process, job in operations:
+            _terminate_process_tree(process, job)
+            process.wait(timeout=2)
+            process.stdout.close()
+            process.stderr.close()
 
 
 @pytest.mark.parametrize("stream", ["stdout", "stderr"])

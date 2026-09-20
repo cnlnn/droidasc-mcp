@@ -24,8 +24,14 @@ def fake_win32(monkeypatch):
             events.append(self.name + ".close")
 
     api = SimpleNamespace(OpenProcess=lambda access, inherit, pid: Handle("process"))
+
+    def create_job(security, name):
+        assert security is None
+        assert name == ""  # pywin32 requires a Unicode name, not None.
+        return Handle("job")
+
     jobs = SimpleNamespace(
-        CreateJobObject=lambda security, name: Handle("job"),
+        CreateJobObject=create_job,
         QueryInformationJobObject=lambda *a: {"BasicLimitInformation": {"LimitFlags": 0}},
         SetInformationJobObject=lambda handle, kind, info: events.append(info),
         AssignProcessToJobObject=lambda *a: events.append("assign"),

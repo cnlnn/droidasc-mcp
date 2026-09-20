@@ -14,7 +14,7 @@ class WindowsJob:
         self._api = win32api
         self._access = win32con.PROCESS_SET_QUOTA | win32con.PROCESS_TERMINATE
         self._jobs = win32job
-        self._handle = win32job.CreateJobObject(None, None)
+        self._handle = win32job.CreateJobObject(None, "")
         try:
             limits = win32job.QueryInformationJobObject(
                 self._handle, win32job.JobObjectExtendedLimitInformation
