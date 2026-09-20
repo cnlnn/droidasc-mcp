@@ -2,7 +2,6 @@
 
 import hashlib
 import os
-import signal
 import socket
 import subprocess
 import sys
@@ -30,9 +29,11 @@ def process_runner(settings, monkeypatch):
 
 
 def alive(pid):
-    # Zombies have no executable workload; Linux PID 1 may reap them later.
-    path = Path(f"/proc/{pid}/stat")
-    return path.exists() and path.read_text().split(") ", 1)[1][0] != "Z"
+    # Zombies have no executable workload; their reaper may run later.
+    try:
+        return psutil.Process(pid).status() != psutil.STATUS_ZOMBIE
+    except psutil.NoSuchProcess:
+        return False
 
 
 def test_real_live_tree_timeout_cleanup(process_runner, tmp_path):
@@ -58,7 +59,6 @@ def test_real_live_tree_timeout_cleanup(process_runner, tmp_path):
                     psutil.Process(int(path.read_text())).kill()
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="Linux process-state verification")
 def test_real_orphan_cleanup(process_runner, tmp_path):
     start = time.monotonic()
     try:
@@ -76,7 +76,8 @@ def test_real_orphan_cleanup(process_runner, tmp_path):
         if (tmp_path / "child.pid").exists():
             pid = int((tmp_path / "child.pid").read_text())
             if alive(pid):
-                os.kill(pid, signal.SIGKILL)
+                with suppress(psutil.NoSuchProcess):
+                    psutil.Process(pid).kill()
 
 
 @pytest.mark.parametrize("stream", ["stdout", "stderr"])

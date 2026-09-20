@@ -16,6 +16,13 @@ def pytest_sessionstart(session):
             raise pytest.UsageError("Fixture acceptance requires an existing ASC_TEST_APK")
 
 
+def pytest_sessionfinish(session, exitstatus):
+    if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
+        reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+        if reporter and reporter.stats.get("skipped"):
+            session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
 @pytest.fixture
 def apk_file(tmp_path: Path) -> Path:
     apk = tmp_path / "fixture.apk"
