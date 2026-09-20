@@ -8,6 +8,8 @@ __pycache__/
 build/
 dist/
 artifacts/
+.gradle/
+local.properties
 
 # APKs may be proprietary or contain secrets. Never commit samples by default.
 *.apk

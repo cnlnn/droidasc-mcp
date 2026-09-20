@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import os
 import zipfile
 from pathlib import Path
 
 import pytest
 
 from droidasc_mcp.config import Settings
+
+
+def pytest_sessionstart(session):
+    if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
+        apk = os.getenv("ASC_TEST_APK")
+        if not apk or not Path(apk).is_file():
+            raise pytest.UsageError("Fixture acceptance requires an existing ASC_TEST_APK")
 
 
 @pytest.fixture

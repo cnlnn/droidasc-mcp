@@ -12,9 +12,11 @@ uv build
 uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.1.tar.gz dist/droidasc_mcp-0.1.1-py3-none-any.whl
 ```
 
-The APK is read locally, never uploaded or included in test artifacts. Tests print counts rather
-than source code, strings, or package names. Failure logs may include local paths; artifacts are
-gitignored. Real-APK checks are explicitly skipped unless `ASC_TEST_APK` is supplied.
+User-supplied APKs are read locally, never uploaded or included in test artifacts. Tests print
+counts rather than APK contents; failure logs can contain assertion details and local paths.
+Artifacts are gitignored. Local real-APK checks are skipped unless `ASC_TEST_APK` is supplied.
+CI instead builds the repository's public-source [acceptance APK](../tests/fixtures/android/README.md)
+and uploads only that generated APK for the other jobs to analyze.
 
 ## 0.1.1 release acceptance (Linux, Python 3.13)
 
@@ -38,13 +40,20 @@ below are retained as historical observations; timings and RSS deltas are worklo
   Python 3.10, 3.11, 3.12, and 3.13. Every test job uploads its JUnit results, including skips.
 - Both operating systems build and install the sdist and wheel on Python 3.13, then rerun
   the tests outside the original checkout. The distribution command uses Bash for glob expansion.
+- An Ubuntu job builds the original test app with JDK 17, Gradle 8.13, AGP 8.9.2, Android SDK 35,
+  and Build Tools 35.0.0. The same `acceptance-apk` artifact goes to every test/distribution job.
+  No third-party APK download or private sample is involved.
 - Always-on checks include stdio and loopback HTTP discovery, ping, synthetic ZIP metadata,
   rejected input, finite stdout/stderr limits, and timeout cleanup of a live parent and child.
-- CI does not receive a private APK. The two full six-tool real-APK checks remain optional;
-  metadata ZIP fixtures do not establish actual DEX decompilation compatibility on Windows.
+- The two real-APK transport checks run in strict fixture mode in CI. Assertions cover the
+  artifact's SHA-256, parsed manifest/package, known DEX classes, pagination, decompiled marker,
+  and string/type/method/field reference callers. Missing fixture input is a test-session error.
+  The same checks run after both source and wheel installation via `verify_dist.py --fixture-apk`.
 - The Linux-only orphan test is explicitly skipped on Windows. The live-parent tree test is
   not a replacement for it: Windows cleanup after the parent exits remains unverified.
 - The matrix defines coverage, not a success claim. Inspect the commit's Actions run for results.
+- This fixture is a small single-DEX Java app, not an obfuscated/multidex/Kotlin/native-code corpus
+  or an Android runtime/UI test.
 
 ## Initial hardening observations (Linux, Python 3.13)
 

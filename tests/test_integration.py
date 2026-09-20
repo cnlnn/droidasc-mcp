@@ -1,5 +1,6 @@
 """Real subprocess, transport, and optional real-APK acceptance checks."""
 
+import hashlib
 import os
 import signal
 import socket
@@ -7,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+import xml.etree.ElementTree as ET
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -212,7 +214,7 @@ async def test_transport_roundtrip(transport, request, apk_file):
 async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
     apk = os.getenv("ASC_TEST_APK")
     if not apk:
-        pytest.skip("Set ASC_TEST_APK to a local APK; samples are never committed")
+        pytest.skip("Set ASC_TEST_APK to a built fixture or a local APK")
     apk = str(Path(apk).resolve())
     monkeypatch.setenv("ASC_TEST_ROOT", str(Path(apk).parent))
     env = os.environ.copy()
@@ -230,6 +232,11 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
             return result.structured_content
 
         assert (await call("asc_ping", {}))["status"] == "ok"
+        assert len((await client.list_tools()).tools) == 6
+        if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
+            await assert_fixture_tools(call, apk)
+            print(f"fixture_apk transport={transport} tools=6 reference_kinds=4")
+            return
         info = await call("asc_apk_info", {"apk_path": apk})
         assert len(info["sha256"]) == 64
         manifest = await call("asc_get_manifest", {"apk_path": apk, "limit": 2})
@@ -244,3 +251,61 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
         )
         assert "total" in refs
         print(f"real_apk transport={transport} tools=6 classes={classes['total']}")
+
+
+async def assert_fixture_tools(call, apk):
+    package = "org.example.droidascfixture"
+    probe = "Lorg/example/droidascfixture/Probe;"
+    activity = "Lorg/example/droidascfixture/MainActivity;"
+    marker = "ASC_FIXTURE_MARKER_v1"
+    info = await call("asc_apk_info", {"apk_path": apk})
+    assert info["sha256"] == hashlib.sha256(Path(apk).read_bytes()).hexdigest()
+    assert info["size_bytes"] == Path(apk).stat().st_size
+    assert info["dex_entries"] == ["classes.dex"]
+    assert info["has_manifest"]
+
+    manifest = await call("asc_get_manifest", {"apk_path": apk, "limit": 1000})
+    assert manifest["next_offset"] is None
+    root = ET.fromstring(manifest["xml"])
+    assert root.tag == "manifest"
+    assert root.attrib["package"] == package
+    assert root.find("uses-permission") is None
+    android = "{http://schemas.android.com/apk/res/android}"
+    assert root.find("application/activity").attrib[android + "name"] == package + ".MainActivity"
+
+    query = {"apk_path": apk, "prefix": package}
+    classes = await call("asc_list_classes", {**query, "limit": 100})
+    assert set(classes["items"]) == {probe, activity}
+    assert classes["total"] == 2
+    first = await call("asc_list_classes", {**query, "limit": 1})
+    assert first["next_offset"] == 1
+    second = await call("asc_list_classes", {**query, "limit": 1, "offset": first["next_offset"]})
+    assert second["next_offset"] is None
+    assert first["items"] + second["items"] == classes["items"]
+
+    source = await call(
+        "asc_get_class_source",
+        {"apk_path": apk, "class_name": package + ".Probe", "limit": 1000},
+    )
+    assert source["class_name"] == probe
+    assert source["next_offset"] is None
+    assert all(value in source["source"] for value in ("marker", "visits", marker))
+
+    for kind, value, caller in (
+        ("string", marker, probe + "->marker"),
+        ("type", package + ".Probe", activity + "->onCreate"),
+        ("method", "marker", probe + "->describe"),
+        ("field", "visits", probe + "->marker"),
+    ):
+        args = {"apk_path": apk, "kind": kind, "value": value, "limit": 100}
+        if kind in {"method", "field"}:
+            args["class_name"] = package + ".Probe"
+        refs = await call("asc_find_refs", args)
+        assert refs["total"] > 0, (kind, refs)
+        assert refs["next_offset"] is None
+        assert any(
+            caller in item.get("method", "") and item.get("dex") == "classes.dex"
+            for item in refs["items"]
+        ), (kind, refs)
+        if kind == "string":
+            assert any(marker in item.get("matched", "") for item in refs["items"])

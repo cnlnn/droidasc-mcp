@@ -1,6 +1,10 @@
 include README.zh-CN.md CHANGELOG.md SECURITY.md CONTRIBUTING.md uv.lock
 recursive-include docs *.md
 recursive-include tests *.py
+recursive-include tests/fixtures/android *.md *.gradle *.properties *.xml *.java
+prune tests/fixtures/android/.gradle
+prune tests/fixtures/android/app/build
+exclude tests/fixtures/android/local.properties
 recursive-include scripts *.py
 prune artifacts
 global-exclude *.apk *.xapk *.pyc

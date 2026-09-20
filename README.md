@@ -26,7 +26,8 @@ structured data instead of unbounded terminal output.
 
 Python 3.10 or newer is required. The 0.1.1 release was validated on Linux.
 Current CI checks Linux and native Windows runners on Python 3.10-3.13, including
-stdio/HTTP metadata roundtrips and package installation. macOS remains unverified.
+all six tools over stdio/HTTP against a source-built [acceptance APK](tests/fixtures/android/README.md)
+and package installation. macOS remains unverified.
 
 ```bash
 git clone https://github.com/cnlnn/droidasc-mcp.git

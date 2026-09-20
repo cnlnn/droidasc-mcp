@@ -22,7 +22,8 @@
 ## 安装
 
 需要 Python 3.10 或更高版本。0.1.1 发布时验证了 Linux。当前 CI 覆盖 Linux 和原生
-Windows runner 的 Python 3.10-3.13，包含 stdio/HTTP 元数据调用与发布包安装；macOS 尚未验证。
+Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fixtures/android/README.md)
+验收 stdio/HTTP 全部 6 个工具及发布包安装；macOS 尚未验证。
 
 ```bash
 git clone https://github.com/cnlnn/droidasc-mcp.git

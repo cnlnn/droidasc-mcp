@@ -13,11 +13,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sdist", type=Path)
     parser.add_argument("wheel", type=Path)
+    parser.add_argument("--fixture-apk", type=Path, help="Built public acceptance APK")
     args = parser.parse_args()
     wheel = args.wheel.resolve()
     env = os.environ.copy()
-    for name in ("ASC_TEST_APK", "ASC_TEST_ROOT", "PYTHONPATH", "VIRTUAL_ENV"):
+    for name in (
+        "ASC_TEST_APK",
+        "ASC_TEST_EXPECT_FIXTURE",
+        "ASC_TEST_ROOT",
+        "PYTHONPATH",
+        "VIRTUAL_ENV",
+    ):
         env.pop(name, None)
+    if args.fixture_apk:
+        fixture_apk = args.fixture_apk.resolve(strict=True)
+        if not fixture_apk.is_file():
+            parser.error("--fixture-apk must be a file")
+        env["ASC_TEST_APK"] = str(fixture_apk)
+        env["ASC_TEST_EXPECT_FIXTURE"] = "1"
     with tempfile.TemporaryDirectory(prefix="droidasc-dist-") as directory:
         root = Path(directory)
         with tarfile.open(args.sdist) as archive:

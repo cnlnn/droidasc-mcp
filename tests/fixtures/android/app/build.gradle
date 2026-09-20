@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.example.droidascfixture'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+
+    defaultConfig {
+        applicationId 'org.example.droidascfixture'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildFeatures {
+        buildConfig false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

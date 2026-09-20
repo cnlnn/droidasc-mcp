@@ -8,7 +8,29 @@ permissions:
   contents: read
 
 jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.13"
+          cache-provider: basic
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - run: gradle --no-daemon -p tests/fixtures/android :app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-apk
+          path: tests/fixtures/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
   test:
+    needs: fixture
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -18,6 +40,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acceptance-apk
+          path: artifacts/fixture apk
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -25,6 +51,9 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest --cov --cov-report=term-missing --junitxml=test-results.xml
+        env:
+          ASC_TEST_APK: ${{ github.workspace }}/artifacts/fixture apk/app-debug.apk
+          ASC_TEST_EXPECT_FIXTURE: "1"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -32,6 +61,7 @@ jobs:
           path: test-results.xml
 
   distribution:
+    needs: fixture
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -40,10 +70,14 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acceptance-apk
+          path: artifacts/fixture apk
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.13"
       - run: uv sync --locked --extra dev
       - run: uv build
-      - run: uv run python scripts/verify_dist.py dist/*.tar.gz dist/*.whl
+      - run: uv run python scripts/verify_dist.py dist/*.tar.gz dist/*.whl --fixture-apk "artifacts/fixture apk/app-debug.apk"
         shell: bash
