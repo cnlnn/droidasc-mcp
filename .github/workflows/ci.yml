@@ -17,6 +17,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: "12266719"
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "8.13"
