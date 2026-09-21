@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import psutil
 from anyio import from_thread
 
 from .config import Settings
@@ -330,6 +331,7 @@ class DroidAscRunner:
                     read_errors.append(exc)
 
         deadline = time.monotonic() + self.settings.timeout_seconds
+        memory_check_at = 0.0
         started = []
         try:
             readers = [
@@ -351,13 +353,20 @@ class DroidAscRunner:
                 started.append(reader)
             while True:
                 _check_cancelled()
+                now = time.monotonic()
+                if now >= memory_check_at:
+                    if _process_tree_rss(process.pid) > self.settings.max_worker_memory_bytes:
+                        raise DroidAscError(
+                            "Droid ASC exceeded the configured aggregate worker memory limit"
+                        )
+                    memory_check_at = now + 0.05
                 if exceeded.is_set():
                     raise DroidAscError("Droid ASC output exceeds configured stream limit")
                 if read_errors:
                     raise DroidAscError("Droid ASC stream read failed") from read_errors[0]
                 if process.poll() is not None and not any(r.is_alive() for r in readers):
                     break
-                if time.monotonic() >= deadline:
+                if now >= deadline:
                     raise DroidAscError(
                         f"Droid ASC timed out after {self.settings.timeout_seconds} seconds"
                     )
@@ -416,6 +425,28 @@ def _check_cancelled() -> None:
     # Direct library callers are not necessarily running in an AnyIO worker thread.
     with suppress(RuntimeError):
         from_thread.check_cancelled()
+
+
+def _process_tree_rss(pid: int) -> int:
+    if os.name != "nt":
+        total = 0
+        for process in psutil.process_iter():
+            try:
+                if os.getpgid(process.pid) == pid:
+                    total += process.memory_info().rss
+            except (ProcessLookupError, psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        return total
+    try:
+        owner = psutil.Process(pid)
+        processes = [owner, *owner.children(recursive=True)]
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return 0
+    total = 0
+    for process in processes:
+        with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            total += process.memory_info().rss
+    return total
 
 
 def _start_process(command, env, memory_limit_bytes=None):

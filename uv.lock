@@ -463,17 +463,17 @@ wheels = [
 
 [[package]]
 name = "droidasc-mcp"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "droidasc" },
     { name = "mcp" },
+    { name = "psutil" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 
 [package.optional-dependencies]
 dev = [
-    { name = "psutil" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -483,7 +483,7 @@ dev = [
 requires-dist = [
     { name = "droidasc", specifier = ">=0.1.1.post1,<0.2" },
     { name = "mcp", specifier = ">=2,<3" },
-    { name = "psutil", marker = "extra == 'dev'", specifier = ">=7" },
+    { name = "psutil", specifier = ">=7,<8" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==312" },

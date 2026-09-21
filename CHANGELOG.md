@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+- Validate WeChat 8.0.74, Taobao 10.62.0, and Douyin 39.1.0 base APKs pulled read-only
+  from an Android 16 device. The corpus includes a 348 MiB, 53-DEX APK with 551,538 classes.
+- Add a 50 ms aggregate process-tree RSS watchdog on top of the inherited POSIX per-process
+  address-space limit. Raise the default worker-tree budget to 2 GiB for current large APKs.
+- Make `psutil` a direct runtime dependency for cross-platform worker-tree accounting.
+
 ## 0.2.0
 
 - Propagate MCP request cancellation into queue waits, shared-snapshot waits, and active ASC

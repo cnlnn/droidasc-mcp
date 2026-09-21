@@ -27,7 +27,7 @@ def main() -> None:
     parser.add_argument("--duration", type=float, default=300)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--timeout", type=int, default=300)
-    parser.add_argument("--max-worker-memory-mib", type=int, default=1024)
+    parser.add_argument("--max-worker-memory-mib", type=int, default=2048)
     parser.add_argument("--max-host-rss-growth-mib", type=int, default=256)
     args = parser.parse_args()
     if args.duration <= 0 or args.workers <= 0:

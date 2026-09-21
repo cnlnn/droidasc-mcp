@@ -36,7 +36,7 @@ class Settings:
     timeout_seconds: int = 180
     max_apk_bytes: int = 2 * 1024 * 1024 * 1024
     max_output_bytes: int = 64 * 1024 * 1024
-    max_worker_memory_bytes: int = 1024 * 1024 * 1024
+    max_worker_memory_bytes: int = 2 * 1024 * 1024 * 1024
     max_page_size: int = 1000
     max_parallel: int = 2
 
@@ -58,7 +58,9 @@ class Settings:
             timeout_seconds=_positive_int("DROIDASC_MCP_TIMEOUT_SECONDS", 180),
             max_apk_bytes=_positive_int("DROIDASC_MCP_MAX_APK_BYTES", 2 * 1024**3),
             max_output_bytes=_positive_int("DROIDASC_MCP_MAX_OUTPUT_BYTES", 64 * 1024**2),
-            max_worker_memory_bytes=_positive_int("DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES", 1024**3),
+            max_worker_memory_bytes=_positive_int(
+                "DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES", 2 * 1024**3
+            ),
             max_page_size=_positive_int("DROIDASC_MCP_MAX_PAGE_SIZE", 1000),
             max_parallel=_positive_int("DROIDASC_MCP_MAX_PARALLEL", 2),
         )

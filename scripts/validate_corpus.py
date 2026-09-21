@@ -16,7 +16,7 @@ def main() -> None:
     parser.add_argument("apks", nargs="+", type=Path)
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--timeout", type=int, default=300)
-    parser.add_argument("--max-worker-memory-mib", type=int, default=1024)
+    parser.add_argument("--max-worker-memory-mib", type=int, default=2048)
     args = parser.parse_args()
 
     apks = [path.resolve(strict=True) for path in args.apks]

@@ -9,7 +9,7 @@ ASC_TEST_APK=/absolute/path/to/a/local.apk uv run pytest -q -s \
   --junitxml=artifacts/validation/with-apk.xml -o junit_logging=all
 uv run ruff check .
 uv build
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.0.tar.gz dist/droidasc_mcp-0.2.0-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.1.tar.gz dist/droidasc_mcp-0.2.1-py3-none-any.whl
 ```
 
 User-supplied APKs are read locally, never uploaded or included in test artifacts. Tests print
@@ -108,6 +108,27 @@ metadata/class-list operations. The MCP host grew by 1,208,320 RSS bytes, file d
 at 5, and no errors or live child processes remained. This is a bounded run on one Linux host, not
 evidence of leak-free operation for arbitrary durations or samples.
 
+## Large Android 16 device corpus (2026-09-21)
+
+At the device owner's request, three current commercial base APKs were pulled read-only over ADB.
+No application data, account data, or split APK was accessed, and the APKs remain gitignored and
+are not redistributed. Under the 2 GiB worker-tree budget, all six operations completed:
+
+| Package/version | APK characteristics | Observed result | SHA-256 |
+| --- | --- | --- | --- |
+| Douyin 39.1.0 | 364,994,058 bytes; 53 DEX; 276 native libraries | 551,538 classes; 4,047 manifest lines; 22,893 `android` reference lines; 3.545 s | `c2b49cb5f85b8432e9c73a259c9eb9b8dd8d891e853177df2ce5a14ee4f3f5b9` |
+| WeChat 8.0.74 | 261,152,116 bytes; 16 DEX; 204 native libraries | 233,555 classes; 2,916 manifest lines; 24,006 reference lines; 1.853 s | `e69e7fef8de8211695f08fc22e8f374333246c2483e637ae317f7a0f15d564cf` |
+| Taobao 10.62.0 | 91,402,818 bytes; 12 DEX; 138 native libraries | 99,712 classes; 6,263 manifest lines; 12,144 reference lines; 1.490 s | `2d8844a2cefecb8b99f5e8dc83e3eabba39391b02e2dc27c562d8ba3d0755348` |
+
+The measured peak across the sequential corpus run was 1,257,508,864 worker-tree RSS bytes;
+the largest individual worker used 367,116,288 bytes and the MCP host peaked at 128,929,792 bytes.
+Repeating Douyin with a 1 GiB tree budget produced the expected explicit aggregate-memory error;
+the 2 GiB default completed. Durations are warm local observations, not performance guarantees.
+
+The three large APKs then completed a 300-second, two-worker stability run with 1,400 uncached
+metadata/class-list operations. The host ended 1,019,904 RSS bytes above its warmed baseline,
+file descriptors stayed at 5, and no operation failed or child process remained.
+
 ## Initial hardening observations (Linux, Python 3.13)
 
 The local full suite passed 32 tests with an APK supplied. Both stdio and Streamable HTTP exercised
@@ -131,7 +152,8 @@ The original orphan-cleanup implementation was not run because its unbounded pip
 ## What this does not prove
 
 - Host RSS sampling is separate from the worker ceiling. Windows limits aggregate Job memory;
-  POSIX `RLIMIT_AS` is inherited but applies per process, not to the tree's aggregate RSS.
+  POSIX `RLIMIT_AS` is inherited and applies per process, with a separate 50 ms aggregate tree-RSS
+  watchdog. The watchdog can overshoot briefly between samples.
   Synthetic workloads are regression checks, not an arbitrary-malformed-APK stress benchmark.
 - A killed Linux child may remain a zombie until its reaper runs; the test checks that it cannot
   execute, not that the PID instantly disappears.

@@ -58,6 +58,7 @@ def test_late_overflow_is_not_returned_as_success(settings, monkeypatch):
         return 0
 
     process = SimpleNamespace(
+        pid=12345,
         stdout=io.BytesIO(b"x" * (settings.max_output_bytes + 1)),
         stderr=io.BytesIO(),
         poll=poll,
@@ -77,6 +78,7 @@ def test_reader_failure_is_not_success(settings, monkeypatch):
             raise OSError("synthetic read failure")
 
     process = SimpleNamespace(
+        pid=12345,
         stdout=BrokenStream(),
         stderr=io.BytesIO(),
         poll=lambda: 0,
@@ -87,6 +89,29 @@ def test_reader_failure_is_not_success(settings, monkeypatch):
     monkeypatch.setattr(module, "_terminate_process_tree", lambda *a: None)
     with pytest.raises(DroidAscError, match="read"):
         DroidAscRunner(settings)._execute(["unused"])
+
+
+def test_aggregate_worker_memory_watchdog_stops_tree(settings, monkeypatch):
+    events = []
+    process = SimpleNamespace(
+        pid=12345,
+        stdout=io.BytesIO(),
+        stderr=io.BytesIO(),
+        poll=lambda: None,
+        returncode=None,
+        wait=lambda **kw: 0,
+    )
+    monkeypatch.setattr(module, "_start_process", lambda *a: (process, None))
+    monkeypatch.setattr(
+        module,
+        "_process_tree_rss",
+        lambda pid: settings.max_worker_memory_bytes + 1,
+    )
+    monkeypatch.setattr(module, "_terminate_process_tree", lambda *a: events.append("terminate"))
+    with pytest.raises(DroidAscError, match="aggregate worker memory limit"):
+        DroidAscRunner(settings)._execute(["unused"])
+    assert events == ["terminate"]
+    assert process.stdout.closed and process.stderr.closed
 
 
 def test_distinct_queries_run_concurrently(settings, apk_file, monkeypatch):

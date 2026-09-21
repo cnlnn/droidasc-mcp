@@ -28,4 +28,4 @@ async def test_ping_exposes_effective_scope(settings: Settings):
         result = await client.call_tool("asc_ping", {})
     assert result.structured_content["status"] == "ok"
     assert result.structured_content["allowed_roots"] == [str(settings.allowed_roots[0])]
-    assert result.structured_content["max_worker_memory_bytes"] == 1024**3
+    assert result.structured_content["max_worker_memory_bytes"] == 2 * 1024**3
