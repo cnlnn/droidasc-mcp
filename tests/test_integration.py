@@ -12,6 +12,7 @@ from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
+import anyio
 import psutil
 import pytest
 from mcp import Client
@@ -120,6 +121,37 @@ def test_repeated_operations_release_resources(process_runner, tmp_path):
         process_runner._execute(["info", str(tmp_path)])
     assert count() <= baseline + 2
     assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
+
+
+def test_worker_memory_limit_and_recovery(settings, tmp_path, monkeypatch):
+    monkeypatch.setenv("PYTHONPATH", str(Path(__file__).parent))
+    subject = DroidAscRunner(
+        replace(
+            settings,
+            timeout_seconds=10,
+            max_worker_memory_bytes=96 * 1024 * 1024,
+        ),
+        module_name="process_fixture",
+    )
+    with pytest.raises(DroidAscError, match="worker memory limit"):
+        subject._execute(["memory", str(tmp_path)])
+    assert subject._execute(["info", str(tmp_path)])
+    assert not any(t.name.startswith("droidasc-reader-") for t in threading.enumerate())
+
+
+@pytest.mark.anyio
+async def test_anyio_cancellation_terminates_worker(process_runner, tmp_path):
+    started = time.monotonic()
+    with anyio.move_on_after(0.25) as scope:
+        await anyio.to_thread.run_sync(process_runner._execute, ["tree", str(tmp_path)])
+    assert scope.cancel_called
+    pids = [int((tmp_path / name).read_text()) for name in ("parent.pid", "child.pid")]
+    deadline = time.monotonic() + 2
+    while any(alive(pid) for pid in pids) and time.monotonic() < deadline:
+        await anyio.sleep(0.01)
+    assert not any(alive(pid) for pid in pids)
+    assert time.monotonic() - started < 3
+    assert process_runner._execute(["info", str(tmp_path)])
 
 
 def test_operation_cleanup_does_not_kill_another_tree(tmp_path):
@@ -277,6 +309,43 @@ async def test_transport_roundtrip(transport, request, apk_file):
         assert result.structured_content["has_manifest"]
         denied = await client.call_tool("asc_apk_info", {"apk_path": "/not-an-apk.txt"})
         assert denied.is_error
+
+
+@pytest.mark.anyio
+async def test_mcp_request_cancellation_stops_worker_and_session_recovers(tmp_path):
+    apk = tmp_path / "sleep.apk"
+    apk.write_bytes(b"apk")
+    env = {
+        **os.environ,
+        "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path),
+        "PYTHONPATH": os.pathsep.join(
+            filter(None, (str(Path(__file__).parent), os.environ.get("PYTHONPATH")))
+        ),
+    }
+    endpoint = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "cancellation_server"],
+        env=env,
+    )
+    started = time.monotonic()
+    async with Client(endpoint) as client:
+        with anyio.move_on_after(0.5) as scope:
+            await client.call_tool(
+                "asc_get_manifest", {"apk_path": str(apk), "offset": 0, "limit": 1}
+            )
+        assert scope.cancel_called
+        pid_file = tmp_path / "worker.pid"
+        deadline = time.monotonic() + 2
+        while not pid_file.exists() and time.monotonic() < deadline:
+            await anyio.sleep(0.01)
+        assert pid_file.exists()
+        pid = int(pid_file.read_text())
+        while alive(pid) and time.monotonic() < deadline:
+            await anyio.sleep(0.01)
+        assert not alive(pid)
+        assert time.monotonic() - started < 3
+        result = await client.call_tool("asc_ping", {})
+        assert not result.is_error
 
 
 @pytest.mark.anyio

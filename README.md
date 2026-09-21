@@ -32,14 +32,14 @@ Install the version-pinned GitHub release on Linux:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.0/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.0/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
@@ -119,6 +119,7 @@ content-addressed evidence store. Do not modify APK files between pages.
 | `DROIDASC_MCP_TIMEOUT_SECONDS` | `180` | Per-operation timeout |
 | `DROIDASC_MCP_MAX_APK_BYTES` | `2147483648` | Maximum accepted APK size |
 | `DROIDASC_MCP_MAX_OUTPUT_BYTES` | `67108864` | Captured stdout limit and aggregate decoded snapshot budget |
+| `DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES` | `1073741824` | Worker memory ceiling (Windows Job aggregate; inherited POSIX per-process address-space cap) |
 | `DROIDASC_MCP_MAX_PAGE_SIZE` | `1000` | Maximum lines returned by one call |
 | `DROIDASC_MCP_MAX_PARALLEL` | `2` | Maximum concurrent ASC subprocesses |
 
@@ -132,7 +133,10 @@ content-addressed evidence store. Do not modify APK files between pages.
 - On POSIX, kills the operation's process group on completion or failure, even if its leader exited.
 - On Windows, assigns the worker to a kill-on-close Job Object before starting ASC. Cleanup
   includes descendants even after the worker exits; Job setup failure prevents analysis from starting.
-- Bounds queue waits and process waits. Client cancellation does not yet immediately stop sync tools.
+- Propagates MCP request cancellation through queue/snapshot waits and active sync tools; cleanup
+  completes before the cancelled server task exits, and the session can continue serving requests.
+- Applies the configured worker memory ceiling before importing ASC. Windows limits aggregate
+  committed memory for the Job tree; POSIX applies a kernel `RLIMIT_AS` inherited by descendants.
 - Resolves symlinks before checking the allowed-root policy.
 
 ASC and its dependencies still parse untrusted binary input. Use a container or disposable VM for
@@ -140,9 +144,9 @@ hostile APKs. This adapter is a process boundary, not a malware sandbox.
 
 Native Windows CI checks live-parent and orphan cleanup, including grandchildren, successful
 completion, output overflow, reader termination, and repeated-operation handle counts.
-There is no worker memory limit; use OS/container resource limits for hostile samples.
 Capture buffers, snapshots being built, and active pages can coexist with the cache; this budget
-is not a hard total-RSS cap. Dense outputs may hit the decoded-memory budget before the wire cap.
+is not a hard MCP-host total-RSS cap. POSIX applies the worker limit per process rather than as an
+aggregate process-tree total. Dense outputs may hit the decoded-memory budget before the wire cap.
 
 ## Development
 
@@ -153,9 +157,11 @@ checks, measured outcomes, and the remaining verification limits.
 uv sync --locked --extra dev
 uv run ruff check .
 uv run pytest --cov --cov-report=term-missing
+uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
+uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.2.tar.gz dist/droidasc_mcp-0.1.2-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.0.tar.gz dist/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 ## License

@@ -42,6 +42,8 @@ def main():
                 "docs/VALIDATION.md",
                 "uv.lock",
                 "scripts/verify_dist.py",
+                "scripts/stability_check.py",
+                "scripts/validate_corpus.py",
             )
             for name in required:
                 assert any(item.endswith("/" + name) for item in members), name

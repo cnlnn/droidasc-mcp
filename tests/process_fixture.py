@@ -11,6 +11,15 @@ from pathlib import Path
 def main():
     mode, directory = sys.argv[1:3]
     root = Path(directory)
+    if mode == "getmanifest":
+        (root.parent / "worker.pid").write_text(str(os.getpid()))
+        time.sleep(15)
+        print("<manifest />")
+        return
+    if mode == "memory":
+        chunks = []
+        while True:
+            chunks.append(bytearray(8 * 1024 * 1024))
     if mode == "child":
         (root / "child.pid").write_text(str(os.getpid()))
         time.sleep(15)

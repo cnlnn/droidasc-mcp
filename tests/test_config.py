@@ -15,11 +15,13 @@ def test_settings_from_env_accepts_multiple_roots(tmp_path: Path, monkeypatch: p
     second.mkdir()
     monkeypatch.setenv("DROIDASC_MCP_ALLOWED_ROOTS", f"{first}{os.pathsep}{second}")
     monkeypatch.setenv("DROIDASC_MCP_MAX_PAGE_SIZE", "77")
+    monkeypatch.setenv("DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES", "268435456")
 
     settings = Settings.from_env()
 
     assert settings.allowed_roots == (first.resolve(), second.resolve())
     assert settings.max_page_size == 77
+    assert settings.max_worker_memory_bytes == 268435456
 
 
 def test_settings_rejects_invalid_integer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

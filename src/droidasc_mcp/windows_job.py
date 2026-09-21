@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class WindowsJob:
-    def __init__(self):
+    def __init__(self, memory_limit_bytes=None):
         import win32api
         import win32con
         import win32job
@@ -19,9 +19,11 @@ class WindowsJob:
             limits = win32job.QueryInformationJobObject(
                 self._handle, win32job.JobObjectExtendedLimitInformation
             )
-            limits["BasicLimitInformation"]["LimitFlags"] = (
-                win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-            )
+            flags = win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            if memory_limit_bytes is not None:
+                flags |= win32job.JOB_OBJECT_LIMIT_JOB_MEMORY
+                limits["JobMemoryLimit"] = memory_limit_bytes
+            limits["BasicLimitInformation"]["LimitFlags"] = flags
             win32job.SetInformationJobObject(
                 self._handle, win32job.JobObjectExtendedLimitInformation, limits
             )
@@ -42,19 +44,23 @@ class WindowsJob:
             self._handle = None
 
 
-def start_process(command, env):
-    job = WindowsJob()
+def start_process(command, env, memory_limit_bytes=None):
+    job = WindowsJob(memory_limit_bytes)
     process = None
     try:
         # The trusted bootstrap waits on stdin before importing the target module. No workload
         # can create descendants before assignment; EOF also exits if the host dies first.
         bootstrap = str(Path(__file__).with_name("worker_bootstrap.py"))
+        worker_env = env.copy()
+        worker_env["DROIDASC_MCP_START_GATE"] = "1"
+        if memory_limit_bytes is not None:
+            worker_env["DROIDASC_MCP_WORKER_MEMORY_BYTES"] = str(memory_limit_bytes)
         process = subprocess.Popen(
             [command[0], bootstrap, *command[2:]],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=env,
+            env=worker_env,
             creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
         )
         job.assign(process.pid)

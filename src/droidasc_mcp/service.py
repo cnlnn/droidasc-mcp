@@ -26,6 +26,7 @@ class DroidAscService:
             "droidasc_version": engine_version,
             "allowed_roots": [str(path) for path in self.settings.allowed_roots],
             "timeout_seconds": self.settings.timeout_seconds,
+            "max_worker_memory_bytes": self.settings.max_worker_memory_bytes,
             "max_page_size": self.settings.max_page_size,
         }
 

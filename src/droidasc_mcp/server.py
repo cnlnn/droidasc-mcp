@@ -8,11 +8,15 @@ from typing import Literal
 from mcp.server import MCPServer
 
 from .config import Settings
+from .runner import DroidAscRunner
 from .service import DroidAscService
 
 
-def build_server(settings: Settings | None = None) -> MCPServer:
-    service = DroidAscService(settings or Settings.from_env())
+def build_server(
+    settings: Settings | None = None, runner: DroidAscRunner | None = None
+) -> MCPServer:
+    settings = settings or Settings.from_env()
+    service = DroidAscService(settings, runner)
     mcp = MCPServer("droidasc-mcp")
 
     @mcp.tool()

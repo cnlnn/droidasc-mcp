@@ -2,10 +2,13 @@
 
 import io
 import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import replace
+from functools import partial
 from types import SimpleNamespace
 
+import anyio
 import pytest
 
 from droidasc_mcp import runner as module
@@ -135,6 +138,60 @@ def test_same_query_shares_one_fill(settings, apk_file, monkeypatch):
         tasks = [pool.submit(subject.get_manifest, apk_file, offset=0, limit=1) for _ in range(2)]
         assert [f.result(3).items for f in tasks] == [["same"], ["same"]]
     assert len(calls) == 1
+    assert not subject._inflight
+
+
+@pytest.mark.anyio
+async def test_cancelled_snapshot_leader_does_not_poison_waiter(settings, apk_file, monkeypatch):
+    first_entered = threading.Event()
+    waiter_entered = threading.Event()
+    calls = 0
+
+    class ObservedFuture(Future):
+        def result(self, *args, **kwargs):
+            waiter_entered.set()
+            return super().result(*args, **kwargs)
+
+    monkeypatch.setattr(module, "Future", ObservedFuture)
+    subject = DroidAscRunner(settings)
+
+    def execute(args):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            first_entered.set()
+            while True:
+                module._check_cancelled()
+                time.sleep(0.01)
+        return b"recovered\n"
+
+    monkeypatch.setattr(subject, "_execute", execute)
+    leader_scope = anyio.CancelScope()
+    result = []
+
+    async def leader():
+        with leader_scope:
+            await anyio.to_thread.run_sync(
+                partial(subject.get_manifest, apk_file, offset=0, limit=1)
+            )
+
+    async def waiter():
+        page = await anyio.to_thread.run_sync(
+            partial(subject.get_manifest, apk_file, offset=0, limit=1)
+        )
+        result.extend(page.items)
+
+    async with anyio.create_task_group() as group:
+        group.start_soon(leader)
+        while not first_entered.wait(0.01):
+            await anyio.sleep(0)
+        group.start_soon(waiter)
+        while not waiter_entered.wait(0.01):
+            await anyio.sleep(0)
+        leader_scope.cancel()
+
+    assert result == ["recovered"]
+    assert calls == 2
     assert not subject._inflight
 
 

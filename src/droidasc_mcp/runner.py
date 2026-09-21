@@ -11,12 +11,15 @@ import sys
 import threading
 import time
 from collections import OrderedDict
+from concurrent.futures import CancelledError as FutureCancelledError
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
+
+from anyio import from_thread
 
 from .config import Settings
 
@@ -63,7 +66,9 @@ class Snapshot:
         if used > budget:
             raise DroidAscError("Decoded snapshot exceeds memory budget; narrow the query")
         pointer_bytes = sys.getsizeof((None,)) - sys.getsizeof(())
-        for raw in io.BytesIO(data):
+        for index, raw in enumerate(io.BytesIO(data)):
+            if index % 256 == 0:
+                _check_cancelled()
             line = raw.rstrip(b"\r\n").decode("utf-8", errors="replace")
             used += sys.getsizeof(line) + pointer_bytes
             if used > budget:
@@ -107,8 +112,14 @@ class DroidAscRunner:
 
     @contextmanager
     def _acquire(self, lock):
-        if not lock.acquire(timeout=self.settings.timeout_seconds):
-            raise DroidAscError("Analysis queue timed out; retry later")
+        deadline = time.monotonic() + self.settings.timeout_seconds
+        while True:
+            _check_cancelled()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise DroidAscError("Analysis queue timed out; retry later")
+            if lock.acquire(timeout=min(0.05, remaining)):
+                break
         try:
             yield
         finally:
@@ -228,10 +239,21 @@ class DroidAscRunner:
                 self._inflight[key] = pending
         # Only identical queries wait for one another. No subprocess runs under the cache lock.
         if not leader:
-            try:
-                return pending.result(timeout=self.settings.timeout_seconds)
-            except FutureTimeoutError as exc:
-                raise DroidAscError("Snapshot wait timed out; retry later") from exc
+            deadline = time.monotonic() + self.settings.timeout_seconds
+            while True:
+                _check_cancelled()
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise DroidAscError("Snapshot wait timed out; retry later")
+                try:
+                    return pending.result(timeout=min(0.05, remaining))
+                except FutureCancelledError:
+                    with self._cache_lock:
+                        if self._inflight.get(key) is pending:
+                            self._inflight.pop(key)
+                    return self._get_snapshot(args)
+                except FutureTimeoutError:
+                    pass
         try:
             with self._acquire(self._slots):
                 data = self._execute(args)
@@ -262,11 +284,15 @@ class DroidAscRunner:
             pending.set_result(snapshot)
             return snapshot
         except BaseException as exc:
-            pending.set_exception(exc)
+            if isinstance(exc, Exception):
+                pending.set_exception(exc)
+            else:
+                pending.cancel()
             raise
         finally:
             with self._cache_lock:
-                self._inflight.pop(key, None)
+                if self._inflight.get(key) is pending:
+                    self._inflight.pop(key)
 
     def _page_bounds(self, offset: int, limit: int) -> tuple[int, int]:
         if offset < 0:
@@ -280,7 +306,7 @@ class DroidAscRunner:
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
         try:
-            process, job = _start_process(command, env)
+            process, job = _start_process(command, env, self.settings.max_worker_memory_bytes)
         except Exception as exc:
             raise DroidAscError("Could not start supervised Droid ASC worker") from exc
         exceeded = threading.Event()
@@ -324,6 +350,7 @@ class DroidAscRunner:
                 reader.start()
                 started.append(reader)
             while True:
+                _check_cancelled()
                 if exceeded.is_set():
                     raise DroidAscError("Droid ASC output exceeds configured stream limit")
                 if read_errors:
@@ -341,7 +368,10 @@ class DroidAscRunner:
             if read_errors:
                 raise DroidAscError("Droid ASC stream read failed") from read_errors[0]
             if process.returncode != 0:
-                detail = _clean_error(buffers[1].decode("utf-8", errors="replace"))
+                stderr = buffers[1].decode("utf-8", errors="replace")
+                if "DROIDASC_MCP_MEMORY_LIMIT_EXCEEDED" in stderr:
+                    raise DroidAscError("Droid ASC exceeded the configured worker memory limit")
+                detail = _clean_error(stderr)
                 raise DroidAscError(f"Droid ASC failed: {detail or process.returncode}")
             return bytes(buffers[0])
         finally:
@@ -382,17 +412,27 @@ def _clean_error(value: str | None) -> str:
     return text[-8000:]
 
 
-def _start_process(command, env):
+def _check_cancelled() -> None:
+    # Direct library callers are not necessarily running in an AnyIO worker thread.
+    with suppress(RuntimeError):
+        from_thread.check_cancelled()
+
+
+def _start_process(command, env, memory_limit_bytes=None):
     if os.name == "nt":
         from .windows_job import start_process
 
-        return start_process(command, env)
+        return start_process(command, env, memory_limit_bytes)
+    worker_env = env.copy()
+    if memory_limit_bytes is not None:
+        worker_env["DROIDASC_MCP_WORKER_MEMORY_BYTES"] = str(memory_limit_bytes)
+    bootstrap = str(Path(__file__).with_name("worker_bootstrap.py"))
     return subprocess.Popen(
-        command,
+        [command[0], bootstrap, *command[2:]],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=env,
+        env=worker_env,
         start_new_session=True,
     ), None
 

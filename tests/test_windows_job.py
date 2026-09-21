@@ -37,6 +37,7 @@ def fake_win32(monkeypatch):
         AssignProcessToJobObject=lambda *a: events.append("assign"),
         JobObjectExtendedLimitInformation=9,
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE=0x2000,
+        JOB_OBJECT_LIMIT_JOB_MEMORY=0x200,
     )
     monkeypatch.setitem(sys.modules, "win32api", api)
     monkeypatch.setitem(sys.modules, "win32job", jobs)
@@ -63,6 +64,17 @@ def test_job_limits_assignment_and_idempotent_close(fake_win32):
         "process.close",
         "job.close",
     ]
+
+
+def test_job_applies_aggregate_memory_limit(fake_win32):
+    _, _, events = fake_win32
+    job = windows_job.WindowsJob(128 * 1024 * 1024)
+    job.close()
+    assert events[0] == {
+        "BasicLimitInformation": {"LimitFlags": 0x2200},
+        "JobMemoryLimit": 128 * 1024 * 1024,
+    }
+    assert events[1] == "job.close"
 
 
 @pytest.mark.parametrize("stage", ["QueryInformationJobObject", "SetInformationJobObject"])
@@ -110,7 +122,11 @@ def test_failed_assignment_does_not_start_work(fake_win32, monkeypatch, tmp_path
 
 @pytest.mark.parametrize("gate", [b"", b"x", b"\x01"])
 def test_bootstrap_waits_for_assignment_handshake(tmp_path, gate):
-    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent)}
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(Path(__file__).parent),
+        "DROIDASC_MCP_START_GATE": "1",
+    }
     with subprocess.Popen(
         [sys.executable, worker_bootstrap.__file__, "process_fixture", "touch", str(tmp_path)],
         stdin=subprocess.PIPE,

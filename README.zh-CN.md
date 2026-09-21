@@ -29,14 +29,14 @@ Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.0/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.1.2/droidasc_mcp-0.1.2-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.0/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
@@ -103,14 +103,17 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 - 不提供任意命令执行工具，不调用 shell。
 - 路径经过真实路径解析后再检查，符号链接不能逃逸允许目录。
 - 默认单次任务超时 180 秒、最多并行 2 个任务、单页最多 1000 行。
+- `DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES` 默认 `1073741824`。Windows 对整个 Job
+  进程树限制提交内存；POSIX 在导入 ASC 前设置可被子进程继承的单进程 `RLIMIT_AS`。
 - stdout 在采集期间限制大小，stderr 上限 64 KiB；不再写入无上限的临时结果文件。
 - 页内容保守限制在 256 KiB 预算内；APK 信息和哈希也在受监管的独立进程中执行。
 - POSIX 下无论父进程是否已经退出，结束时都会清理进程组；排队和进程等待均有超时。
 - Windows 在运行 ASC 前将工作进程加入 Job Object；结束时一并清理子孙进程，不依赖父进程
   仍然存活。Job 设置失败则不启动分析。原生 CI 覆盖孤儿清理、输出超限及重复调用资源释放。
-- 客户端取消尚不能立即终止同步工具。
-- 未限制解析器自身内存，应使用操作系统或容器资源限制处理不可信样本。
-- 捕获缓冲区、正在构建的快照和活跃页面可与缓存同时存在；缓存预算不等于总 RSS 硬上限。
+- MCP 请求取消会传递到排队、共享快照等待和运行中的同步工具；服务端退出被取消任务前会清理
+  对应进程树，同一会话随后仍可继续使用。
+- 捕获缓冲区、正在构建的快照和活跃页面可与缓存同时存在；缓存预算不等于 MCP Host 总 RSS
+  硬上限。POSIX 的 worker 限制是每进程地址空间上限，不是进程树 RSS 合计上限。
 
 ASC 及其依赖仍会解析不可信二进制数据。分析恶意 APK 时，应在无网络的容器或一次性虚拟机
 中运行。本项目提供的是受控进程边界，不是完整恶意软件沙箱。
@@ -124,9 +127,11 @@ ASC 及其依赖仍会解析不可信二进制数据。分析恶意 APK 时，�
 uv sync --locked --extra dev
 uv run ruff check .
 uv run pytest --cov --cov-report=term-missing
+uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
+uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.1.2.tar.gz dist/droidasc_mcp-0.1.2-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.0.tar.gz dist/droidasc_mcp-0.2.0-py3-none-any.whl
 ```
 
 ## 许可证

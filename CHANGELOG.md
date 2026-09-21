@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- Propagate MCP request cancellation into queue waits, shared-snapshot waits, and active ASC
+  workers. Cancellation tears down the supervised process tree and the same session remains usable.
+- Add a configurable 1 GiB worker memory ceiling. Windows enforces it across the Job Object;
+  POSIX workers apply an inherited `RLIMIT_AS` before importing Droid ASC.
+- Add repeatable corpus and concurrent stability checks, plus native Linux/Windows stability CI.
+- Validate all six operations against four open-source APKs pulled read-only from an Android 16
+  device, covering large, five-DEX, Kotlin, Flutter/obfuscated, and native-library packages.
+
 ## 0.1.2
 
 - Add native Windows and Linux Python 3.10-3.13 acceptance, using an original source-built APK
