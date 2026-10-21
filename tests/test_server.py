@@ -19,6 +19,9 @@ async def test_server_advertises_expected_tools(settings: Settings):
     assert names == {
         "asc_ping",
         "asc_apk_info",
+        "asc_list_apk_entries",
+        "asc_read_apk_entry",
+        "asc_manifest_summary",
         "asc_get_manifest",
         "asc_list_classes",
         "asc_get_class_source",

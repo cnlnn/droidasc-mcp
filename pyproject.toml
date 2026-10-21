@@ -26,9 +26,12 @@ classifiers = [
     "Topic :: Software Development :: Disassemblers",
 ]
 dependencies = [
+    "axml>=0.0.2,<0.1",
     "droidasc>=0.1.2.post3,<0.2",
+    "lxml>=5,<7",
     "mcp>=2,<3",
     "psutil>=7,<8",
+    "pydantic>=2,<3",
     "pywin32==312; sys_platform == 'win32'",
 ]
 

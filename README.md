@@ -17,6 +17,9 @@ structured data instead of unbounded terminal output.
 | --- | --- |
 | `asc_ping` | Show adapter/engine versions and effective runtime limits |
 | `asc_apk_info` | Return size, SHA-256, manifest presence, and DEX entries |
+| `asc_list_apk_entries` | Page APK contents, resources, assets and native ABIs (unreleased) |
+| `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML (unreleased) |
+| `asc_manifest_summary` | Page structured components, filters and permission provenance (unreleased) |
 | `asc_get_manifest` | Decode `AndroidManifest.xml` with line pagination |
 | `asc_list_classes` | List class descriptors with prefix filtering and pagination |
 | `asc_get_class_source` | Decompile one class with line pagination |
@@ -29,7 +32,8 @@ structured data instead of unbounded terminal output.
 ## Install
 
 Python 3.10 or newer is required. CI checks Linux and native Windows runners on Python 3.10-3.13, including
-all six tools over stdio/HTTP against a source-built [acceptance APK](tests/fixtures/android/README.md)
+the released tools and candidate additions over stdio/HTTP against a source-built
+[acceptance APK](tests/fixtures/android/README.md)
 and package installation. macOS remains unverified.
 
 Install the version-pinned GitHub release on Linux:
@@ -97,12 +101,36 @@ Ask an MCP host to call:
 
 ```text
 asc_apk_info(apk_path="/samples/app.apk")
+asc_manifest_summary(apk_path="/samples/app.apk", limit=20)
+asc_list_apk_entries(apk_path="/samples/app.apk", kind="resource", limit=100)
+asc_read_apk_entry(apk_path="/samples/app.apk", entry_path="res/xml/config.xml")
 asc_list_classes(apk_path="/samples/app.apk", prefix="com.example", limit=100)
 asc_find_refs(apk_path="/samples/app.apk", kind="string", value="Authorization")
 asc_find_refs(apk_path="/samples/app.apk", kind="extends", value="android.app.Activity")
 asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnable")
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
+
+### APK contents and manifest triage (unreleased)
+
+The three archive tools bind every successful result to `apk_sha256`. Match hashes before
+correlating resources, components and code. Inventory supports a category and a literal,
+case-sensitive path prefix; its CRC values are ZIP metadata, not integrity verification.
+Native rows report archive paths and ABI directories, not ELF analysis.
+
+`asc_read_apk_entry` streams a bounded prefix without filesystem extraction. `max_bytes`
+defaults to 16 KiB, with a 128 KiB maximum before UTF-8/base64 encoding. XML decoding reads
+only complete inputs up to 4 MiB. `decoded`, `decoding_status`, `decoding_warnings`,
+`truncated`, `content_complete` and `crc_verified` distinguish successful decoding, decoder
+warnings, output truncation and incomplete raw reads. Resource-table values remain unresolved.
+
+`asc_manifest_summary` preserves raw namespaced declarations and component order, intent
+filters, metadata, provider path/URI-grant rules, and permission inheritance sources. Explicit
+empty permissions clear inherited requirements; an alias without its own permission requires
+none, rather than inheriting its target/application permission. Absent exported defaults and
+resource-dependent values remain unresolved. These are static declarations, not proof of
+runtime accessibility. Follow `next_offset`; reduce page size on an explicit `response_limit`.
+See [archive workflow boundaries and acceptance](docs/ARCHIVE_WORKFLOW.md).
 
 Results include `total`, `offset`, `limit`, `truncated`, and `next_offset`. Use `next_offset` for the
 next request (`null` means done): the response budget can shorten a page. A single line

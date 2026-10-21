@@ -14,6 +14,9 @@
 | --- | --- |
 | `asc_ping` | 查看适配器、ASC 版本和当前运行限制 |
 | `asc_apk_info` | 返回文件大小、SHA-256、Manifest 和 DEX 条目 |
+| `asc_list_apk_entries` | 分页列出 APK 内容、资源、assets 和 native ABI（未发布） |
+| `asc_read_apk_entry` | 有界读取 UTF-8/base64 内容，支持二进制 XML 解码（未发布） |
+| `asc_manifest_summary` | 分页返回组件、Intent Filter 和权限来源（未发布） |
 | `asc_get_manifest` | 解码并分页读取 `AndroidManifest.xml` |
 | `asc_list_classes` | 按包名前缀分页列出类 |
 | `asc_get_class_source` | 定位并反编译单个类 |
@@ -85,12 +88,32 @@ DROIDASC_MCP_ALLOWED_ROOTS=/APK所在目录 \
 
 ```text
 asc_apk_info(apk_path="/samples/app.apk")
+asc_manifest_summary(apk_path="/samples/app.apk", limit=20)
+asc_list_apk_entries(apk_path="/samples/app.apk", kind="resource", limit=100)
+asc_read_apk_entry(apk_path="/samples/app.apk", entry_path="res/xml/config.xml")
 asc_list_classes(apk_path="/samples/app.apk", prefix="com.example", limit=100)
 asc_find_refs(apk_path="/samples/app.apk", kind="string", value="Authorization")
 asc_find_refs(apk_path="/samples/app.apk", kind="extends", value="android.app.Activity")
 asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnable")
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
+
+### APK 内容与组件研判（未发布）
+
+三个归档工具均返回 `apk_sha256`，跨资源、组件和代码关联时先核对哈希。
+清单支持分类和区分大小写的字面路径前缀；其中 CRC 是 ZIP 声明值，不代表校验完成。
+native 条目仅提供路径和 ABI，不等同于 ELF 分析。
+
+条目读取默认返回 16 KiB，最多 128 KiB，二进制内容使用 base64；完整 XML 输入上限为 4 MiB。
+`decoded`、`decoding_status`、`decoding_warnings`、`truncated`、`content_complete` 和
+`crc_verified` 分别说明解码、告警、输出截断、内容完整性和 CRC 校验情况，不在文件系统解包。
+资源 ID 尚不解析。正常的新 Android 属性也可能触发解码库告警，告警会保留，不直接判为加固。
+
+结构化 Manifest 保留原始命名空间属性、组件顺序、Intent Filter、metadata、Provider 路径规则和
+URI 授权规则，并标明权限来源。显式空权限清除继承要求；alias 未声明权限时不继承目标 Activity
+或 application 权限。缺省 exported 和依赖资源的值保持未解析，不据此判定运行时可达或存在漏洞。
+通过 `next_offset` 翻页；出现 `response_limit` 时降低页大小。
+详见 [能力边界与验收](docs/ARCHIVE_WORKFLOW.md)。
 
 分页结果包含 `total`、`offset`、`limit`、`truncated` 和 `next_offset`。下一页直接使用
 `next_offset`，为 `null` 时结束。响应预算可能缩短页面，不能直接加请求的 `limit`。

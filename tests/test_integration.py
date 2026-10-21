@@ -41,6 +41,122 @@ def process_runner(settings, monkeypatch):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_archive_workflow_over_transport(transport, tmp_path, request, monkeypatch):
+    path = tmp_path / "archive workflow.apk"
+    manifest = b"""<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        package="org.workflow"><application android:permission="org.workflow.GUARD">
+        <activity android:name=".Entry" android:exported="true"/>
+        <activity-alias android:name=".Alias" android:targetActivity=".Entry"/>
+        </application></manifest>"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("AndroidManifest.xml", manifest)
+        archive.writestr("assets/config.json", b'{"endpoint":"https://example.test"}')
+        archive.writestr("lib/arm64-v8a/libtest.so", b"\x7fELF")
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    expected_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+    async with Client(endpoint) as client:
+
+        async def query(tool, **args):
+            reply = await client.call_tool(tool, dict(apk_path=str(path), **args))
+            assert not reply.is_error, reply
+            assert reply.structured_content["apk_sha256"] == expected_hash
+            assert reply.structured_content["status"] == "ok"
+            return reply.structured_content
+
+        entries = await query("asc_list_apk_entries", limit=1)
+        assert entries["total"] == 3 and entries["next_offset"] == 1
+        native = await query("asc_list_apk_entries", kind="native")
+        assert native["items"][0]["abi"] == "arm64-v8a"
+        content = await query("asc_read_apk_entry", entry_path="assets/config.json")
+        assert content["content"] == '{"endpoint":"https://example.test"}'
+        assert content["crc_verified"] and not content["truncated"]
+        summary = await query("asc_manifest_summary", limit=1)
+        assert summary["package_name"] == "org.workflow" and summary["total"] == 2
+        name = summary["items"][0]["name"]
+        assert name == "org.workflow.Entry"
+        assert summary["items"][0]["effective_permission"]["value"] == "org.workflow.GUARD"
+        alias = await query("asc_manifest_summary", offset=1, limit=1)
+        assert alias["items"][0]["target_activity"] == name
+        assert alias["items"][0]["effective_permission"]["value"] is None
+        missing = await client.call_tool(
+            "asc_read_apk_entry", dict(apk_path=str(path), entry_path="missing")
+        )
+        assert missing.structured_content["code"] == "entry_not_found"
+        invalid = await client.call_tool(
+            "asc_read_apk_entry",
+            dict(apk_path=str(path), entry_path="assets/config.json", max_bytes=131073),
+        )
+        assert invalid.is_error
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_binary_manifest_archive_workflow(transport, tmp_path, request, monkeypatch):
+    source = os.getenv("ASC_TEST_APK")
+    if not source:
+        pytest.skip("Set ASC_TEST_APK for compiled binary manifest acceptance")
+    apk = str(shutil.copy(source, tmp_path / "compiled binary.apk"))
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    with zipfile.ZipFile(apk) as archive:
+        raw_manifest = archive.read("AndroidManifest.xml")
+        assert raw_manifest[:4] == b"\x03\x00\x08\x00"
+        expected = {
+            i.filename: (i.file_size, i.compress_size, f"{i.CRC:08x}")
+            for i in archive.infolist()
+            if not i.is_dir()
+        }
+    async with Client(endpoint) as client:
+        result = await client.call_tool("asc_list_apk_entries", dict(apk_path=apk, limit=1000))
+        assert not result.is_error
+        entries = result.structured_content
+        assert not entries["has_more"]
+        assert {
+            r["path"]: (r["size_bytes"], r["compressed_size_bytes"], r["crc32"])
+            for r in entries["items"]
+        } == expected
+        result = await client.call_tool(
+            "asc_read_apk_entry",
+            dict(apk_path=apk, entry_path="AndroidManifest.xml", max_bytes=65536),
+        )
+        assert not result.is_error
+        content = result.structured_content
+        assert content.get("xml_format") == "android_binary_xml" and content["decoded"], content
+        assert content["crc_verified"] and content["content_complete"]
+        xml = ET.fromstring(content["content"])
+        result = await client.call_tool("asc_manifest_summary", dict(apk_path=apk))
+        assert not result.is_error
+        summary = result.structured_content
+        assert summary["status"] == "ok", summary
+        assert summary["apk_sha256"] == hashlib.sha256(Path(apk).read_bytes()).hexdigest()
+        assert summary["package_name"] == xml.get("package") == "org.example.droidascfixture"
+        main = next(r for r in summary["items"] if r["name"].endswith(".MainActivity"))
+        assert main["exported"] is True
+        assert (
+            main["intent_filters"][0]["actions"][0][
+                "{http://schemas.android.com/apk/res/android}name"
+            ]
+            == "android.intent.action.MAIN"
+        )
+        assert summary["application"] == xml.find("application").attrib
+        raw = await client.call_tool("asc_get_manifest", dict(apk_path=apk, limit=1000))
+        assert not raw.is_error
+        assert "MainActivity" in str(raw.structured_content)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_kotlin_r8_methods(transport, tmp_path, request, monkeypatch):
     apk, mapping = os.getenv("ASC_TEST_COMPLEX_APK"), os.getenv("ASC_TEST_COMPLEX_MAPPING")
     if not apk or not mapping:
@@ -809,7 +925,7 @@ async def test_transport_roundtrip(transport, request, apk_file):
     )
     async with Client(endpoint) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 10
+        assert len(tools.tools) == 13
         result = await client.call_tool("asc_ping", {})
         assert not result.is_error
         result = await client.call_tool("asc_apk_info", {"apk_path": str(apk_file)})
@@ -879,7 +995,7 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
             return result.structured_content
 
         assert (await call("asc_ping", {}))["status"] == "ok"
-        assert len((await client.list_tools()).tools) == 10
+        assert len((await client.list_tools()).tools) == 13
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
 
             async def refs_call(**kwargs):

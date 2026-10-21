@@ -184,6 +184,15 @@ and hashes in both the immutable bundle and the public-CLI per-DEX temporary arc
 Complete local/native/package gates must be read for the exact candidate commit, not
 inferred from these narrower comparisons.
 
+The performance implementation at `6e057e9` subsequently passed local strict acceptance
+with **274 tests, zero skips** in 364.58 seconds. Clean sdist and installed-wheel runs
+passed the same 274 tests in 385.44 and 392.32 seconds. The
+[complete Windows/Linux CI run](https://github.com/cnlnn/droidasc-mcp/actions/runs/39632380156)
+passed all 16 jobs. Downloaded JUnit XML confirms 274 tests and zero failures/errors/skips
+in each of the eight Python 3.10-3.13 OS combinations. Both native Rust builds, stability
+jobs and clean-distribution jobs passed. This is the performance baseline, not acceptance
+of subsequent archive workflow additions.
+
 Local evidence: `artifacts/reverse-acceptance/taobao-interactive-before-stored.json`,
 `taobao-interactive-after-stored.json`, `taobao-interactive-optimized-final.json` and
 `artifacts/validation/reference-memo-parity.json`. Private APKs and reports remain ignored.

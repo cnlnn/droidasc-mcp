@@ -114,6 +114,27 @@ class DroidAscRunner:
             raise DroidAscError("APK metadata exceeds response budget")
         return json.loads(data)
 
+    def query_archive(self, apk: Path, query: dict) -> dict:
+        if query.get("operation") in {"list_entries", "manifest_summary"}:
+            offset, limit = self._page_bounds(query.get("offset", 0), query.get("limit", 100))
+            query = {**query, "offset": offset, "limit": limit}
+        request = {
+            "apk_path": str(apk),
+            "allowed_roots": [str(path) for path in self.settings.allowed_roots],
+            "max_input_bytes": self.settings.max_apk_bytes,
+            "max_output_bytes": self.settings.max_output_bytes,
+            "max_page_size": self.settings.max_page_size,
+            "query": query,
+        }
+        with tempfile.TemporaryDirectory(prefix="droidasc-apk-") as root:
+            request_path = Path(root) / "request.json"
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            with self._acquire(self._slots):
+                data = self._execute([str(request_path)], module_name="droidasc_mcp.archive_worker")
+        if len(data) > 256 * 1024:
+            raise DroidAscError("APK response exceeds response budget")
+        return json.loads(data)
+
     def analyze_dex(self, paths: list[Path], query: dict) -> dict:
         request = self._dex_request(paths, query)
         # The parent owns temporary storage so cancellation/worker kills also clean it up.

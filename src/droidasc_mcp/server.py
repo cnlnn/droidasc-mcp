@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 from contextlib import asynccontextmanager
-from typing import Literal
+from typing import Annotated, Literal
 
 import anyio
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from .config import Settings
 from .runner import DroidAscRunner
@@ -45,6 +46,80 @@ def build_server(
     def asc_apk_info(apk_path: str, include_sha256: bool = True) -> dict[str, object]:
         """Inspect APK size, SHA-256, manifest presence, and top-level DEX entries."""
         return service.apk_info(apk_path, include_sha256=include_sha256)
+
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_list_apk_entries(
+        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        kind: Annotated[
+            Literal["manifest", "resource", "asset", "native", "dex", "metadata", "other"] | None,
+            Field(description="Entry category; omit for all file entries"),
+        ] = None,
+        prefix: Annotated[
+            str | None, Field(description="Case-sensitive literal ZIP path prefix")
+        ] = None,
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based offset in sorted filtered entries")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Page size, capped by server limits")
+        ] = 100,
+    ) -> dict[str, object]:
+        """List APK contents, sizes, CRC metadata and native ABIs without extracting files.
+
+        SHA-256 binds this page to the APK. CRC values here are declarations, not verification.
+        Native rows are an archive inventory, not ELF analysis. Follow next_offset for more.
+        """
+        return service.query_archive(
+            apk_path, operation="list_entries", kind=kind, prefix=prefix, offset=offset, limit=limit
+        )
+
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_read_apk_entry(
+        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        entry_path: Annotated[
+            str, Field(description="Exact relative ZIP entry path from inventory")
+        ],
+        max_bytes: Annotated[
+            int,
+            Field(ge=1, le=131072, description="Maximum returned content bytes before encoding"),
+        ] = 16384,
+        decode_xml: Annotated[
+            bool,
+            Field(description="Decode complete XML entries up to 4 MiB; false reads raw bytes"),
+        ] = True,
+    ) -> dict[str, object]:
+        """Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.
+
+        Binary XML decoding and returned-content truncation are separate statuses. Partial raw
+        reads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.
+        """
+        return service.query_archive(
+            apk_path,
+            operation="read_entry",
+            entry_path=entry_path,
+            max_bytes=max_bytes,
+            decode_xml=decode_xml,
+        )
+
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_manifest_summary(
+        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based component offset in manifest order")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Component page size, server-capped")
+        ] = 100,
+    ) -> dict[str, object]:
+        """Read structured Manifest components, filters, metadata and permission inheritance.
+
+        Raw declarations are preserved separately. Unspecified exported defaults and resource
+        values remain unresolved. Provider path rules and URI grants need separate review;
+        permission inheritance is static triage, not a runtime accessibility or vulnerability test.
+        """
+        return service.query_archive(
+            apk_path, operation="manifest_summary", offset=offset, limit=limit
+        )
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_get_manifest(

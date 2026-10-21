@@ -389,9 +389,12 @@ name = "droidasc-mcp"
 version = "0.2.2"
 source = { editable = "." }
 dependencies = [
+    { name = "axml" },
     { name = "droidasc" },
+    { name = "lxml" },
     { name = "mcp" },
     { name = "psutil" },
+    { name = "pydantic" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 
@@ -404,9 +407,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "axml", specifier = ">=0.0.2,<0.1" },
     { name = "droidasc", specifier = ">=0.1.2.post3,<0.2" },
+    { name = "lxml", specifier = ">=5,<7" },
     { name = "mcp", specifier = ">=2,<3" },
     { name = "psutil", specifier = ">=7,<8" },
+    { name = "pydantic", specifier = ">=2,<3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==312" },

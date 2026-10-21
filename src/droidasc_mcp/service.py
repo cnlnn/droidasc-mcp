@@ -100,6 +100,10 @@ class DroidAscService:
         apk = self.settings.validate_apk(apk_path)
         return self.runner.apk_info(apk, include_sha256)
 
+    def query_archive(self, apk_path: str, **query) -> dict[str, object]:
+        apk = self.settings.validate_apk(apk_path)
+        return self.runner.query_archive(apk, query)
+
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
         paths = self.settings.validate_dex_paths(dex_paths)
         return self.runner.analyze_dex(paths, _normalize_dex_query(query))

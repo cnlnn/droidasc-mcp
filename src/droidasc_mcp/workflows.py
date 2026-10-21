@@ -5,6 +5,10 @@ import json
 INSTRUCTIONS = """Read-only Android static analysis. Start with asc_ping for effective roots,
 configured backends and limits, then asc_apk_info for APK identity. Use asc_list_classes,
 asc_get_manifest and targeted asc_get_class_source rather than decompiling everything.
+asc_manifest_summary preserves component declarations and permission inheritance; follow its
+component pages. asc_list_apk_entries inventories resources/assets/native ABIs; asc_read_apk_entry
+returns bounded content with an APK hash. Match hashes across operations before correlating
+resources with code. XML decoding, truncation and CRC verification have separate status fields.
 asc_find_refs is name/regex-level CLI evidence, not exact overload resolution. For supplied
 DEX files, open an immutable asc_open_dex_session, reuse its session_id and close it when done.
 Use list_methods for a known class, or search_members (kind=method/field, literal value) to
