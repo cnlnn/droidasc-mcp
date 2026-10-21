@@ -211,6 +211,7 @@ def build_server(
             "get_method_source",
             "find_method_refs",
             "get_method_calls",
+            "get_call_graph",
             "find_field_refs",
             "find_type_refs",
             "build_xref_index",
@@ -232,6 +233,29 @@ def build_server(
         threads: int = 8,
         offset: int = 0,
         limit: int = 200,
+        direction: Annotated[
+            Literal["incoming", "outgoing", "both"],
+            Field(description="Graph direction; edges retain caller-to-callee orientation."),
+        ] = "both",
+        depth: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=5,
+                description="Graph hop bound; first use builds the full static index.",
+            ),
+        ] = 2,
+        max_nodes: Annotated[
+            int, Field(ge=1, le=500, description="Call-graph node budget including the root.")
+        ] = 200,
+        max_edges: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=1000,
+                description="Graph call-site budget; repeated calls remain separate edges.",
+            ),
+        ] = 500,
     ) -> dict[str, object]:
         """Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.
 
@@ -246,6 +270,8 @@ def build_server(
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         find_type_refs reports exact type operands, declarations and annotation types/values.
         build_xref_index builds a bounded complete static index; one-shot indexes are temporary.
+        get_call_graph builds/reuses the index for bounded multi-hop static exploration.
+        Graph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.
         search_members scans declarations without building an index; kind=method/field.
         value is a case-sensitive literal substring of the full descriptor, not regex.
         class_name restricts exact owner. search_strings scans DEX string-pool values
@@ -271,6 +297,10 @@ def build_server(
             threads=threads,
             offset=offset,
             limit=limit,
+            direction=direction,
+            depth=depth,
+            max_nodes=max_nodes,
+            max_edges=max_edges,
         )
 
     @mcp.tool(annotations=SESSION_STATE)
@@ -300,6 +330,7 @@ def build_server(
             "get_method_source",
             "find_method_refs",
             "get_method_calls",
+            "get_call_graph",
             "find_field_refs",
             "find_type_refs",
             "build_xref_index",
@@ -321,6 +352,29 @@ def build_server(
         threads: int = 8,
         offset: int = 0,
         limit: int = 200,
+        direction: Annotated[
+            Literal["incoming", "outgoing", "both"],
+            Field(description="Graph direction; edges retain caller-to-callee orientation."),
+        ] = "both",
+        depth: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=5,
+                description="Hop bound; first use builds the full index, later queries reuse it.",
+            ),
+        ] = 2,
+        max_nodes: Annotated[
+            int, Field(ge=1, le=500, description="Call-graph node budget including the root.")
+        ] = 200,
+        max_edges: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=1000,
+                description="Graph call-site budget; repeated calls remain separate edges.",
+            ),
+        ] = 500,
     ) -> dict[str, object]:
         """Query an immutable DEX session in a supervised worker, with original provenance.
 
@@ -331,6 +385,8 @@ def build_server(
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         build_xref_index persists an atomic static index for this session's lifetime.
+        get_call_graph builds/reuses it for bounded multi-hop static exploration.
+        Inspect truncation_reasons and unresolved_sites; graph edges are declared operands.
         An optional configured durable cache restores matching indexes across server restarts.
         find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.
         type_descriptor is exact (including arrays); type_relation filters before pagination.
@@ -359,6 +415,10 @@ def build_server(
             threads=threads,
             offset=offset,
             limit=limit,
+            direction=direction,
+            depth=depth,
+            max_nodes=max_nodes,
+            max_edges=max_edges,
         )
 
     return mcp

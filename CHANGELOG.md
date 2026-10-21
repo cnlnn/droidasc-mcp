@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add index-backed multi-hop static call graphs with incoming/outgoing/both traversal,
+  bounded depth/nodes/call sites/output bytes, explicit expansion boundaries, external roots,
+  original DEX offsets and unresolved dynamic diagnostics. Exercise public multi-DEX cycles,
+  self-recursion, overloads and invoke-custom/polymorphic fixtures over both MCP transports.
 - Add an opt-in durable xref cache across sessions/server restarts, keyed by input/schema/backend
   hashes, with checksum verification, a separate byte/entry budget, TTL/LRU eviction, OS process
   locks and atomic publication. Keep default session cleanup and fresh-worker supervision.

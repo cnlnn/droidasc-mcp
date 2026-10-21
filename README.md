@@ -294,6 +294,23 @@ responses fail explicitly. The API currently takes DEX inputs/sessions, not an A
 
 ### Indexed investigation (unreleased)
 
+`operation="get_call_graph"` explores an exact `method_descriptor` with
+`direction="incoming"|"outgoing"|"both"` (default both), `depth=1..5` (default 2),
+`max_nodes=1..500` (default 200) and `max_edges=1..1000` (default 500).
+It builds/reuses the full static index: first use on a large application can take minutes;
+this is not a cold-query speedup. Use sessions to retain that work.
+Nodes retain minimum hop distance and definition DEX; edges retain **individual call sites**
+including repeated calls, original opcode, offset and target provenance. Cycles and recursive
+calls terminate without duplicate call sites. External method operands can be roots too.
+Graph exploration has a 128 KiB content budget, separate from ordinary pagination.
+`truncation_reasons` distinguishes depth, node, edge and byte boundaries;
+`traversal_complete_within_depth` describes only the requested static neighborhood.
+Expand boundary descriptors as new roots or raise budgets to investigate further;
+node `expansion_status` identifies expanded, pending and depth/budget-boundary methods.
+`offset` must be zero and ordinary `limit` does not control graphs. Diagnostics count dynamic
+sites only in returned nodes (at most 20 examples), including unresolved invoke-custom targets;
+these do not become fabricated call edges. Runtime dispatch remains unresolved.
+
 `build_xref_index` scans all supplied DEX files once and atomically publishes a bounded SQLite
 index. Subsequent exact method/field references need no JVM. `find_type_refs` builds/reuses it
 and separates `type_relation=instruction|declaration|annotation|all`, including nested annotation

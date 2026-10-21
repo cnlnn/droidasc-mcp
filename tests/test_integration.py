@@ -333,6 +333,54 @@ async def test_reference_memo_is_scoped_to_dex_and_member_kind(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_bounded_call_graph_transport(
+    transport, tmp_path, graph_dex_files, request, monkeypatch
+):
+    from test_call_graph import ORACLE, ROOT, edge_set
+
+    paths = [str(shutil.copy(p, tmp_path)) for p in graph_dex_files]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+        tools = (await client.list_tools()).tools
+        schema = next(t.input_schema for t in tools if t.name == "asc_query_dex_session")
+        assert "get_call_graph" in schema["properties"]["operation"]["enum"]
+        assert schema["properties"]["max_nodes"]["maximum"] == 500
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        opened = await call("asc_open_dex_session", dex_paths=paths)
+        key = opened["session_id"]
+        args = {"operation": "get_call_graph", "method_descriptor": ROOT, "depth": 5}
+        result = await call("asc_query_dex_session", session_id=key, **args)
+        assert result["status"] == "ok", result
+        assert edge_set(result) == ORACLE and not result["truncated"]
+        assert result["input_id"] == opened["input_id"]
+        assert result["sources"] == opened["sources"]
+        again = await call("asc_query_dex_session", session_id=key, **args)
+        assert again["index"]["reused"] and result["edges"] == again["edges"]
+        bounded = await call("asc_query_dex_session", session_id=key, max_edges=1, **args)
+        assert bounded["edge_count"] == 1
+        assert bounded["truncation_reasons"] == ["max_edges"]
+        once = await call("asc_analyze_dex", dex_paths=paths, **args)
+        assert once["edges"] == result["edges"] and once["nodes"] == result["nodes"]
+        bad = await client.call_tool(
+            "asc_query_dex_session", {"session_id": key, **args, "depth": 6}
+        )
+        assert bad.is_error
+        await call("asc_close_dex_session", session_id=key)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_structured_method_references(
     transport, tmp_path, smali_dex_files, request, monkeypatch
 ):

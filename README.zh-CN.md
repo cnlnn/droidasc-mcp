@@ -243,6 +243,17 @@ JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，
 
 ### 索引与目标发现（未发布）
 
+`operation="get_call_graph"` 根据完整 `method_descriptor` 探索多跳静态调用图。
+`direction=incoming|outgoing|both`，默认双向；`depth=1..5`，默认 2；
+`max_nodes=1..500`，默认 200；`max_edges=1..1000`，默认 500。
+首次调用会构建完整索引，大型应用可能需要数分钟，不代表冷查询提速；会话内后续调用复用索引。
+节点保留最短跳数及定义 DEX；边保留每个独立调用点，重复调用、opcode、偏移及目标来源均保留。
+循环和递归不会无限展开，外部方法操作数也可以作为根节点。
+图内容另有 128 KiB 预算，`truncation_reasons` 分别报告深度、节点、边及输出字节边界。
+`traversal_complete_within_depth` 只描述指定深度内的静态邻域。
+可提高预算或以边界方法为新根继续探索；`offset` 必须为零，普通 `limit` 不控制图大小。
+动态调用诊断仅统计返回节点，最多附 20 个示例；`invoke-custom` 不伪造目标边，虚调用运行时分派仍未解析。
+
 `build_xref_index` 完整扫描所提供 DEX，成功后原子发布 SQLite 索引。之后精确方法/字段引用查询
 无需再次启动 JVM。`find_type_refs` 自动建库或复用，`type_relation` 可选 `instruction`、
 `declaration`、`annotation`、`all`，覆盖声明和嵌套注解类型值；数组按完整描述符匹配，不展开元素类型。

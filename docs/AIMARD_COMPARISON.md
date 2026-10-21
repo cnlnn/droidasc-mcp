@@ -164,7 +164,9 @@ in the same run and reproduced both extra callers. Local evidence is
 `artifacts/reverse-acceptance/check_competitor_regressions.json`; the corresponding
 `check_competitor_regressions.py` harness uses only our public fixtures. This does
 not establish that our one-hop tools implement the competitor's multi-hop API;
-bounded graph exploration remains a separate feature gap.
+bounded graph exploration now has a candidate implementation in
+[call_graph.py](../src/droidasc_mcp/call_graph.py), exercised against public
+multi-DEX Smali call-site fixtures and real stdio/HTTP transport tests.
 
 | Area | What the pinned implementation actually does | Our status / next action |
 | --- | --- | --- |
@@ -173,7 +175,7 @@ bounded graph exploration remains a separate feature gap.
 | Query reuse | Resident workers cache parsed DEX and complete reference result sets by path/size/mtime; the reference cache has an eight-key LRU. | Candidate reuses exact query pages by immutable input/backend identity, capped at 32 pages / 4 MiB and charged to the existing index reservation. Different pages may rescan; isolation and byte bounds are retained, but warm queries remain slower than its resident cache. |
 | APK contents | Sorted entry inventory, asset/resource reads, binary XML decoding and native-library ABI inventory. | Candidate adds bounded inventory/entry reads, native ABI paths, binary XML decoding, SHA-256 and distinct decoding/truncation/CRC status. Real stdio/HTTP and independent large-APK ZIP/aapt2 checks are documented in ARCHIVE_WORKFLOW.md. Resource-table resolution and ELF analysis remain outside this slice. |
 | Manifest analysis | Package/SDK/component structure, inherited application permission, and separate effective provider read/write permissions. | Candidate adds structured declarations, filters, metadata, provider read/write/path/URI-grant rules and permission provenance. Unlike the pinned implementation's general application fallback, an alias with no permission reports no requirement. Absent exported/resource-dependent values remain unresolved. Large-APK component kind/name order matches aapt2; this is not runtime exposure validation. |
-| Calls and hierarchy | Source implements full method prototype selection, overload rejection, cached adjacency and depth 1-3 exploration, but real call-graph execution failed as documented above. Direct interfaces/subclasses and superclass chain are also implemented. | Our exact one-hop edges are more explicit about evidence, but are not yet a multi-hop investigation operation. Reuse our index for a bounded, provenance-preserving graph. |
+| Calls and hierarchy | Source implements full method prototype selection, overload rejection, cached adjacency and depth 1-3 exploration, but real call-graph execution failed as documented above. Direct interfaces/subclasses and superclass chain are also implemented. | Candidate `get_call_graph` reuses our index: incoming/outgoing/both, depth 1-5, independent node/edge/byte caps, individual call-site provenance, external roots and dynamic diagnostics. First use still pays full-index cost; no general speed claim. |
 | Signing | Androguard signing-scheme presence and certificate metadata/fingerprints. | Useful missing triage metadata. Scheme presence must not be advertised as cryptographic verification. |
 | Formats | APK/raw DEX; directly embedded DEX in JAR/AAB/APKS/XAPK/ZIP; JVM `.class` inventory, including embedded JARs such as AAR `classes.jar`. | Our raw DEX and APK paths should evolve toward capability-based containers without falsely promising split-APK reconstruction or JVM decompilation. |
 | Version comparison | Class inventory added/removed sets and common count. | Useful, but not a code/behavior diff. A bounded inventory comparison can precede later method-body or manifest comparisons. |
@@ -246,6 +248,11 @@ without sacrificing its evidence gates while adding these bounded slices.
 The inventory/content and structured-manifest slices now have candidate implementations
 and independent acceptance in [ARCHIVE_WORKFLOW.md](ARCHIVE_WORKFLOW.md); the rows below
 retain their original criteria, not a claim that all later slices are complete.
+The indexed graph slice also has a candidate implementation and reproducible public
+fixtures in [test_call_graph.py](../tests/test_call_graph.py), including cycles,
+self-recursion, overloads, external roots, invoke-custom/polymorphic diagnostics,
+exact-budget completion and bounded responses. Cross-platform/package gates remain
+the acceptance authority for each commit, not the presence of an implementation.
 
 | Priority | Slice | Acceptance that establishes a useful improvement |
 | --- | --- | --- |

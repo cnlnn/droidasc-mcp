@@ -13,7 +13,7 @@ from pathlib import Path
 from .method_backend import java_command
 from .runner import DroidAscError
 
-INDEX_OPERATIONS = {"build_xref_index", "find_type_refs"}
+INDEX_OPERATIONS = {"build_xref_index", "find_type_refs", "get_call_graph"}
 DISCOVERY_OPERATIONS = {"search_members", "search_strings"}
 REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs"}
 SCHEMA = "3"
@@ -238,6 +238,10 @@ def _query(db, query, settings):
             "edge_counts": dict(db.execute("SELECT kind,count(*) FROM edges GROUP BY kind")),
             "definition_count": db.execute("SELECT count(*) FROM definitions").fetchone()[0],
         }
+    if operation == "get_call_graph":
+        from .call_graph import query_call_graph
+
+        return {**base, **query_call_graph(db, query)}
     if operation == "search_members":
         clauses = ["d.kind=?", "instr(s.name,?)>0"]
         params = [query["kind"], query.get("value") or ""]

@@ -18,6 +18,10 @@ reference pages reuse a bounded session cache.
 Use the returned full descriptors unchanged; never guess an overload. Exact references
 use find_method_refs/get_method_calls/find_field_refs. find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;
+get_call_graph builds/reuses that full index for incoming/outgoing/both multi-hop exploration.
+It preserves individual call sites and reports depth/node/edge/byte truncation explicitly.
+Inspect returned nodes' unresolved dynamic sites; expand a boundary method as a new root or
+raise graph budgets within their limits. Graph limits are separate from ordinary page limits.
 its working copy lasts until that session closes/expires or the server stops. An explicitly
 configured durable index cache can restore matching indexes across sessions and restarts;
 asc_ping reports its budget and retention, and index.durable_cache reports reuse status.

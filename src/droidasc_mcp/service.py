@@ -69,6 +69,7 @@ class DroidAscService:
                     "get_method_source",
                     "find_method_refs",
                     "get_method_calls",
+                    "get_call_graph",
                     "find_field_refs",
                     "find_type_refs",
                     "build_xref_index",
@@ -84,7 +85,7 @@ class DroidAscService:
                 "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 "max_disk_bytes": self.settings.max_dex_session_bytes,
                 "reuse": "validated_dex_bundle",
-                "optional_index": "explicit_build_or_first_type_search",
+                "optional_index": "explicit_build_or_first_type_or_graph_search",
                 "index_persistence": "session_lifetime",
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
                 "durable_index_cache": {
@@ -207,6 +208,21 @@ class DroidAscService:
 
 
 def _normalize_dex_query(query):
+    if query.get("operation") == "get_call_graph":
+        for key, default, maximum in (
+            ("depth", 2, 5),
+            ("max_nodes", 200, 500),
+            ("max_edges", 500, 1000),
+        ):
+            value = query.setdefault(key, default)
+            if type(value) is not int or not 1 <= value <= maximum:
+                raise ValueError(f"{key} must be an integer between 1 and {maximum}")
+        if query.setdefault("direction", "both") not in {"incoming", "outgoing", "both"}:
+            raise ValueError("direction must be incoming, outgoing, or both")
+        if query.get("offset", 0) != 0:
+            raise ValueError("get_call_graph uses graph budgets rather than offset pagination")
+        if query.get("fuzzy_class"):
+            raise ValueError("get_call_graph requires an exact method descriptor")
     if query.get("operation") == "search_strings":
         if not query.get("value"):
             raise ValueError("search_strings requires a nonempty literal value")
@@ -245,7 +261,12 @@ def _normalize_dex_query(query):
         raise ValueError("field_descriptor and field_access require find_field_refs")
     if query.get("field_access", "all") not in {"all", "read", "write"}:
         raise ValueError("field_access must be all, read, or write")
-    if query.get("operation") in {"get_method_source", "find_method_refs", "get_method_calls"}:
+    if query.get("operation") in {
+        "get_method_source",
+        "find_method_refs",
+        "get_method_calls",
+        "get_call_graph",
+    }:
         descriptor = query.get("method_descriptor")
         owner_type = r"L[^;\[\]]+;"
         value_type = rf"\[*(?:[ZBCSIJFD]|{owner_type})"
