@@ -12,7 +12,14 @@ import anyio
 import pytest
 
 from droidasc_mcp import runner as module
+from droidasc_mcp import windows_job
 from droidasc_mcp.runner import DroidAscError, DroidAscRunner
+
+
+@pytest.fixture
+def synthetic_pipe_reader(monkeypatch):
+    # BytesIO has no native pipe handle; preserve the synthetic stream's behavior.
+    monkeypatch.setattr(windows_job, "read_pipe", lambda stream, stopped: stream.read(8192))
 
 
 def test_reader_construction_failure_releases_worker(settings, monkeypatch):
@@ -35,7 +42,7 @@ def test_reader_construction_failure_releases_worker(settings, monkeypatch):
     assert process.stdout.closed and process.stderr.closed
 
 
-def test_late_overflow_is_not_returned_as_success(settings, monkeypatch):
+def test_late_overflow_is_not_returned_as_success(settings, monkeypatch, synthetic_pipe_reader):
     tasks = []
 
     class ControlledThread:
@@ -72,7 +79,7 @@ def test_late_overflow_is_not_returned_as_success(settings, monkeypatch):
         DroidAscRunner(settings)._execute(["unused"])
 
 
-def test_reader_failure_is_not_success(settings, monkeypatch):
+def test_reader_failure_is_not_success(settings, monkeypatch, synthetic_pipe_reader):
     class BrokenStream(io.BytesIO):
         def read(self, *args):
             raise OSError("synthetic read failure")
@@ -87,11 +94,13 @@ def test_reader_failure_is_not_success(settings, monkeypatch):
     )
     monkeypatch.setattr(module, "_start_process", lambda *a: (process, None))
     monkeypatch.setattr(module, "_terminate_process_tree", lambda *a: None)
-    with pytest.raises(DroidAscError, match="read"):
+    with pytest.raises(DroidAscError, match="read") as caught:
         DroidAscRunner(settings)._execute(["unused"])
+    assert isinstance(caught.value.__cause__, OSError)
+    assert str(caught.value.__cause__) == "synthetic read failure"
 
 
-def test_aggregate_worker_memory_watchdog_stops_tree(settings, monkeypatch):
+def test_aggregate_worker_memory_watchdog_stops_tree(settings, monkeypatch, synthetic_pipe_reader):
     events = []
     process = SimpleNamespace(
         pid=12345,
