@@ -99,6 +99,7 @@ async def benchmark(args):
                     "definition_count",
                     "coverage",
                     "instruction_scan_complete",
+                    "query_cache",
                 ):
                     if key in result:
                         metric[key] = result[key]
@@ -113,7 +114,7 @@ async def benchmark(args):
                     k: ping[k] for k in ("droidasc_version", "rust_backend", "method_backend")
                 }
                 counts = []
-                for backend in ("droidasc", "rust_asc"):
+                for backend in () if args.interactive else ("droidasc", "rust_asc"):
                     result = await call(
                         backend + ":classes",
                         "asc_list_classes",
@@ -149,8 +150,9 @@ async def benchmark(args):
                         limit=10,
                         threads=2,
                     )
-                report["backend_class_counts_equal"] = counts[0] == counts[1]
-                assert counts[0] == counts[1], counts
+                if counts:
+                    report["backend_class_counts_equal"] = counts[0] == counts[1]
+                    assert counts[0] == counts[1], counts
                 if not args.backends_only:
                     paths = []
                     with zipfile.ZipFile(apk) as archive:
@@ -178,6 +180,11 @@ async def benchmark(args):
                             "field_descriptor": "Landroid/os/Build;->MODEL:Ljava/lang/String;",
                         },
                     ]
+                    if args.interactive:
+                        queries[:0] = [
+                            {"operation": "search_members", "kind": "method", "value": "->equals("},
+                            {"operation": "search_strings", "value": "https://"},
+                        ]
                     baseline = []
                     for query in queries:
                         baseline.append(
@@ -189,37 +196,39 @@ async def benchmark(args):
                                 **query,
                             )
                         )
-                    await call(
-                        "index:build",
-                        "asc_query_dex_session",
-                        session_id=key,
-                        operation="build_xref_index",
-                    )
+                    if not args.interactive:
+                        await call(
+                            "index:build",
+                            "asc_query_dex_session",
+                            session_id=key,
+                            operation="build_xref_index",
+                        )
                     for repeat in range(3):
                         for query, expected in zip(queries, baseline, strict=True):
+                            mode = "cache" if args.interactive else "index"
                             actual = await call(
-                                f"index:{query['operation']}:{repeat}",
+                                f"{mode}:{query['operation']}:{repeat}",
                                 "asc_query_dex_session",
                                 session_id=key,
                                 limit=100,
                                 **query,
                             )
-                            ignored = {"index", "backend"}
+                            ignored = {"index", "backend", "query_cache"}
                             assert {k: v for k, v in actual.items() if k not in ignored} == {
                                 k: v for k, v in expected.items() if k not in ignored
-                            }, "Stream/index parity failed"
-                        await call(
-                            f"index:type:{repeat}",
-                            "asc_query_dex_session",
-                            session_id=key,
-                            operation="find_type_refs",
-                            type_descriptor="Landroid/app/Activity;",
-                            limit=100,
-                        )
+                            }, "Stream/reuse parity failed"
+                        if not args.interactive:
+                            await call(
+                                f"index:type:{repeat}",
+                                "asc_query_dex_session",
+                                session_id=key,
+                                operation="find_type_refs",
+                                type_descriptor="Landroid/app/Activity;",
+                                limit=100,
+                            )
                     await call("session:close", "asc_close_dex_session", session_id=key)
-                    report["stream_index_parity"] = (
-                        "full counts, diagnostics, first 100 rows for two exact descriptors"
-                    )
+                    report["queries"] = queries
+                    report["stream_reuse_parity"] = "complete counts/diagnostics and first 100 rows"
                 assert sha256(apk) == report["apk_sha256"]
                 report["original_unchanged"] = True
                 report["status"] = "passed"
@@ -236,7 +245,11 @@ def main():
     parser.add_argument("apk", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--index-mib", type=int, default=4096)
-    parser.add_argument("--backends-only", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--backends-only", action="store_true")
+    mode.add_argument(
+        "--interactive", action="store_true", help="Discovery and exact-page cache, no full index"
+    )
     asyncio.run(benchmark(parser.parse_args()))
 
 

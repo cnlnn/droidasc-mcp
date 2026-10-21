@@ -72,8 +72,7 @@ def real_dex_files(tmp_path):
     return paths
 
 
-@pytest.fixture(scope="session")
-def smali_dex_files(tmp_path_factory):
+def assemble_smali(tmp_path_factory, names):
     home = os.getenv("DROIDASC_MCP_JADX_HOME")
     java = os.getenv("DROIDASC_MCP_JAVA") or shutil.which("java")
     if not home or not java:
@@ -81,7 +80,7 @@ def smali_dex_files(tmp_path_factory):
     root = tmp_path_factory.mktemp("instruction-oracle")
     jars = os.pathsep.join(str(p) for p in sorted((Path(home) / "lib").glob("*.jar")))
     paths = []
-    for number, name in enumerate(("first", "second"), 1):
+    for number, name in enumerate(names, 1):
         output = root / f"input{number}.dex"
         subprocess.run(
             [
@@ -103,3 +102,13 @@ def smali_dex_files(tmp_path_factory):
         assert output.is_file()
         paths.append(output)
     return paths
+
+
+@pytest.fixture(scope="session")
+def smali_dex_files(tmp_path_factory):
+    return assemble_smali(tmp_path_factory, ("first", "second"))
+
+
+@pytest.fixture(scope="session")
+def boundary_dex_file(tmp_path_factory):
+    return assemble_smali(tmp_path_factory, ("boundary",))[0]

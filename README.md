@@ -285,6 +285,17 @@ asc_query_dex_session(
 Search uses a case-sensitive literal substring of the full descriptor, not a regex. An optional
 `class_name` restricts its exact owner. Feed returned descriptors unchanged into exact references
 or Smali queries. Searching declarations is not searching DEX string pools or runtime usages.
+Member discovery reads declarations only and does not build the full xref index. Use
+`operation="search_strings", value="https://"` for case-sensitive literal DEX string-pool
+search with `dex_entry`, `string_index` and `value` provenance; pool presence is not a use site.
+Both discovery operations return `instruction_scan_complete=false`.
+
+Discovery and non-indexed exact reference results reuse identical query pages within a session.
+The disk LRU cache holds at most 32 pages / 4 MiB, with a 256 KiB per-page cap, and shares the
+index reservation rather than adding unaccounted storage. Full index construction clears it.
+Cache identity includes immutable input and backend hashes; different pages may rescan.
+`query_cache.hit` reports reuse. This keeps worker isolation rather than retaining parsed APKs
+in a long-lived process.
 
 Index construction costs time/disk upfront. Default per-session index quota is 256 MiB, reserved
 from the session storage budget; large applications may need an explicitly larger index quota,

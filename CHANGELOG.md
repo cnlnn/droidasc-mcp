@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Make member discovery declaration-only rather than implicitly building the full xref index;
+  add literal DEX string-pool discovery with entry/index provenance. Add bounded, hash-bound
+  exact-page caching without retaining worker processes, and measure large-APK cold/warm costs.
+- Add independently assembled field-reference boundary regressions: opcode-like bytes in
+  adjacent code-item headers and array payloads must never become executable reference hits.
+- Close the acceptance test's SQLite connection on Windows and retry transient JADX download
+  failures with bounded backoff while retaining mandatory archive hash verification.
 - Add bounded atomic session-lifetime SQLite xref indexes, exact type relationships across
   instructions/declarations/annotations, and literal method/field declaration discovery.
   Preserve streaming-query semantics, source identities and fail-closed incomplete scans.

@@ -8,7 +8,12 @@ An additional real stdio/HTTP index/guidance rerun passed both transport cases.
 Thirteen concurrent session lifecycle cycles, including index construction/reuse,
 ended with zero live children, zero remaining storage/sessions, no reaper thread,
 zero handle growth and 1,310,720 bytes host RSS growth.
-These numbers do not substitute for the current candidate's Windows or clean-package gates.
+These numbers describe the prior index/Rust baseline, not the later discovery/cache candidate.
+The discovery/cache regression initially returned 257 passed / 2 failures because old transport
+assertions compared cache-hit metadata literally. Both transport reruns passed after asserting
+identical evidence separately from the expected cache-hit transition. A new independently
+assembled boundary/payload reference regression also passed. Complete candidate package and
+Windows gates are tracked separately; these narrow checks do not replace them.
 
 ### Large-sample index and backend evidence
 
@@ -31,8 +36,30 @@ exhaustive equality of all rows or all queries. The APK hash was unchanged and
 the session was closed. The default 256 MiB index quota and 180-second timeout
 are insufficient for this sample; the benchmark explicitly uses 4 GiB and 900
 seconds, with a 6 GiB session budget. Index cost is substantial: do not auto-build
-for a single exact-reference lookup. Current member discovery does build first;
-a declaration-only fast path remains an important improvement for large artifacts.
+for a single exact-reference lookup. Member discovery now uses a declaration-only
+path without building the full index.
+
+### Interactive discovery and exact-page reuse
+
+On the same Taobao APK, real stdio MCP with no full index:
+
+| Query | First seconds | Repeated seconds | Matches |
+| --- | --- | --- | --- |
+| Method descriptor contains `->equals(` | 4.0018 | 0.6646 / 0.3350 / 0.3183 | 1,372 |
+| String pool contains `https://` | 2.5270 | 0.4198 / 0.3318 / 0.3156 | 1,723 |
+| Exact `String.equals(Object)` references | 8.6978 | 0.3165 / 0.2533 / 0.3211 | 24,461 |
+| Exact `Build.MODEL` references | 9.3805 | 0.3272 / 0.3975 / 0.3231 | 332 |
+
+The separate immutable session-open cost was **12.8858 seconds**, so opening and
+the first member query together cost about 16.89 seconds. The declaration-only
+query peaked at 635,822,080 bytes descendant RSS; the first exact method query
+peaked at 749,490,176 bytes. Identical pages, counts and diagnostics matched on
+all three cache repeats (excluding cache metadata). Different pages may rescan.
+Input SHA-256 was unchanged; the session closed successfully. These are single-host
+measurements, not controlled speed rankings. The harness still explicitly sets
+4 GiB / 900 seconds, although these queries do not build an index and the page
+cache itself is capped at 4 MiB. Reproduce using `scripts/benchmark_backends.py
+<apk> --interactive`; raw report: `artifacts/reverse-acceptance/taobao-interactive-benchmark.json`.
 
 The same real MCP adapter exercised both Python and Rust manifest/class/source/
 string-reference operations on Taobao and Douyin 39.1.0 (53 DEX, 551,538 classes).

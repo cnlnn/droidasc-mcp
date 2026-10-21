@@ -239,18 +239,30 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, owners, query, workspace):
-    from .xref_index import INDEX_OPERATIONS, REFERENCE_OPERATIONS, query_index
+    from .query_cache import cached_query
+    from .xref_index import (
+        DISCOVERY_OPERATIONS,
+        INDEX_OPERATIONS,
+        REFERENCE_OPERATIONS,
+        query_index,
+    )
 
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
     if operation in INDEX_OPERATIONS or (
-        operation in REFERENCE_OPERATIONS and (bundle.parent / "xrefs.sqlite").is_file()
+        operation in REFERENCE_OPERATIONS | {"search_members"}
+        and (bundle.parent / "xrefs.sqlite").is_file()
     ):
         return {**common, **query_index(runner.settings, bundle, common, query, workspace)}
-    if operation in {"find_method_refs", "get_method_calls", "find_field_refs"}:
-        from .method_backend import query_methods
+    if operation in REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS:
+        from .method_backend import query_discovery, query_methods
 
-        result = query_methods(runner.settings, bundle, "", query, workspace)
+        def execute():
+            if operation in DISCOVERY_OPERATIONS:
+                return query_discovery(runner.settings, bundle, query, workspace)
+            return query_methods(runner.settings, bundle, "", query, workspace)
+
+        result = cached_query(runner.settings, bundle, common, query, workspace, execute)
         return {**common, **result}
     if operation in {"list_methods", "get_method_source"}:
         from .method_backend import query_methods

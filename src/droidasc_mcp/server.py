@@ -140,6 +140,7 @@ def build_server(
             "find_type_refs",
             "build_xref_index",
             "search_members",
+            "search_strings",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
@@ -170,8 +171,10 @@ def build_server(
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         find_type_refs reports exact type operands, declarations and annotation types/values.
         build_xref_index builds a bounded complete static index; one-shot indexes are temporary.
-        search_members builds/reuses the index; kind=method/field, value is a case-sensitive
-        literal substring of the full descriptor (not regex); class_name restricts exact owner.
+        search_members scans declarations without building an index; kind=method/field.
+        value is a case-sensitive literal substring of the full descriptor, not regex.
+        class_name restricts exact owner. search_strings scans DEX string-pool values
+        using a case-sensitive literal value, not instruction use sites.
         source_format=auto returns Java or exact-method Smali with fell_back/reason;
         java never silently falls back, smali always disassembles that exact method.
         """
@@ -226,6 +229,7 @@ def build_server(
             "find_type_refs",
             "build_xref_index",
             "search_members",
+            "search_strings",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
@@ -254,8 +258,11 @@ def build_server(
         build_xref_index persists an atomic static index for this session's lifetime.
         find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.
         type_descriptor is exact (including arrays); type_relation filters before pagination.
-        search_members builds/reuses the index; kind=method/field, value is a case-sensitive
-        literal substring of the full descriptor (not regex); class_name restricts exact owner.
+        search_members scans declarations or reuses an existing index; kind=method/field.
+        value is a case-sensitive literal substring of the full descriptor, not regex.
+        class_name restricts exact owner. search_strings scans DEX string-pool values
+        using a case-sensitive literal value, not instruction use sites.
+        Identical discovery and non-indexed reference pages reuse a bounded session cache.
         source_format=auto may return exact-method Smali with an explicit fallback reason.
         """
         return service.query_dex_session(

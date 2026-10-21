@@ -73,6 +73,7 @@ class DroidAscService:
                     "find_type_refs",
                     "build_xref_index",
                     "search_members",
+                    "search_strings",
                 ],
                 "identity": "full_dex_method_descriptor",
                 "field_identity": "full_dex_field_descriptor",
@@ -196,6 +197,11 @@ class DroidAscService:
 
 
 def _normalize_dex_query(query):
+    if query.get("operation") == "search_strings":
+        if not query.get("value"):
+            raise ValueError("search_strings requires a nonempty literal value")
+        if query.get("class_name") or query.get("method_descriptor") or query.get("fuzzy_class"):
+            raise ValueError("search_strings searches the DEX string pool, not a class or method")
     if query.get("operation") == "search_members":
         if query.get("kind") not in {"method", "field"}:
             raise ValueError("search_members requires kind=method or field")

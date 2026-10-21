@@ -237,6 +237,13 @@ asc_query_dex_session(
 `search_members` 发现方法或字段声明，`kind` 必须为 `method` 或 `field`。`value` 是完整描述符的
 区分大小写字面子串，不是正则；`class_name` 可限定精确所属类。返回的描述符可直接用于精确引用和
 Smali 查询，不必猜重载。它不是 DEX 字符串池搜索，也不是运行时使用证明。
+成员发现只读取声明，不再触发完整索引。`operation="search_strings", value="https://"` 搜索
+DEX 字符串池，使用区分大小写的字面子串，返回 `dex_entry`、`string_index` 和 `value`；
+字符串池中存在不等于代码使用。两种发现操作均返回 `instruction_scan_complete=false`。
+
+会话内的发现与未建库精确引用查询支持相同查询页复用。磁盘 LRU 缓存最多 32 页、总计 4 MiB、
+每页 256 KiB，与索引共用磁盘预留，完整建库前清空。缓存绑定不可变输入与后端哈希，换页可能
+重新扫描；`query_cache.hit` 表示是否命中。仍保留独立工作进程，不常驻整份 APK 解析对象。
 
 建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 256 MiB，从会话磁盘总额预留；
 大应用可能需要显式调整索引配额、会话总额和超时。取消、配额耗尽和解码失败不会发布部分索引。

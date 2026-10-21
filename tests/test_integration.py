@@ -343,8 +343,12 @@ async def test_structured_field_references(
             source_format="smali",
         )
         assert source["status"] == "ok" and target in source["source"]
-        # Every query starts a fresh worker; history equality cannot be a response-cache hit.
-        assert await query() == incoming
+        # Source reads preserve the immutable input and its exact-reference page cache.
+        repeated = await query()
+        assert repeated["query_cache"]["hit"] is True
+        assert {k: v for k, v in repeated.items() if k != "query_cache"} == {
+            k: v for k, v in incoming.items() if k != "query_cache"
+        }
         once = await call(
             "asc_analyze_dex", dex_paths=paths, operation="find_field_refs", field_descriptor=target
         )
@@ -1414,6 +1418,14 @@ async def test_persistent_index_transport(
             result = response.structured_content
             assert result["status"] == "ok", result
             return result
+
+        early = await query("search_members", kind="method", value="->pick(", limit=1)
+        assert early["backend"] == "dexlib2-discovery" and "index" not in early
+        assert early["total"] == 2 and early["next_offset"] == 1
+        warm = await query("search_members", kind="method", value="->pick(", limit=1)
+        assert warm["query_cache"]["hit"] and warm["items"] == early["items"]
+        strings = await query("search_strings", value="Caller.java")
+        assert strings["total"] == 1 and not strings["instruction_scan_complete"]
 
         cancel = anyio.CancelScope()
 

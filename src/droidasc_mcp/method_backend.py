@@ -67,6 +67,27 @@ def query_methods(settings, bundle, entry, query, workspace=None):
         str(min(limit, 2**31 - 1)),
         query.get("field_access", "all"),
     ]
+    return _execute_java(settings, command, workspace, offset, limit)
+
+
+def query_discovery(settings, bundle, query, workspace):
+    command = java_command(settings, workspace, "DiscoveryBridge.java")
+    if isinstance(command, dict):
+        return command
+    offset, limit = query["offset"], min(query["limit"], settings.max_page_size)
+    command += [
+        str(bundle),
+        query["operation"],
+        query.get("kind") or "",
+        query.get("value") or "",
+        query.get("class_name") or "",
+        str(min(offset, 2**63 - 1)),
+        str(limit),
+    ]
+    return _execute_java(settings, command, workspace, offset, limit)
+
+
+def _execute_java(settings, command, workspace, offset, limit):
     # The caller's supervisor owns this descendant, including cancellation and Job limits.
     try:
         process = subprocess.Popen(

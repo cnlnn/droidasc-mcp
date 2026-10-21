@@ -48,10 +48,88 @@ executed here. [Test runner](https://github.com/aimardcr/asc-mcp/blob/848c711f1d
 
 ## Confirmed useful implementations
 
+### Large-APK latency measurement
+
+On 2026-10-21, ran the pinned competitor unchanged through real stdio MCP against
+the same Taobao 10.62.0 APK (91,402,818 bytes, 12 DEX files, SHA-256
+`2d8844a2cefecb8b99f5e8dc83e3eabba39391b02e2dc27c562d8ba3d0755348`).
+Each scenario started a fresh server. Explicitly selected one worker for
+deterministic cache reuse rather than the default four; OS file caches were not
+dropped. Timings exclude server initialization and the separate artifact-open
+call (0.19-0.26 seconds). External 120-second/4-GiB safety limits did not trigger.
+
+| Competitor operation | First call | Repeated calls |
+| --- | --- | --- |
+| Method declaration name contains `equals` | 4.4848 s | 0.3250 / 0.3263 s |
+| Exact `String.equals(Object)` references | 4.5192 s | 0.0669 / 0.0674 s |
+| Exact `Build.MODEL:String` references | 3.5706 s | 0.0666 / 0.0712 s |
+
+The member search returned 1,440 declarations; the reference tools returned
+9,342 and 417 caller rows respectively. These are NOT equivalent to our 24,461
+and 332 instruction rows. The field discrepancy is resolved below; the method
+comparison still requires an independent oracle. Source APK hash remained unchanged.
+Local evidence and repeatable harness are in ignored
+`artifacts/reverse-acceptance/aimard-taobao-benchmark.json` and
+`artifacts/reverse-acceptance/benchmark_aimard.py`.
+
+Our prior 460.0459-second result is a full method/field/type/annotation relationship
+index build, not equivalent work. Our existing non-indexed exact method/field
+queries took 9.8224/7.3267 seconds on this APK. Nevertheless, forcing member
+discovery to build that full index is an avoidable interactive-latency defect.
+The candidate now implements declaration-only discovery and bounded exact-page
+caching. On the same APK, member descriptor search `->equals(` took **4.0018 s**,
+with repeats at **0.3183-0.6646 s**; string-pool discovery took **2.5270 s**, with
+repeats at **0.3156-0.4198 s**. Member matching differs from the competitor's
+case-insensitive name search, so this is not an identical-query speed victory.
+Our exact method/field first queries remained slower at **8.6978 / 9.3805 s**,
+with identical-page repeats **0.2533-0.3975 s**. The separate immutable session
+open took **12.8858 s**; do not hide that cost in end-to-end comparisons.
+See [local acceptance](VALIDATION.md#interactive-discovery-and-exact-page-reuse).
+The full index is no longer a prerequisite for ordinary discovery. Type-relation
+queries still build/reuse it. A full competitor call-graph build has not been timed here.
+
+### Confirmed field-reference false positives
+
+Independently decoded all 606,974 declared methods / 12,495,817 instructions in
+the same APK with Androguard 4.1.4, without using either scanner's hit list to
+select methods. Normalized byte offsets against our 16-bit code-unit offsets and
+compared complete `(DEX, caller descriptor, offset, opcode)` sets for the exact
+`Landroid/os/Build;->MODEL:Ljava/lang/String;` operand:
+
+| Implementation | Instruction hits | Distinct callers | Extra / missing vs oracle |
+| --- | --- | --- | --- |
+| Independent sequential decoder | 332 | 320 | baseline |
+| Our dexlib2 instruction scan | 332 | 320 | 0 / 0 |
+| Pinned competitor scanner | 429 | 417 | 97 / 0 |
+
+Raw DEX `code_item.insns_size` confirms **96 extra hits are outside the claimed
+method's instruction array**. One additional hit is inside a `fill-array-data`
+payload, not an executable field instruction. The source cause is specific:
+`InsnLocator` maps offsets to coarse 16-byte buckets, records only method starts,
+and regex-verifies instruction lengths without checking the exact method end;
+its fixed-width `nop` pattern also does not skip variable-length payloads.
+The byte-level prefilter is useful, but these missing boundary checks must not
+be adopted. [Locator source](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/core/findrefs/locator/insn_locator.py),
+[prefilter source](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/core/findrefs/scan/code_item_scan.py).
+
+A public independent [Smali fixture](../tests/fixtures/xrefs/boundary/Boundary.smali)
+reproduces both errors without the private APK: `aNoReference` has only
+`return-void`, but the next code item's register-count bytes look like `sget`;
+`cPayload` holds matching bytes as short-array data. The competitor reports these
+at byte offsets 4 and 24 plus the real `dReal` reference at 0. Our streamed and
+indexed queries return only `dReal`, as enforced by
+`test_field_opcode_bytes_in_payload_and_adjacent_header_are_not_references`.
+This establishes a concrete correctness advantage for this query and these
+fixtures, not universal superiority. The competitor checkout remained unchanged.
+Private complete evidence is retained in
+`artifacts/reverse-acceptance/field-reference-oracle.json` with its repeatable
+`audit_field_refs.py` harness; neither is shipped.
+
 | Area | What the pinned implementation actually does | Our status / next action |
 | --- | --- | --- |
 | Agent routing | Server instructions distinguish declarations, string-pool matches, const-string use sites and type operands; each parameter has a description; read-only tools have MCP annotations. | Candidate now has initialization instructions, an analysis-guide resource, two prompts and annotations distinguishing read-only queries from session state. Per-parameter guidance and typed output contracts still need alignment. |
-| Target discovery | `search_members` searches method/field declarations and returns full descriptors; `search_strings` searches the DEX pool with DEX name and string index. | Candidate now discovers method/field declarations with literal search, full descriptors and DEX provenance, round-tripped into exact xrefs over both transports. It first builds the disk-bounded index; DEX string-pool discovery remains missing. |
+| Target discovery | `search_members` searches method/field declarations and returns full descriptors; `search_strings` searches the DEX pool with DEX name and string index. | Candidate now has declaration-only method/field discovery and DEX string-pool search, with explicit case-sensitive literal semantics and provenance. Neither scans instructions or builds the full index. |
+| Query reuse | Resident workers cache parsed DEX and complete reference result sets by path/size/mtime; the reference cache has an eight-key LRU. | Candidate reuses exact query pages by immutable input/backend identity, capped at 32 pages / 4 MiB and charged to the existing index reservation. Different pages may rescan; isolation and byte bounds are retained, but warm queries remain slower than its resident cache. |
 | APK contents | Sorted entry inventory, asset/resource reads, binary XML decoding and native-library ABI inventory. | Our baseline APK info does not replace this workflow. Add bounded reads with provenance and explicit decoding/truncation status. |
 | Manifest analysis | Package/SDK/component structure, inherited application permission, and separate effective provider read/write permissions. | Raw XML is available; structured summaries would reduce client parsing mistakes. Do not equate an absent exported attribute or permission with a confirmed exposure. |
 | Calls and hierarchy | Full method prototype selection, overload rejection, cached caller/callee adjacency, depth 1-3 exploration; direct interfaces/subclasses and superclass chain. | Our exact one-hop edges are more explicit about evidence, but are not yet a multi-hop investigation operation. Reuse our index for a bounded, provenance-preserving graph. |

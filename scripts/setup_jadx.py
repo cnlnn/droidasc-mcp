@@ -3,6 +3,8 @@
 import hashlib
 import os
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -11,18 +13,32 @@ URL = "https://github.com/skylot/jadx/releases/download/v1.5.5/jadx-1.5.5.zip"
 SHA256 = "38a5766d3c8170c41566b4b13ea0ede2430e3008421af4927235c2880234d51a"
 
 
+def download(archive):
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(URL, timeout=120) as source, archive.open("wb") as target:
+                digest = hashlib.sha256()
+                while block := source.read(1024 * 1024):
+                    target.write(block)
+                    digest.update(block)
+            if digest.hexdigest() != SHA256:
+                raise RuntimeError("JADX release digest mismatch")
+            return
+        except urllib.error.HTTPError as error:
+            if error.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == 2:
+                raise
+        time.sleep(2 ** (attempt + 1))
+
+
 def main():
     home = Path("artifacts/jadx-1.5.5").resolve()
     home.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as temporary:
         archive = Path(temporary) / "jadx.zip"
-        with urllib.request.urlopen(URL, timeout=120) as source, archive.open("wb") as target:
-            digest = hashlib.sha256()
-            while block := source.read(1024 * 1024):
-                target.write(block)
-                digest.update(block)
-        if digest.hexdigest() != SHA256:
-            raise RuntimeError("JADX release digest mismatch")
+        download(archive)
         with zipfile.ZipFile(archive) as bundle:
             bundle.extractall(home)
     if os.getenv("GITHUB_ENV"):

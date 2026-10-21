@@ -8,7 +8,9 @@ asc_get_manifest and targeted asc_get_class_source rather than decompiling every
 asc_find_refs is name/regex-level CLI evidence, not exact overload resolution. For supplied
 DEX files, open an immutable asc_open_dex_session, reuse its session_id and close it when done.
 Use list_methods for a known class, or search_members (kind=method/field, literal value) to
-discover declarations across supplied files. The latter builds/reuses the bounded index first.
+discover declarations across supplied files without building a full index. search_strings finds
+literal DEX string-pool values, not instruction use sites. Identical discovery and non-indexed
+reference pages reuse a bounded session cache.
 Use the returned full descriptors unchanged; never guess an overload. Exact references
 use find_method_refs/get_method_calls/find_field_refs. find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;

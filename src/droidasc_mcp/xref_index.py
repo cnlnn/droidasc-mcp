@@ -13,19 +13,20 @@ from pathlib import Path
 from .method_backend import java_command
 from .runner import DroidAscError
 
-INDEX_OPERATIONS = {"build_xref_index", "find_type_refs", "search_members"}
+INDEX_OPERATIONS = {"build_xref_index", "find_type_refs"}
+DISCOVERY_OPERATIONS = {"search_members", "search_strings"}
 REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs"}
 SCHEMA = "3"
 
 
-def backend_identity(settings):
+def backend_identity(settings, sources=("IndexBridge.java",)):
     if not settings.jadx_home:
         return None
     jars = sorted((settings.jadx_home / "lib").glob("*.jar"))
     if not jars:
         return None
     digest = hashlib.sha256(SCHEMA.encode())
-    for path in [Path(__file__).with_name("IndexBridge.java"), *jars]:
+    for path in [*(Path(__file__).with_name(name) for name in sources), *jars]:
         digest.update(path.name.encode())
         with path.open("rb") as source:
             while block := source.read(1024 * 1024):
@@ -190,6 +191,9 @@ def query_index(settings, bundle, common, query, workspace):
                         "message": "Reopen the session after engine/schema changes",
                     }
         else:
+            from .query_cache import clear_cache
+
+            clear_cache(bundle.parent)
             error = _build(settings, bundle, target, workspace, identity)
             if error:
                 return error
@@ -244,6 +248,7 @@ def _query(db, query, settings):
         more = offset + len(items) < total
         return {
             **base,
+            "instruction_scan_complete": False,
             "match_semantics": "case_sensitive_literal_substring_of_full_descriptor",
             "scope": "declarations_in_supplied_files",
             "items": items,

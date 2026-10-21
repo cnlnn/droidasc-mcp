@@ -138,9 +138,12 @@ class DexSessions:
                 return error("session_not_found", "Session is unknown, expired, or closed")
             entry.users += 1
         try:
-            from .xref_index import INDEX_OPERATIONS, REFERENCE_OPERATIONS
+            from .xref_index import DISCOVERY_OPERATIONS, INDEX_OPERATIONS, REFERENCE_OPERATIONS
 
-            if query.get("operation") in INDEX_OPERATIONS | REFERENCE_OPERATIONS:
+            if (
+                query.get("operation")
+                in INDEX_OPERATIONS | REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS
+            ):
                 # Atomic publication and one builder per session; waiting remains cancellable.
                 with self.runner._acquire(entry.index_lock):
                     result = self.runner.query_dex_session(Path(entry.storage.name), query)
