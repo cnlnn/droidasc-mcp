@@ -47,8 +47,39 @@ Targeted acceptance passed **12 tests** on Linux, including real stdio/HTTP serv
 restarts with an intentionally unavailable Java executable during reuse, identical
 field rows, an entirely new service instance, corrupt/oversized manifests, checksum
 failure, TTL/quota eviction, separate-process writers and lock recovery after a killed
-writer. The existing real index-JVM cancellation tests still passed. Large-input,
-full-suite and native Windows gates for this extension remain pending until recorded.
+writer. The existing real index-JVM cancellation tests still passed. The subsequent
+complete local Linux/Python 3.13 run passed **270 tests, zero skips**, in 444.04 seconds
+with all public fixtures and both optional backends. Local JUnit evidence is
+`artifacts/validation/persistence-tests.xml`. The native Windows/Linux and clean-package
+gate for implementation commit `9712467` is
+[CI 39622441029](https://github.com/cnlnn/droidasc-mcp/actions/runs/39622441029);
+its actual conclusion is authoritative rather than inferred from local tests.
+
+The same 12-DEX Taobao APK was then tested through two separate real stdio MCP server
+lifetimes. The first server built and retained the complete 2,349,907,968-byte index in
+**471.5827 seconds**. After closing the session and exiting that server, the second server
+opened a fresh immutable session in **12.0965 seconds**, restored/verified the saved index
+and returned all **332 field-reference rows in 3.3324 seconds**. Every row and the complete
+count matched the pre-index streamed result. Java was intentionally unavailable in the
+second server, proving reuse rather than rebuilding. The original APK SHA-256 was unchanged.
+Reopening plus restore/query therefore cost about **15.43 seconds**, not 3.33 seconds total.
+
+This run explicitly used a 4 GiB per-session index quota, 6 GiB durable-cache quota and
+900-second worker timeout. Defaults do not fit this index. First-build cost remains
+substantial and is not a competitor cold-query speedup. The durable store retains derived
+identifiers/relationships until eviction; it is opt-in and does not retain the original APK.
+Reproduce with `scripts/benchmark_persistence.py <apk> --cache-dir <private-directory>
+--output <report.json>`. Local result: `artifacts/reverse-acceptance/taobao-persistent-index.json`.
+
+| Goal requirement | Implementation and independent acceptance evidence |
+| --- | --- |
+| Reusable persistent reverse index | Atomic SQLite session index plus opt-in content/backend-bound durable copies; full restart with Java unavailable on both transports and the large APK above; corruption, quota, killed-writer and multi-process tests in `test_durable_index.py`. |
+| Type/annotation/declaration relationships | `IndexBridge.java` and `test_index_parity_and_type_oracle`: independently authored nested annotations, declaration types, arrays, superclass/interface relationships and instruction offsets. |
+| Representative large-APK performance | Taobao all-DEX full index and cold/warm queries; Taobao and Douyin Python/Rust backend stdio checks, retained hashes, measured limits and explicit coverage caveats below. |
+| Optional Rust integration and source verification | Pinned public CLI adapter, native process supervision, explicit backend selection; source/revision and unsupported/error coverage documented in `RUST_BACKEND.md`; Linux/Windows native builds and transport tests in CI. |
+| Runtime-debugging boundary | `RUST_BACKEND.md` separates static operands from reflection/JNI/loaded DEX and debugger control; dynamic integration is not presented as implemented. |
+| Local and Windows/Linux gates | Full local regression plus strict fixture/no-skips, eight OS/Python combinations, clean sdist/wheel, stability and Rust jobs; use the exact commit's CI conclusion. |
+| Candidate delivery only | Work remains on `codex/dex-input-analysis`; no merge, tag or release is part of this acceptance. |
 
 ### Large-sample index and backend evidence
 

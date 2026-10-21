@@ -4,7 +4,8 @@ Reviewed: 2026-10-21. Competitor commit:
 [`848c711f1d80a1c2577283f1fa5f475ff734aa40`](https://github.com/aimardcr/asc-mcp/tree/848c711f1d80a1c2577283f1fa5f475ff734aa40).
 Our original baseline was `8cab43f4159ddc7252322f12a831dd98146d88d6`; the measured
 index, type relationships, optional Rust backend and workflow-guidance changes
-are now committed in `a96ea4c` and the discovery/cache changes in `88de70b`.
+are now committed in `a96ea4c`, discovery/page-cache changes in `88de70b`, and
+opt-in cross-restart index persistence in `9712467`.
 This report is not a claim of complete parity, a performance victory, or a release gate.
 No competitor implementation was copied into our package.
 
@@ -88,6 +89,14 @@ open took **12.8858 s**; do not hide that cost in end-to-end comparisons.
 See [local acceptance](VALIDATION.md#interactive-discovery-and-exact-page-reuse).
 The full index is no longer a prerequisite for ordinary discovery. Type-relation
 queries still build/reuse it. A full competitor call-graph build has not been timed here.
+
+An additional opt-in durable index cache now reuses a completed full index across
+server restarts. On the same APK, a fresh server restored the 2.19-GiB index and
+queried all 332 field-reference rows in **3.3324 seconds**, with Java intentionally
+unavailable. The separate session preparation took **12.0965 seconds**; the first
+build/publication took **471.5827 seconds**. This avoids repeated full builds, not
+the initial cost or session validation. See the [completion audit](VALIDATION.md#durable-cache-completion-audit)
+for limits, full-row equality and independent process-lifetime evidence.
 
 ### Confirmed field-reference false positives
 
