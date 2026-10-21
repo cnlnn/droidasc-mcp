@@ -4,10 +4,18 @@ import java.util.*;
 import com.google.gson.GsonBuilder;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.ReferenceType;
+import com.android.tools.smali.dexlib2.Opcode;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedMethodImplementation;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedMethod;
+import com.android.tools.smali.dexlib2.dexbacked.raw.FieldIdItem;
+import com.android.tools.smali.dexlib2.dexbacked.raw.MethodIdItem;
 import com.android.tools.smali.dexlib2.dexbacked.instruction.DexBackedInstruction;
 import com.android.tools.smali.dexlib2.iface.*;
 import com.android.tools.smali.dexlib2.iface.instruction.*;
 import com.android.tools.smali.dexlib2.iface.instruction.formats.UnknownInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.formats.ArrayPayload;
 import com.android.tools.smali.dexlib2.iface.reference.*;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
@@ -31,6 +39,90 @@ public class MethodBridge {
 
     static String descriptor(FieldReference field) {
         return field.getDefiningClass() + "->" + field.getName() + ":" + field.getType();
+    }
+
+    static final class MethodKey implements Comparable<MethodKey> {
+        final MemberNames names;
+        final int index;
+        final String prefix;
+        final String prototype;
+        String descriptor;
+
+        MethodKey(Method method, MemberNames names) {
+            this.names = names;
+            index = ((DexBackedMethod) method).methodIndex;
+            // Include '(' so prefix names such as a$ and a preserve descriptor order.
+            prefix = names.methodName(index) + '(';
+            // Still validate every definition's prototype, even for unreferenced methods.
+            prototype = names.methodProto(index);
+        }
+
+        String text() {
+            if (descriptor == null) descriptor = names.methodName(index) + prototype;
+            return descriptor;
+        }
+
+        public int compareTo(MethodKey other) {
+            int order = prefix.compareTo(other.prefix);
+            return order == 0 ? text().compareTo(other.text()) : order;
+        }
+    }
+
+    /** Query-local DEX pools: decode repeated names/types/prototypes once, not per member. */
+    static final class MemberNames {
+        final DexBackedDexFile dex;
+        final String[] strings, types, protos;
+
+        MemberNames(DexBackedDexFile dex) {
+            this.dex = dex;
+            strings = new String[dex.getStringSection().size()];
+            types = new String[dex.getTypeSection().size()];
+            protos = new String[dex.getProtoSection().size()];
+        }
+
+        String string(int index) {
+            if (strings[index] == null) strings[index] = dex.getStringSection().get(index);
+            return strings[index];
+        }
+
+        String type(int index) {
+            if (types[index] == null) types[index] = dex.getTypeSection().get(index);
+            return types[index];
+        }
+
+        String proto(int index) {
+            if (protos[index] == null) {
+                var reference = dex.getProtoSection().get(index);
+                StringBuilder value = new StringBuilder("(");
+                for (CharSequence parameter : reference.getParameterTypes()) value.append(parameter);
+                protos[index] = value.append(')').append(reference.getReturnType()).toString();
+            }
+            return protos[index];
+        }
+
+        String methodName(int index) {
+            int position = dex.getMethodSection().getOffset(index);
+            return string(dex.getBuffer().readSmallUint(position + MethodIdItem.NAME_OFFSET));
+        }
+
+        String methodProto(int index) {
+            int position = dex.getMethodSection().getOffset(index);
+            return proto(dex.getBuffer().readUshort(position + MethodIdItem.PROTO_OFFSET));
+        }
+
+        String localMethod(int index) {
+            return methodName(index) + methodProto(index);
+        }
+
+        String member(int index, boolean field) {
+            int position = field ? dex.getFieldSection().getOffset(index)
+                : dex.getMethodSection().getOffset(index);
+            var buffer = dex.getBuffer();
+            String owner = type(buffer.readUshort(position));
+            if (!field) return owner + "->" + localMethod(index);
+            return owner + "->" + string(buffer.readSmallUint(position + FieldIdItem.NAME_OFFSET))
+                + ":" + type(buffer.readUshort(position + FieldIdItem.TYPE_OFFSET));
+        }
     }
 
     static String definition(String member, boolean field, Map<String, ClassDef> owners,
@@ -57,24 +149,94 @@ public class MethodBridge {
         return found ? origins.get(owner) : null;
     }
 
-    static boolean matches(Instruction instruction, ReferenceInstruction referenced, String requested, byte[] memo) {
-        int index = -1;
-        if (instruction instanceof DexBackedInstruction backed) {
-            // Decoded standard member operands share a 16-bit ID at code unit one.
-            switch (instruction.getOpcode().format) {
-                case Format21c, Format22c, Format35c, Format3rc, Format45cc, Format4rcc:
-                    index = backed.dexFile.getDataBuffer().readUshort(backed.instructionStart + 2);
-                    break;
-                default:
-                    break;
-            }
+    /** Walk exact boundaries using the pinned decoder's version-specific format table.
+     * Only payloads and requested operands need allocated instruction objects. */
+    static final class InstructionCursor {
+        final DexBackedDexFile dex;
+        final Opcode[] opcodes;
+        final int start, end;
+        int next, position, units;
+        long address;
+        Opcode opcode;
+        Instruction decoded;
+
+        static Opcode[] table(Opcodes version) {
+            Opcode[] table = new Opcode[256];
+            for (int i = 0; i < table.length; i++) table[i] = version.getOpcodeByValue(i);
+            return table;
         }
-        if (index >= 0 && memo[index] != 0) return memo[index] == 1;
-        Reference reference = referenced.getReference();
-        String value = reference instanceof MethodReference method
-            ? descriptor(method) : descriptor((FieldReference) reference);
+
+        InstructionCursor(MethodImplementation implementation) {
+            this(implementation, table(((DexBackedMethodImplementation) implementation).dexFile.getOpcodes()));
+        }
+
+        InstructionCursor(MethodImplementation implementation, Opcode[] table) {
+            var backed = (DexBackedMethodImplementation) implementation;
+            dex = backed.dexFile;
+            opcodes = table;
+            int size = backed.getInstructionsSize();
+            start = size == 0 ? 0 : ((DexBackedInstruction)
+                backed.getInstructions().iterator().next()).instructionStart;
+            long stop = start + 2L * size;
+            var buffer = dex.getDataBuffer();
+            if (size < 0 || start < 0 || stop > buffer.getBuf().length - buffer.getBaseOffset())
+                throw new IllegalArgumentException("Invalid DEX instruction range");
+            end = (int) stop;
+            next = start;
+        }
+
+        boolean advance() {
+            if (next == end) return false;
+            position = next;
+            address = (position - start) / 2L;
+            decoded = null;
+            var buffer = dex.getDataBuffer();
+            int value = buffer.readUbyte(position);
+            opcode = value == 0 ? dex.getOpcodes().getOpcodeByValue(buffer.readUshort(position))
+                : opcodes[value];
+            if (opcode == null || opcode.odexOnly())
+                throw new IllegalArgumentException("Unknown or optimized DEX instruction");
+            long count = opcode.format.size / 2;
+            if (opcode.format.isPayloadFormat) {
+                int header = opcode.format == com.android.tools.smali.dexlib2.Format.ArrayPayload ? 8 : 4;
+                if ((long) position + header > end)
+                    throw new IllegalArgumentException("Truncated DEX payload header");
+                var payload = instruction();
+                if (payload instanceof ArrayPayload array) {
+                    int width = array.getElementWidth();
+                    if (width != 1 && width != 2 && width != 4 && width != 8)
+                        throw new IllegalArgumentException("Invalid DEX array element width");
+                    count = 4 + ((long) width * array.getArrayElements().size() + 1) / 2;
+                } else if (payload instanceof SwitchPayload switches) {
+                    count = opcode.format == com.android.tools.smali.dexlib2.Format.PackedSwitchPayload
+                        ? 4L + 2L * switches.getSwitchElements().size()
+                        : 2L + 4L * switches.getSwitchElements().size();
+                } else throw new IllegalArgumentException("Unknown DEX payload format");
+            }
+            if (count <= 0 || (long) position + count * 2 > end)
+                throw new IllegalArgumentException("Truncated or oversized DEX instruction");
+            units = (int) count;
+            next = position + units * 2;
+            return true;
+        }
+
+        Instruction instruction() {
+            if (decoded == null)
+                decoded = DexBackedInstruction.readFrom(dex, dex.getDataBuffer().readerAt(position));
+            if (decoded instanceof UnknownInstruction)
+                throw new IllegalArgumentException("Unknown DEX instruction");
+            return decoded;
+        }
+    }
+
+    static boolean matches(InstructionCursor cursor, String requested, byte[] memo, MemberNames names,
+            boolean fields) {
+        // These validated standard member formats all store the ID at code unit one.
+        int index = cursor.dex.getDataBuffer().readUshort(cursor.position + 2);
+        if (memo[index] != 0) return memo[index] == 1;
+        String value = names.member(index, fields);
         boolean matched = value.equals(requested);
-        if (index >= 0) memo[index] = (byte) (matched ? 1 : 2);
+        memo[index] = (byte) (matched ? 1 : 2);
         return matched;
     }
 
@@ -193,12 +355,17 @@ public class MethodBridge {
         // Resolve only queried operands; instruction scanning stays independent and complete.
         Map<String, ClassDef> owners = new HashMap<>();
         Map<String, String> origins = new HashMap<>();
+        Map<String, TreeMap<String, ClassDef>> orderedClasses = new HashMap<>();
         for (String entry : entries) {
+            TreeMap<String, ClassDef> classes = new TreeMap<>();
             for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses()) {
-                if (owners.put(cls.getType(), cls) != null)
+                String type = cls.getType();
+                if (owners.put(type, cls) != null)
                     throw new IllegalArgumentException("Duplicate class definition");
-                origins.put(cls.getType(), entry);
+                origins.put(type, entry);
+                classes.put(type, cls);
             }
+            orderedClasses.put(entry, classes);
         }
         Map<String, String> definitions = new HashMap<>();
         definitions.put(requested, definition(requested, fields, owners, origins));
@@ -218,43 +385,49 @@ public class MethodBridge {
         for (String entry : entries) {
             // Member IDs are local to each DEX and to this one method/field query.
             byte[] memo = incoming ? new byte[65536] : null;
-            TreeMap<String, ClassDef> classes = new TreeMap<>();
-            for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses())
-                classes.put(cls.getType(), cls);
-            for (ClassDef cls : classes.values()) {
-                if (!incoming && !requested.startsWith(cls.getType() + "->")) continue;
-                TreeMap<String, Method> methods = new TreeMap<>();
+            var dex = container.getEntry(entry).getDexFile();
+            var names = new MemberNames(dex);
+            Opcode[] opcodes = InstructionCursor.table(dex.getOpcodes());
+            for (var owner : orderedClasses.get(entry).entrySet()) {
+                ClassDef cls = owner.getValue();
+                String classType = owner.getKey();
+                if (!incoming && !requested.startsWith(classType + "->")) continue;
+                TreeMap<MethodKey, Method> methods = new TreeMap<>();
                 for (Method method : cls.getMethods()) {
-                    if (methods.put(localDescriptor(method), method) != null)
+                    if (methods.put(new MethodKey(method, names), method) != null)
                         throw new IllegalArgumentException("Duplicate method definition");
                 }
                 for (var member : methods.entrySet()) {
-                    if (!incoming && !member.getKey().equals(requested.substring(requested.indexOf("->") + 2)))
+                    if (!incoming && !member.getKey().text().equals(requested.substring(requested.indexOf("->") + 2)))
                         continue;
                     String caller = null;
                     scannedMethods++;
                     MethodImplementation implementation = member.getValue().getImplementation();
                     if (implementation == null) { withoutCode++; continue; }
-                    long address = 0;
-                    for (Instruction instruction : implementation.getInstructions()) {
-                        if (instruction instanceof UnknownInstruction || instruction.getOpcode().odexOnly())
-                            throw new IllegalArgumentException("Unknown or optimized DEX instruction");
+                    var cursor = new InstructionCursor(implementation, opcodes);
+                    while (cursor.advance()) {
+                        long address = cursor.address;
                         scannedInstructions++;
-                        String opcode = instruction.getOpcode().name;
-                        if (instruction instanceof ReferenceInstruction referenced) {
-                            int referenceType = referenced.getReferenceType();
+                        String opcode = cursor.opcode.name;
+                        int referenceType = cursor.opcode.referenceType;
+                        if (referenceType == ReferenceType.METHOD || referenceType == ReferenceType.FIELD
+                                || referenceType == ReferenceType.CALL_SITE
+                                || referenceType == ReferenceType.METHOD_HANDLE) {
                             String callee = null, fieldAccess = null;
                             if (!fields && referenceType == ReferenceType.METHOD) {
                                 callee = incoming
-                                    ? (matches(instruction, referenced, requested, memo) ? requested : null)
-                                    : descriptor((MethodReference) referenced.getReference());
+                                    ? (matches(cursor, requested, memo, names, false) ? requested : null)
+                                    : descriptor((MethodReference) ((ReferenceInstruction)
+                                        cursor.instruction()).getReference());
                             } else if (fields && referenceType == ReferenceType.FIELD) {
-                                callee = matches(instruction, referenced, requested, memo) ? requested : null;
-                                if (opcode.startsWith("iget") || opcode.startsWith("sget"))
-                                    fieldAccess = "read";
-                                else if (opcode.startsWith("iput") || opcode.startsWith("sput"))
-                                    fieldAccess = "write";
-                                else throw new IllegalArgumentException("Unknown field access opcode");
+                                callee = matches(cursor, requested, memo, names, true) ? requested : null;
+                                if (callee != null) {
+                                    if (opcode.startsWith("iget") || opcode.startsWith("sget"))
+                                        fieldAccess = "read";
+                                    else if (opcode.startsWith("iput") || opcode.startsWith("sput"))
+                                        fieldAccess = "write";
+                                    else throw new IllegalArgumentException("Unknown field access opcode");
+                                }
                             }
                             if (callee != null) {
                                 if ((!incoming || callee.equals(requested))
@@ -264,7 +437,7 @@ public class MethodBridge {
                                     String targetEntry = definitions.get(callee);
                                     if (targetEntry == null) unresolvedMatches++;
                                     if (total >= offset && total - offset < limit) {
-                                        if (caller == null) caller = cls.getType() + "->" + member.getKey();
+                                        if (caller == null) caller = classType + "->" + member.getKey().text();
                                         Map<String, Object> row = new LinkedHashMap<>();
                                         row.put("caller", caller);
                                         row.put(fields ? "field_descriptor" : "callee", callee);
@@ -279,7 +452,7 @@ public class MethodBridge {
                                         row.put("target_resolution", targetEntry == null
                                             ? "not_defined_in_input" : "defined_in_input");
                                         row.put("target_dex_entry", targetEntry);
-                                        if (instruction instanceof DualReferenceInstruction dual
+                                        if (cursor.instruction() instanceof DualReferenceInstruction dual
                                                 && dual.getReference2() instanceof MethodProtoReference proto) {
                                             StringBuilder prototype = new StringBuilder("(");
                                             for (CharSequence type : proto.getParameterTypes()) prototype.append(type);
@@ -293,16 +466,16 @@ public class MethodBridge {
                             }
                             if (referenceType == ReferenceType.CALL_SITE
                                     || referenceType == ReferenceType.METHOD_HANDLE
-                                    || opcode.startsWith("invoke-polymorphic")) {
+                                    || cursor.opcode == Opcode.INVOKE_POLYMORPHIC
+                                    || cursor.opcode == Opcode.INVOKE_POLYMORPHIC_RANGE) {
                                 dynamicSites++;
-                                if (caller == null) caller = cls.getType() + "->" + member.getKey();
+                                if (caller == null) caller = classType + "->" + member.getKey().text();
                                 if (unresolved.size() < 20) unresolved.add(Map.of(
                                     "caller", caller, "dex_entry", entry,
                                     "instruction_offset", address, "opcode", opcode,
                                     "reason", "dynamic_target_not_resolved"));
                             }
                         }
-                        address += instruction.getCodeUnits();
                     }
                 }
             }

@@ -1,5 +1,49 @@
 # aimardcr/asc-mcp: source-backed comparison
 
+## v0.4.1 cold-query investigation, 2026-10-22
+
+The competitor's main was rechecked at `848c711f1d80a1c2577283f1fa5f475ff734aa40`.
+Its [code-item scanner](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/core/findrefs/scan/code_item_scan.py)
+resolves member IDs before scanning. Dense cases combine translated opcode and high-ID byte
+masks as integers, then verify candidate IDs. The
+[instruction locator](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/core/findrefs/locator/insn_locator.py)
+maps candidates into code items and verifies byte patterns. This avoids constructing every
+instruction object, but byte-pattern candidates are not equivalent to exact instruction
+boundaries. The independently confirmed 97 extra field sites below remain a correctness
+reason not to adopt that implementation verbatim.
+
+Our optimized scanner uses the pinned decoder's DEX-version-specific opcode/format table
+to walk every exact instruction boundary, including switch/array payloads. Fixed instructions
+need no object allocation until an operand is emitted; member-ID decisions and decoded pool
+strings/types/prototypes are cached only inside that isolated query. Method sorting lazily
+constructs complete descriptors while retaining exact order and duplicate detection. Ordered
+class identities are reused rather than decoded again. Every definition's prototype is still
+validated even when its name is unique and no reference matches. No worker is retained, no persistent
+compiled-code cache is introduced, and no competitor implementation is copied.
+
+The frozen v0.4.0 source was retained for alternating fresh-JVM comparisons with
+`scripts/benchmark_reference_scan.py`. Every reference row, ordering, resolution diagnostic
+and scan counter must match, not merely a first page or total. The Taobao input is the same
+12-DEX APK and SHA-256 recorded below: 606,974 methods and 12,495,817 instructions, with
+24,461 exact method sites and 332 exact field sites. A separate Java oracle compares our
+cursor and cached member descriptors with dexlib2's unfiltered public iterator/pools.
+
+JFR identified repeated UTF decoding and instruction iteration as useful optimization
+targets. The suspected duplicate ZIP-entry loading was rejected: the pinned container already
+caches its entries. An alternating two-round `-XX:TieredStopAtLevel=1` experiment also failed
+to establish a method-query improvement and was not enabled in production. Limiting the JVM
+to two active processors also regressed both method rounds and was rejected. These rejected
+approaches are not represented as performance wins.
+
+Fresh stdio trials alternate our server and the unchanged pinned competitor, exclude server
+initialization and the separate artifact/session-open call, and exclude RSS-sampler shutdown
+from both query timings. Each first query starts a fresh worker/JVM; OS caches are not dropped.
+The comparison is operation-specific: the competitor returns caller groups whereas we return
+instruction sites with complete scanning diagnostics. This is not a claim that all operations
+or machines are faster. Local load varies, so ranges and medians must accompany speed claims.
+The final release notes link the successful candidate CI gate; historical evidence below
+does not authorize the v0.4.1 release.
+
 ## Current source audit: 2026-10-22
 
 The v0.4.0 implementation maps all 25 tools, two resource templates, three prompts and

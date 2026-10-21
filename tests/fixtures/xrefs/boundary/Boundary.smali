@@ -31,3 +31,23 @@
     sget v0, Lfixture/Boundary;->value:I
     return v0
 .end method
+
+.method public static eSwitches(I)I
+    .registers 2
+    packed-switch p0, :packed
+    sparse-switch p0, :sparse
+    const-wide/16 v0, 0x60
+    const v0, 0x600000
+    return v0
+    :selected
+    const/4 v0, 0x1
+    return v0
+    :packed
+    .packed-switch 0x1
+        :selected
+    .end packed-switch
+    :sparse
+    .sparse-switch
+        0x6000 -> :selected
+    .end sparse-switch
+.end method

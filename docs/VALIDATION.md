@@ -1,5 +1,40 @@
 # Local acceptance checks
 
+## v0.4.1 cold-query gate, 2026-10-22
+
+The scanner optimization preserves fresh supervised workers and the existing 512-MiB JVM
+heap bound. New differential checks compare instruction opcode, code-unit offset, size,
+member operand and polymorphic second operand against the pinned decoder. They also compare
+every cached method/field descriptor with the public reference pools. Regressions cover
+packed/sparse switches, wide instructions, array payloads, unknown opcodes, truncated headers,
+oversized/overflowing lengths, prefix-name ordering and pagination. The Java oracle is included
+in the source package, including a malformed unreferenced-prototype fail-closed regression,
+and exercised against installed wheel code during clean-distribution acceptance.
+
+Large-APK complete-result parity uses the frozen v0.4.0 source and the unchanged 12-DEX
+Taobao APK. All 24,461 method sites and 332 field sites, not just the first page, must match
+with all 12,495,817 instruction counters and resolution diagnostics. Reproduce with:
+
+```sh
+uv run python scripts/benchmark_reference_scan.py INPUT.apk \
+  --baseline-source BASELINE/MethodBridge.java --java JAVA \
+  --jadx-home JADX_HOME --rounds 3 --output full-parity.json
+```
+
+Performance receipts are development evidence, not permission to release. The frozen candidate
+must pass the complete Linux suite, the native Windows/Linux Python 3.10-3.13 matrix, real
+stdio/HTTP tests, clean sdist/wheel acceptance, independent signing and both stability jobs.
+Candidate commits on the acceptance branch are allowed; main/tag/release must wait for every
+job to pass. Publish only the exact wheel/sdist bytes from that successful CI run. The release
+notes must identify the tested commit, successful run and artifact SHA-256 values.
+
+The preceding v0.4.0 release was approved by
+[CI 39667389148](https://github.com/cnlnn/droidasc-mcp/actions/runs/39667389148)
+at `319ef0ca900188a19bf30b6b8d0e42a29e03a43f`: all 16 jobs passed, including 426 tests
+with zero failures/errors/skips in each of the eight platform/Python suites. That is historical
+evidence only and is not reused for this candidate. The sections below retain their original
+development context.
+
 ## v0.4.0 feature-frozen gate, 2026-10-22
 
 The competitor's main commit was rechecked as `848c711f1d80a1c2577283f1fa5f475ff734aa40`.

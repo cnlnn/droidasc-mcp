@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1
+
+- Cache decoded DEX names, types and prototypes inside each isolated query and reuse
+  ordered class identities, avoiding repeated UTF-8 decoding without retaining workers.
+- Reduce cold method/field reference scanning allocations using the pinned decoder's
+  version-specific opcode/format table and lazy numeric member-ID memoization. Keep exact
+  instruction boundaries, payload validation, complete scan counters and fresh isolated workers.
+- Construct full method signatures only for overloaded sorting keys and emitted callers;
+  preserve descriptor ordering, duplicate detection, pagination and dynamic-site diagnostics.
+- Add decoder-differential cursor checks, invalid/truncated/overflowing payload regressions,
+  prefix-name ordering fixtures and alternating fresh-JVM complete-result benchmarks.
+
 ## 0.4.0
 
 - Complete a source-traceable workflow map of all 25 competitor tools, two resource templates,
