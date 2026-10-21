@@ -25,6 +25,14 @@ class DexInputError(ValueError):
         self.code = code
 
 
+def preparation_progress(root, completed, total, message):
+    temporary = root / "progress.partial.json"
+    temporary.write_text(
+        json.dumps({"completed": completed, "total": total, "message": message}), encoding="utf-8"
+    )
+    temporary.replace(root / "progress.json")
+
+
 class BoundedText(io.StringIO):
     def __init__(self, budget: int):
         super().__init__()
@@ -132,6 +140,7 @@ def analyze(request: dict, root: Path) -> dict:
         max_output_bytes=request["max_output_bytes"],
         max_page_size=request["max_page_size"],
         jadx_home=Path(request["jadx_home"]) if request.get("jadx_home") else None,
+        dexlib_home=Path(request["dexlib_home"]) if request.get("dexlib_home") else None,
         java_executable=request.get("java_executable"),
         max_xref_index_bytes=request.get("max_xref_index_bytes", 256 * 1024**2),
         xref_cache_dir=Path(request["xref_cache_dir"]) if request.get("xref_cache_dir") else None,
@@ -159,6 +168,8 @@ def analyze(request: dict, root: Path) -> dict:
             return query_prepared(
                 runner, prepared / "analysis.apk", common, metadata["owners"], query, root
             )
+        if request.get("prepare"):
+            preparation_progress(root, 0, None, "Validating and snapshotting input")
         origins, artifact_metadata = [], None
         if request.get("artifact_path"):
             from .containers import snapshot, validate_budget
@@ -198,6 +209,10 @@ def analyze(request: dict, root: Path) -> dict:
                         "source_path": str(source),
                     }
                 common["sources"].append(record)
+                if request.get("prepare"):
+                    preparation_progress(
+                        root, index + 1, len(expanded) * 2, "Validated DEX snapshot"
+                    )
                 if provenance:
                     record.update(provenance, path=str(original))
                 if artifact_metadata is not None:
@@ -212,21 +227,16 @@ def analyze(request: dict, root: Path) -> dict:
         if artifact_metadata is not None:
             for source in paths:
                 source.unlink()
-        # Inspect each DEX independently so duplicate definitions cannot be hidden by merging.
+        # Read the validated snapshot directly; never repackage each DEX or import ASC.
+        from .native_dex import InvalidDex, dex_entries
+
         owners = {}
         duplicates = []
-        with zipfile.ZipFile(bundle) as archive:
-            for record in common["sources"]:
-                single = root / (record["dex_entry"] + ".apk")
-                with (
-                    zipfile.ZipFile(single, "w", compression=zipfile.ZIP_STORED) as out,
-                    archive.open(record["dex_entry"]) as source,
-                    out.open("classes.dex", "w") as target,
-                ):
-                    while block := source.read(1024 * 1024):
-                        target.write(block)
-                names = runner._get_snapshot(["listclass", "--threads", "1", str(single)]).lines
-                single.unlink()
+        records = {record["dex_entry"]: record for record in common["sources"]}
+        try:
+            for directory_index, (entry, dex) in enumerate(dex_entries(bundle)):
+                record = records[entry]
+                names = [name for name, _ in dex.classes()]
                 record["class_count"] = len(names)
                 if len(names) != record["declared_class_count"]:
                     raise DexInputError(
@@ -244,6 +254,15 @@ def analyze(request: dict, root: Path) -> dict:
                             )
                     else:
                         owners[name] = record["dex_entry"]
+                if request.get("prepare"):
+                    preparation_progress(
+                        root,
+                        len(expanded) + directory_index + 1,
+                        len(expanded) * 2,
+                        "Validated class directory",
+                    )
+        except InvalidDex as exc:
+            raise DexInputError("invalid_dex", str(exc)) from exc
         if duplicates:
             return {
                 **common,
@@ -267,6 +286,12 @@ def analyze(request: dict, root: Path) -> dict:
             if len(metadata.encode("utf-8")) > settings.max_output_bytes:
                 raise DexInputError("metadata_limit", "Prepared DEX metadata exceeds budget")
             (root / "prepared.json").write_text(metadata, encoding="utf-8")
+            preparation_progress(
+                root,
+                len(expanded) * 2,
+                len(expanded) * 2,
+                "Validated session ready; indexes remain on demand",
+            )
             return {**common, "status": "ok"}
         return query_prepared(runner, bundle, common, owners, query, root)
     except (DexInputError, ArchiveError) as exc:
@@ -280,7 +305,6 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, owners, query, workspace):
-    from .query_cache import cached_query
     from .xref_index import (
         DISCOVERY_OPERATIONS,
         INDEX_OPERATIONS,
@@ -291,6 +315,29 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
 
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    if ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir) and (
+        operation in REFERENCE_OPERATIONS - {"search_refs"}
+        or (
+            operation == "search_members"
+            and query.get("case_sensitive", True)
+            and query.get("member_match", "descriptor") == "descriptor"
+        )
+    ):
+        indexed = query_index(runner.settings, bundle, common, query, workspace)
+        if indexed is not None:
+            return {**common, **indexed}
+    if operation in {"find_method_refs", "get_method_calls", "find_field_refs", "search_refs"}:
+        from .native_dex import query_references
+
+        return {**common, **query_references(runner.settings, bundle, query)}
+    if operation in DISCOVERY_OPERATIONS:
+        from .native_discovery import query_discovery
+
+        return {**common, **query_discovery(runner.settings, bundle, query, workspace)}
+    if operation in STRUCTURE_OPERATIONS or operation == "list_methods":
+        from .native_structure import query_structure
+
+        return {**common, **query_structure(runner.settings, bundle, query, workspace)}
     if operation in {"revision_diff", "secret_candidates"}:
         from .review import query_review
 
@@ -302,33 +349,11 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
         return {**common, **query_source_metadata(runner.settings, bundle, owners[name], query)}
-    if operation in INDEX_OPERATIONS or (
-        (
-            operation in REFERENCE_OPERATIONS
-            or (
-                operation == "search_members"
-                and query.get("case_sensitive", True)
-                and query.get("member_match", "descriptor") == "descriptor"
-            )
-        )
-        and ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir)
-    ):
+    if operation in INDEX_OPERATIONS:
         indexed = query_index(runner.settings, bundle, common, query, workspace)
         if indexed is not None:
             return {**common, **indexed}
-    if operation in REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS | STRUCTURE_OPERATIONS:
-        from .method_backend import query_discovery, query_methods, query_structure
-
-        def execute():
-            if operation in STRUCTURE_OPERATIONS:
-                return query_structure(runner.settings, bundle, query, workspace)
-            if operation in DISCOVERY_OPERATIONS:
-                return query_discovery(runner.settings, bundle, query, workspace)
-            return query_methods(runner.settings, bundle, "", query, workspace)
-
-        result = cached_query(runner.settings, bundle, common, query, workspace, execute)
-        return {**common, **result}
-    if operation in {"list_methods", "get_method_source"}:
+    if operation == "get_method_source":
         from .method_backend import query_methods
 
         name = query.get("class_name")
@@ -336,7 +361,7 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
             raise ValueError("class_name is required")
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
-        if operation == "get_method_source" and query.get("source_format") == "smali":
+        if operation == "get_method_source" and query.get("source_format", "auto") != "java":
             return {**common, **asc_method_smali(runner, bundle, owners[name], query)}
         result = query_methods(runner.settings, bundle, owners[name], query, workspace)
         return {**common, **result, "class_name": name, "dex_entry": owners[name]}
@@ -350,12 +375,28 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
             "message": "DEX files do not contain AndroidManifest.xml",
         }
     if operation == "list_classes":
-        result = runner.list_classes(
-            bundle, prefix=query["prefix"], threads=query["threads"], **page
-        ).as_dict()
-        result["items"] = [
-            {"class_name": name, "dex_entry": owners[name]} for name in result["items"]
-        ]
+        from .native_dex import page_result, utf16_key
+
+        names = sorted(
+            (
+                name
+                for name in owners
+                if not query.get("prefix") or name.startswith(query["prefix"])
+            ),
+            key=utf16_key,
+        )
+        offset, limit = query["offset"], min(query["limit"], runner.settings.max_page_size)
+        result = page_result(
+            {
+                "total": len(names),
+                "items": [
+                    {"class_name": name, "dex_entry": owners[name]}
+                    for name in names[offset : offset + limit]
+                ],
+            },
+            query,
+            runner.settings,
+        )
     elif operation == "get_class_source":
         name = query["class_name"]
         if not name:

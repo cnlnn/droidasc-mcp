@@ -125,6 +125,11 @@ class DurableIndexes:
                     or (entry / "index.sqlite").stat().st_size != data["size"]
                 ):
                     raise ValueError("identity or quota")
+                # Another reader can publish while this process waits for the
+                # cross-process cache lock. Never replace its open SQLite file
+                # (not permitted on Windows); query_index validates its identity.
+                if target.is_file():
+                    return True
                 from .query_cache import clear_cache
 
                 clear_cache(target.parent)

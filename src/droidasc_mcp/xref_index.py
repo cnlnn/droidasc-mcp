@@ -22,18 +22,22 @@ STRUCTURE_OPERATIONS = {
     "search_method_bodies",
     "disassemble_method",
 }
-REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs"}
-SCHEMA = "3"
+REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs", "search_refs"}
+SCHEMA = "4"
 
 
 def backend_identity(settings, sources=("IndexBridge.java", "xref_index.py")):
-    if not settings.jadx_home:
-        return None
-    jars = sorted((settings.jadx_home / "lib").glob("*.jar"))
-    if not jars:
-        return None
     digest = hashlib.sha256(SCHEMA.encode())
-    for path in [*(Path(__file__).with_name(name) for name in sources), *jars]:
+    names = set(sources) | {
+        "native_dex.py",
+        "native_scan.py",
+        "native_index.py",
+        "native_discovery.py",
+        "native_structure.py",
+        "native_page.py",
+        "_dexscan.c",
+    }
+    for path in sorted(Path(__file__).with_name(name) for name in names):
         digest.update(path.name.encode())
         with path.open("rb") as source:
             while block := source.read(1024 * 1024):
@@ -41,7 +45,7 @@ def backend_identity(settings, sources=("IndexBridge.java", "xref_index.py")):
     return digest.hexdigest()
 
 
-def _build(settings, bundle, target, workspace, identity):
+def _build_java_oracle(settings, bundle, target, workspace, identity):
     command = java_command(settings, workspace, "IndexBridge.java")
     if isinstance(command, dict):
         return command
@@ -185,11 +189,17 @@ def _unpack_edge(kind, payload, source, target, relation, entry):
 def query_index(settings, bundle, common, query, workspace):
     from .durable_index import DurableIndexes
 
-    target = bundle.parent / "xrefs.sqlite"
+    calls_only = (
+        query["operation"] == "get_call_graph" and not (bundle.parent / "xrefs.sqlite").is_file()
+    )
+    target = bundle.parent / ("calls.sqlite" if calls_only else "xrefs.sqlite")
     fingerprint = backend_identity(settings)
-    if fingerprint is None:
-        return {"status": "error", "code": "backend_unavailable", "message": "Configure JADX 1.5.5"}
-    identity = {"schema": SCHEMA, "input_id": common["input_id"], "backend_id": fingerprint}
+    identity = {
+        "schema": SCHEMA,
+        "input_id": common["input_id"],
+        "backend_id": fingerprint,
+        "scope": "method_calls" if calls_only else "all_relations",
+    }
     try:
         cache = DurableIndexes(settings)
         reused = target.is_file()
@@ -211,9 +221,12 @@ def query_index(settings, bundle, common, query, workspace):
             from .query_cache import clear_cache
 
             clear_cache(bundle.parent)
-            error = _build(settings, bundle, target, workspace, identity)
-            if error:
-                return error
+            from .native_index import build
+
+            # Keep combined indexes within the single reserved index budget.
+            if not calls_only:
+                (bundle.parent / "calls.sqlite").unlink(missing_ok=True)
+            build(settings, bundle, target, workspace, identity, calls_only)
             cache_status = cache.publish(identity, target)
         with closing(sqlite3.connect(target.as_uri() + "?mode=ro", uri=True)) as db:
             result = _query(db, query, settings)
@@ -234,8 +247,8 @@ def _query(db, query, settings):
     operation = query["operation"]
     base = {
         "status": "ok",
-        "backend": "dexlib2-index",
-        "backend_version": "1.5.5",
+        "backend": "native-dex-index",
+        "backend_version": "1",
         "instruction_scan_complete": True,
         "scan_errors": 0,
         "runtime_target_resolution": "not_performed",

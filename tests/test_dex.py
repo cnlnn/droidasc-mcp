@@ -15,7 +15,7 @@ from mcp import Client
 
 from droidasc_mcp.config import ApkPathError
 from droidasc_mcp.dex_worker import BoundedText, DexInputError, PublicCliRunner, analyze, copy_dex
-from droidasc_mcp.runner import DroidAscError, DroidAscRunner, Snapshot
+from droidasc_mcp.runner import DroidAscError, DroidAscRunner
 from droidasc_mcp.server import build_server
 
 
@@ -48,15 +48,9 @@ def test_preparation_stores_exact_dex_without_recompression(settings, tmp_path, 
     path.write_bytes(data)
     root = tmp_path / "prepared"
     root.mkdir()
-    inspected = []
 
     def inspect(self, args):
-        single = Path(args[-1])
-        with zipfile.ZipFile(single) as archive:
-            assert archive.getinfo("classes.dex").compress_type == zipfile.ZIP_STORED
-            assert archive.read("classes.dex") == data
-        inspected.append(single)
-        return Snapshot(0, (), 0)
+        pytest.fail("Preparation must not start ASC or a JVM")
 
     monkeypatch.setattr(PublicCliRunner, "_get_snapshot", inspect)
     result = analyze(
@@ -76,7 +70,8 @@ def test_preparation_stores_exact_dex_without_recompression(settings, tmp_path, 
     with zipfile.ZipFile(root / "analysis.apk") as archive:
         assert archive.getinfo("classes.dex").compress_type == zipfile.ZIP_STORED
         assert archive.read("classes.dex") == data
-    assert inspected and all(not p.exists() for p in inspected)
+    assert result["class_count"] == 0
+    assert not list(root.glob("single-*"))
     assert path.read_bytes() == data
 
 

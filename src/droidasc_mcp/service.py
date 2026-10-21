@@ -150,9 +150,15 @@ class DroidAscService:
                 "limitation": LIMITATION,
             },
             "method_backend": {
-                "configured": self.settings.jadx_home is not None,
-                "required_jadx_version": "1.5.5",
-                "required_java": "JDK 17+",
+                "configured": True,
+                "backend": "native-dex",
+                "requires_java": False,
+                "optional_java_source": {
+                    "configured": self.settings.jadx_home is not None,
+                    "required_jadx_version": "1.5.5",
+                    "required_java": "JDK 17+",
+                    "selection": "source_format=java only; auto uses ASC Smali",
+                },
                 "operations": [
                     "list_methods",
                     "get_method_source",
@@ -160,6 +166,7 @@ class DroidAscService:
                     "get_method_calls",
                     "get_call_graph",
                     "find_field_refs",
+                    "search_refs",
                     "find_type_refs",
                     "build_xref_index",
                     "search_members",
@@ -307,13 +314,45 @@ class DroidAscService:
 
 def _normalize_dex_query(query):
     operation = query.get("operation")
-    discoveries = {"search_members", "search_strings", "search_classes", "search_method_bodies"}
+    discoveries = {
+        "search_members",
+        "search_strings",
+        "search_classes",
+        "search_method_bodies",
+        "search_refs",
+    }
     if type(query.get("case_sensitive", True)) is not bool:
         raise ValueError("case_sensitive must be a boolean")
-    if query.get("member_match", "descriptor") not in {"descriptor", "name"}:
-        raise ValueError("member_match must be descriptor or name")
-    if query.get("member_match", "descriptor") != "descriptor" and operation != "search_members":
-        raise ValueError("member_match requires search_members")
+    modes = (
+        {"descriptor", "name", "exact_name", "prototype"}
+        if operation == "search_refs"
+        else {"descriptor", "name"}
+    )
+    if query.get("member_match", "descriptor") not in modes:
+        raise ValueError("Unsupported member_match for this operation")
+    if query.get("member_match", "descriptor") != "descriptor" and operation not in {
+        "search_members",
+        "search_refs",
+    }:
+        raise ValueError("member_match requires search_members or search_refs")
+    if operation == "search_refs":
+        if query.get("kind") not in {"method", "field"} or not (
+            query.get("value") or query.get("class_name")
+        ):
+            raise ValueError("search_refs requires kind=method or field and value or class_name")
+        if query.get("method_descriptor") or query.get("field_descriptor"):
+            raise ValueError("search_refs uses value, not an exact descriptor parameter")
+        if query.get("kind") == "field" and query.get("member_match") == "prototype":
+            raise ValueError("prototype matching requires kind=method")
+        if query.get("class_name") and query.get("fuzzy_class"):
+            query["class_name"] = query["class_name"].replace(".", "/")
+    if query.get("target_descriptor") and operation != "search_refs":
+        raise ValueError("target_descriptor requires search_refs")
+    if operation == "search_refs" and query.get("target_descriptor"):
+        typ = r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)"
+        pattern = rf"\((?:{typ})*\)(?:V|{typ})" if query["kind"] == "method" else typ
+        if not re.fullmatch(pattern, query["target_descriptor"]):
+            raise ValueError("target_descriptor requires an exact method prototype or field type")
     if not query.get("case_sensitive", True) and operation not in discoveries:
         raise ValueError("case_sensitive requires a discovery operation")
     if operation in {
@@ -383,7 +422,10 @@ def _normalize_dex_query(query):
         if query.get("method_descriptor") or query.get("fuzzy_class"):
             raise ValueError("find_field_refs requires an exact field, not a method or fuzzy class")
         query["class_name"] = owner
-    elif query.get("field_descriptor") or query.get("field_access", "all") != "all":
+    elif query.get("field_descriptor") or (
+        query.get("field_access", "all") != "all"
+        and not (operation == "search_refs" and query.get("kind") == "field")
+    ):
         raise ValueError("field_descriptor and field_access require find_field_refs")
     if query.get("field_access", "all") not in {"all", "read", "write"}:
         raise ValueError("field_access must be all, read, or write")

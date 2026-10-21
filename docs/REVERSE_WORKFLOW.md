@@ -1,6 +1,6 @@
 # Container and revision review
 
-Version 0.4.0 feature boundaries. The combined Linux/Windows, real stdio/HTTP,
+Current candidate feature boundaries. The combined Linux/Windows, real stdio/HTTP,
 independent-tool and clean sdist/wheel results establish acceptance, not this document.
 
 ## Artifact routing
@@ -61,7 +61,7 @@ Format references: [AOSP v2](https://source.android.com/docs/security/features/a
 
 Open baseline and candidate sessions, then call
 `asc_diff_dex_sessions(old_session_id=..., new_session_id=..., kind="all", change="all")`.
-The optional pinned JADX/dexlib2 backend scans declarations without decoding instructions
+The native DEX reader scans declarations without decoding instructions
 or building the expensive xref index. Both sessions remain pinned during the comparison.
 Results include both input IDs, source hashes and container hashes where applicable.
 
@@ -85,7 +85,7 @@ Existing source rows map the DEX entry to the original input.
 These are candidates, including test values and public/restricted identifiers. Credentials
 are never sent to providers for probing. The scan does not resolve instruction use sites,
 assets, native code, runtime values, obfuscated encodings or arbitrary secret formats.
-The optional JADX backend is required. Defaults: 64 MiB cumulative decoded UTF-8 bytes,
+No Java backend is required. Defaults: 64 MiB cumulative decoded UTF-8 bytes,
 2M strings, skip strings above 64K UTF-16 units, cap 20 matches per pattern/string.
 Byte/string-count exhaustion is an error; oversize skips/match caps report partial coverage.
 The maximum requested byte budget is 256 MiB. Candidate paging rescans pools but never
@@ -103,7 +103,10 @@ Decoded instruction text includes registers, literals and switch/array payloads.
 links use Unicode code-point spans and are not instruction references. Follow all pages.
 
 DEX 041 physical containers support multiple logical files and shared physical string data.
-Strict validation precedes version-pinned dexlib2 normalization. Original container hashes,
+Strict validation precedes standalone Google Smali dexlib2 3.0.9 normalization. This uncommon
+format requires JDK 17+ and `DROIDASC_MCP_DEXLIB_HOME`, not JADX. Run
+`uv run python scripts/setup_dexlib.py` explicitly to install the pinned small JAR set.
+Original container hashes,
 logical header offsets and normalized DEX hashes are separate evidence fields. The aggregate
 normalized-byte limit is the smaller of the input limit and twice the container size.
 

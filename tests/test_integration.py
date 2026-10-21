@@ -562,7 +562,7 @@ async def test_structured_method_references(
 
         outgoing = await query("get_method_calls", caller)
         assert outgoing["status"] == "ok", outgoing
-        assert outgoing["backend"] == "dexlib2-instructions"
+        assert outgoing["backend"] == "native-dex-instructions"
         assert outgoing["total"] == 3
         assert outgoing["scanned_methods"] == 1 and outgoing["scanned_instructions"] == 6
         assert outgoing["instruction_scan_complete"] is True
@@ -795,7 +795,7 @@ async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files)
         assert "native noCode(JLjava/lang/String;)V" in native["source"]
         guarded = await query("guarded()V")
         assert ".catch Ljava/lang/Exception;" in guarded["source"]
-        unavailable = await client.call_tool(
+        references = await client.call_tool(
             "asc_analyze_dex",
             {
                 "dex_paths": paths,
@@ -803,9 +803,20 @@ async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files)
                 "field_descriptor": "Lfixture/Target;->value:I",
             },
         )
-        assert not unavailable.is_error
+        assert not references.is_error
+        actual = references.structured_content
+        assert actual["status"] == "ok" and actual["backend"] == "native-dex-instructions"
+        assert actual["total"] > 0 and actual["scan_errors"] == 0
+        unavailable = await client.call_tool(
+            "asc_analyze_dex",
+            {
+                "dex_paths": paths,
+                "operation": "get_method_source",
+                "method_descriptor": "Lfixture/Caller;->run()V",
+                "source_format": "java",
+            },
+        )
         assert unavailable.structured_content["code"] == "backend_unavailable"
-        assert "items" not in unavailable.structured_content
         # Reassemble ASC's public output, not a simulated or name-matched source slice.
         for number, result in enumerate((debug, native, guarded)):
             source = tmp_path / f"roundtrip{number}.smali"
@@ -1349,7 +1360,7 @@ async def test_real_exact_methods(transport, tmp_path, real_dex_files, request, 
 
         listed = await query("list_methods", class_name=owner, limit=100)
         assert listed["status"] == "ok", listed
-        assert listed["backend_version"] == "1.5.5"
+        assert listed["backend_version"] == "1"
         assert listed["dex_entry"] == "classes2.dex"
         methods = {item["descriptor"]: item for item in listed["items"]}
         expected = {
@@ -1378,13 +1389,13 @@ async def test_real_exact_methods(transport, tmp_path, real_dex_files, request, 
                 assert result["status"] == "ok", result
                 assert result["method_descriptor"] == owner + "->" + signature
                 assert marker in result["source"] and absent not in result["source"]
-                assert result["format"] == ("java" if mode == "auto" else "smali")
+                assert result["format"] == "smali"
                 assert result["fell_back"] is False
                 assert result["input_id"] == opened["input_id"]
-        # Empty default constructors are omitted from Java, never replaced by a different method.
+        # Auto is ASC Smali, including constructors. Java remains an explicit opt-in.
         fallback = await query(method_descriptor=owner + "-><init>()V")
-        assert fallback["format"] == "smali" and fallback["fell_back"] is True, fallback
-        assert fallback["fallback_reason"] == "java_method_not_emitted"
+        assert fallback["format"] == "smali" and fallback["fell_back"] is False, fallback
+        assert fallback["fallback_reason"] == ""
         assert ".method public constructor <init>()V" in fallback["source"]
         strict = await query(method_descriptor=owner + "-><init>()V", source_format="java")
         assert strict["code"] == "java_unavailable"
@@ -1411,7 +1422,9 @@ async def test_real_exact_methods(transport, tmp_path, real_dex_files, request, 
 
         async def pending_query():
             with cancel:
-                await query(method_descriptor=owner + "->choose(I)Ljava/lang/String;")
+                await query(
+                    method_descriptor=owner + "->choose(I)Ljava/lang/String;", source_format="java"
+                )
 
         java_pid = None
         java_temporary = None
@@ -1868,7 +1881,7 @@ async def test_persistent_index_transport(
             return result
 
         early = await query("search_members", kind="method", value="->pick(", limit=1)
-        assert early["backend"] == "dexlib2-discovery" and "index" not in early
+        assert early["backend"] == "native-dex-discovery" and "index" not in early
         assert early["total"] == 2 and early["next_offset"] == 1
         warm = await query("search_members", kind="method", value="->pick(", limit=1)
         assert warm["query_cache"]["hit"] and warm["items"] == early["items"]
@@ -1890,24 +1903,18 @@ async def test_persistent_index_transport(
                 for child in psutil.Process().children(recursive=True):
                     with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
                         args = child.cmdline()
-                        if any(arg.endswith("IndexBridge.java") for arg in args):
+                        if "droidasc_mcp.dex_worker" in args:
                             java_pid = child.pid
-                            java_temporary = Path(
-                                next(
-                                    arg.split("=", 1)[1]
-                                    for arg in args
-                                    if arg.startswith("-Djava.io.tmpdir=")
-                                )
-                            )
+                            java_temporary = Path(args[-1]).parent
                             (java_temporary / "cleanup-sentinel").write_text("temporary")
                             break
                 await anyio.sleep(0.01)
-            assert java_pid is not None, "Index JVM did not start"
+            assert java_pid is not None, "Native index worker did not start"
             cancel.cancel()
         deadline = time.monotonic() + 3
         while (alive(java_pid) or java_temporary.exists()) and time.monotonic() < deadline:
             await anyio.sleep(0.01)
-        assert not alive(java_pid), "Cancelled index JVM is still executing"
+        assert not alive(java_pid), "Cancelled native index worker is still executing"
         assert not java_temporary.exists(), "Cancelled index temporary files remain"
 
         annotation = await query(
@@ -1950,6 +1957,76 @@ async def test_persistent_index_transport(
         closed = await client.call_tool("asc_query_dex_session", {"session_id": key})
         assert closed.structured_content["code"] == "session_not_found"
     assert [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths] == hashes
+
+
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+@pytest.mark.anyio
+async def test_native_fuzzy_references_without_java(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_JAVA", "java-must-not-run")
+    monkeypatch.delenv("DROIDASC_MCP_JADX_HOME", raising=False)
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        progress = []
+
+        async def observed(completed, total, message):
+            progress.append((completed, total, message))
+
+        opened = await client.call_tool(
+            "asc_open_dex_session", {"dex_paths": paths}, progress_callback=observed
+        )
+        assert not opened.is_error, opened
+        assert progress and progress[-1][0] == progress[-1][1]
+        assert [p[0] for p in progress] == sorted(p[0] for p in progress)
+        key = opened.structured_content["session_id"]
+
+        async def query(**parameters):
+            result = await client.call_tool(
+                "asc_query_dex_session", {"session_id": key, **parameters}
+            )
+            assert not result.is_error, result
+            assert result.structured_content["status"] == "ok", result
+            return result.structured_content
+
+        exact = await query(
+            operation="find_method_refs", method_descriptor="Lfixture/Target;->pick(I)V"
+        )
+        fuzzy = await query(
+            operation="search_refs",
+            kind="method",
+            class_name="fixture.tar",
+            fuzzy_class=True,
+            value="PICK",
+            member_match="exact_name",
+            case_sensitive=False,
+            target_descriptor="(I)V",
+        )
+        assert fuzzy["items"] == exact["items"] and fuzzy["total"] == exact["total"] > 0
+        exact = await query(
+            operation="find_field_refs", field_descriptor="Lfixture/Target;->value:I"
+        )
+        owner = await query(
+            operation="search_refs",
+            kind="field",
+            class_name="fixture.Target",
+            target_descriptor="I",
+        )
+        assert owner["items"] == exact["items"] and owner["total"] == exact["total"] > 0
+        assert not any(
+            "java" in child.name().lower() for child in psutil.Process().children(recursive=True)
+        )
+        await client.call_tool("asc_close_dex_session", {"session_id": key})
 
 
 async def assert_fixture_query_boundaries(client, apk, tmp_path):

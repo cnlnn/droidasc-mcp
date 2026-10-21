@@ -1,5 +1,41 @@
 # Local acceptance checks
 
+## v0.5.0 native-query candidate, 2026-10-22
+
+Candidate only: main, tags and release assets must remain unchanged until the frozen
+Linux/Windows, installed sdist/wheel, signing, stability and accuracy gates pass.
+
+Core references, discovery, structure and streaming indexes now use checked native DEX
+boundaries, with an optional CPython stable-ABI C accelerator and an independent Python
+fallback. Neither needs JADX or Java. ASC remains the exact-method Smali engine; Java
+decompilation is explicit opt-in only. DEX 041 normalization uses separately pinned
+standalone dexlib2 3.0.9, not a JADX distribution. Installation does not download a backend.
+
+`search_refs` adds a one-pass union with literal owner/name filters, omitted member names,
+exact prototype/type filtering, read/write selection and global pagination. The graph index
+can build call relations only. Immutable session readers can run concurrently; completed
+pages retain bounded host caching without keeping whole APK objects or workers resident.
+
+Startup still performs original integrity and duplicate-class checks before reporting ready.
+Actual MCP progress reports snapshot/class-directory completion; heavy indexes remain lazy.
+Do not compare this validated-ready contract to a competitor's path-registration time as if
+both performed the same work. Still report both measured end-to-end times without adjustment.
+
+Reproduce same-interpreter, same-input, alternating fresh-stdio trials with the unmodified
+competitor at `848c711f1d80a1c2577283f1fa5f475ff734aa40`:
+
+```sh
+uv run --with ./artifacts/aimard-asc-mcp python scripts/benchmark_competitor_runtime.py INPUT.apk \
+  --rounds 3 --workers 2 --graph-depth 3 --output matched-runtime.json
+```
+
+The report records full runtime hashes, real progress, cold/warm calls, concurrent batches,
+aggregate descendant RSS, output and timeout failures. Both implementations share external
+180-second/4-GiB limits; OS caches remain intact. A competitor timeout is not a completed
+graph timing or evidence of our graph completeness. Verify every emitted graph site with
+the independent decoder and complete method/field rows and diagnostics against the frozen
+JVM oracle (`benchmark_reference_scan.py --native`). Pilot results are not release authority.
+
 ## v0.4.1 cold-query gate, 2026-10-22
 
 The scanner optimization preserves fresh supervised workers and the existing 512-MiB JVM

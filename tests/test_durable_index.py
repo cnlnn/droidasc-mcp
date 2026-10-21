@@ -90,6 +90,20 @@ def test_restore_clears_page_reservation(cache, tmp_path):
     assert not list(pages.iterdir())
 
 
+def test_second_restore_does_not_replace_open_target(cache, tmp_path, monkeypatch):
+    identity, _ = put(cache, tmp_path, "one")
+    target = tmp_path / "immutable.sqlite"
+    assert cache.restore(identity, target, tmp_path)
+
+    def forbidden(*args):
+        pytest.fail("Concurrent restore replaced an already-published SQLite file")
+
+    monkeypatch.setattr(os, "replace", forbidden)
+    with target.open("rb") as reader:
+        assert cache.restore(identity, target, tmp_path)
+        assert reader.read() == b"sample" * 1000
+
+
 def test_lock_never_writes_before_acquisition(cache):
     for _ in range(2):
         with cache._locked():

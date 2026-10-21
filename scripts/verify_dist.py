@@ -56,6 +56,18 @@ def main():
                 "scripts/verify_archive_workflow.py",
                 "scripts/verify_signing.py",
                 "scripts/benchmark_call_graph.py",
+                "scripts/benchmark_competitor_runtime.py",
+                "setup.py",
+                "scripts/setup_dexlib.py",
+                "src/droidasc_mcp/_dexscan.c",
+                "src/droidasc_mcp/native_dex.py",
+                "src/droidasc_mcp/native_scan.py",
+                "src/droidasc_mcp/native_index.py",
+                "src/droidasc_mcp/native_page.py",
+                "src/droidasc_mcp/native_discovery.py",
+                "src/droidasc_mcp/native_structure.py",
+                "tests/test_native_dex.py",
+                "tests/test_native_page.py",
                 "src/droidasc_mcp/archive_worker.py",
                 "src/droidasc_mcp/manifest.py",
                 "src/droidasc_mcp/call_graph.py",
@@ -143,7 +155,7 @@ def main():
             [
                 str(python),
                 "-c",
-                "import droidasc_mcp; "
+                "import droidasc_mcp, droidasc_mcp._dexscan; "
                 "assert 'site-packages' in droidasc_mcp.__file__; print(droidasc_mcp.__file__)",
             ],
             root,

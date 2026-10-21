@@ -1,6 +1,8 @@
 """Strict DEX 041 container validation and supervised logical-file normalization."""
 
 import hashlib
+import os
+import shutil
 import struct
 import zlib
 
@@ -10,7 +12,7 @@ from .runner import DroidAscError
 
 def expand(settings, source, workspace):
     from .dex_worker import _identity
-    from .method_backend import _execute_java, java_command
+    from .method_backend import _execute_java
 
     before = source.stat()
     if before.st_size > settings.max_apk_bytes:
@@ -65,9 +67,34 @@ def expand(settings, source, workspace):
         job = workspace / f"logical-{number}"
         job.mkdir()
         target = job / "normalized.dex"
-        command = java_command(settings, job, "DexContainerBridge.java")
-        if isinstance(command, dict):
-            raise DexInputError(command["code"], command["message"])
+        java = settings.java_executable or shutil.which("java")
+        jars = sorted((settings.dexlib_home / "lib").glob("*.jar")) if settings.dexlib_home else []
+        if not java or not jars:
+            raise DexInputError(
+                "backend_unavailable",
+                "DEX 041 requires standalone dexlib2 "
+                "and Java 17+: configure DROIDASC_MCP_DEXLIB_HOME; JADX is not used",
+            )
+        from pathlib import Path
+
+        temporary = job / "jvm"
+        temporary.mkdir()
+        command = [
+            str(java),
+            "-Xmx512m",
+            "-Xss512k",
+            "-XX:+UseSerialGC",
+            "-XX:CompressedClassSpaceSize=64m",
+            "-XX:ReservedCodeCacheSize=64m",
+            "-XX:-CreateCoredumpOnCrash",
+            f"-XX:ErrorFile={os.devnull}",
+            f"-Djava.io.tmpdir={temporary}",
+            f"-Duser.home={temporary}",
+            "-Dfile.encoding=UTF-8",
+            "--class-path",
+            os.pathsep.join(map(str, jars)),
+            str(Path(__file__).with_name("DexContainerBridge.java")),
+        ]
         result = _execute_java(
             settings,
             command

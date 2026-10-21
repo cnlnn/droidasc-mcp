@@ -91,11 +91,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: uv sync --locked --extra dev
+      - run: uv run python -c "import droidasc_mcp._dexscan"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
       - run: uv run python scripts/setup_jadx.py
+      - run: uv run python scripts/setup_dexlib.py
       - uses: actions/download-artifact@v4
         with:
           name: rust-asc-${{ matrix.os }}
@@ -127,8 +129,12 @@ jobs:
             signing-results.json
 
   package:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -136,9 +142,13 @@ jobs:
           python-version: "3.13"
       - run: uv sync --locked --extra dev
       - run: uv build
+      - if: runner.os == 'Linux'
+        run: uv run --with auditwheel auditwheel repair dist/*.whl --wheel-dir repaired
+      - if: runner.os == 'Linux'
+        run: uv run python -c "from pathlib import Path; import shutil; [p.unlink() for p in Path('dist').glob('*.whl')]; [shutil.move(str(p), 'dist') for p in Path('repaired').glob('*.whl')]"
       - uses: actions/upload-artifact@v4
         with:
-          name: python-distributions
+          name: python-distributions-${{ matrix.os }}
           path: dist/*
           if-no-files-found: error
 
@@ -154,7 +164,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: python-distributions
+          name: python-distributions-${{ matrix.os }}
           path: dist
       - uses: actions/download-artifact@v4
         with:
@@ -173,6 +183,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: uv run python scripts/setup_jadx.py
+      - run: uv run python scripts/setup_dexlib.py
       - uses: actions/download-artifact@v4
         with:
           name: rust-asc-${{ matrix.os }}
@@ -213,6 +224,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: uv run python scripts/setup_jadx.py
+      - run: uv run python scripts/setup_dexlib.py
       - run: uv run python -m zipfile -e "artifacts/fixture apk/app-debug.apk" artifacts/stability-dex
       - run: >-
           uv run python scripts/stability_dex.py

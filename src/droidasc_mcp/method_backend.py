@@ -122,7 +122,9 @@ def _execute_java(settings, command, workspace, offset, limit):
             process.kill()
             raise DroidAscError("Method backend output exceeds configured stream limit")
         if process.wait() != 0:
-            raise DroidAscError("Method backend failed; check configured JADX and Java versions")
+            raise DroidAscError(
+                "Configured Java bridge failed; check its libraries and JDK version"
+            )
     try:
         result = json.loads(output)
     except (ValueError, UnicodeError) as exc:

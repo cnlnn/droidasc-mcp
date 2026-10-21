@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import itertools
+import json
 import tempfile
 import threading
 import time
@@ -30,6 +32,7 @@ class Entry:
     closing: bool = False
     index_lock: threading.Lock = field(default_factory=threading.Lock)
     pages: PageCache = field(default_factory=PageCache)
+    query_locks: tuple = field(default_factory=lambda: tuple(threading.Lock() for _ in range(32)))
 
 
 class DexSessions:
@@ -177,8 +180,26 @@ class DexSessions:
                 | DISCOVERY_OPERATIONS
                 | STRUCTURE_OPERATIONS
             ):
-                # Atomic publication and one builder per session; waiting remains cancellable.
-                with self.runner._acquire(entry.index_lock):
+                native_read = query.get("operation") in {
+                    "find_method_refs",
+                    "get_method_calls",
+                    "find_field_refs",
+                    "search_refs",
+                    "search_members",
+                    "search_strings",
+                    "search_classes",
+                }
+                # Immutable readers run concurrently. Equal queries share a bounded lock
+                # stripe; only index publication needs the session-wide builder lock.
+                stripe = (
+                    int.from_bytes(
+                        hashlib.sha256(json.dumps(query, sort_keys=True).encode()).digest()[:2],
+                        "big",
+                    )
+                    % 32
+                )
+                lock = entry.query_locks[stripe] if native_read else entry.index_lock
+                with self.runner._acquire(lock):
                     _check_cancelled()
                     root = Path(entry.storage.name)
 

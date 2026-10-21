@@ -248,7 +248,9 @@ def test_discovery_without_index_and_cached_references(indexed_service, smali_de
     assert query(operation="search_strings", value="string_argument")["total"] == 0
     assert query(operation="search_strings", value="%_")["total"] == 0
     assert not (root / "xrefs.sqlite").exists()
-    assert list((root / "query-cache").glob("*.json"))
+    assert service.sessions.entries[key].pages.used > 0
+    # Native read-only queries use bounded resident pages, not shared disk-page writes.
+    assert not list((root / "query-cache").glob("*.json"))
     query(operation="build_xref_index")
     assert not list((root / "query-cache").glob("*.json"))
     for request, baseline in zip(requests, baselines, strict=True):

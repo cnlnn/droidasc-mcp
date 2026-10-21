@@ -1,0 +1,283 @@
+"""Native results must match the independent JVM oracle, not byte candidates."""
+
+import zipfile
+from dataclasses import replace
+
+import pytest
+
+from droidasc_mcp.config import Settings
+from droidasc_mcp.method_backend import query_methods
+from droidasc_mcp.native_dex import Dex, InvalidDex, query_references
+
+
+@pytest.mark.parametrize(
+    "operation,descriptor",
+    [
+        ("find_method_refs", "Lfixture/Target;->pick(I)V"),
+        ("find_field_refs", "Lfixture/Ordering;->value:I"),
+        ("get_method_calls", "Lfixture/Caller;->run()V"),
+    ],
+)
+def test_native_matches_independent_oracle(
+    tmp_path, smali_dex_files, boundary_dex_file, operation, descriptor
+):
+    bundle = tmp_path / "analysis.apk"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        for number, path in enumerate([*smali_dex_files, boundary_dex_file]):
+            archive.write(path, f"classes{number}.dex")
+    settings = Settings.from_env()
+    query = {
+        "operation": operation,
+        "offset": 0,
+        "limit": 100,
+        "class_name": "",
+        "field_descriptor" if operation == "find_field_refs" else "method_descriptor": descriptor,
+    }
+    actual = query_references(settings, bundle, query)
+    expected = query_methods(settings, bundle, "", query, tmp_path)
+    assert expected["status"] == "ok", expected
+    for result in (actual, expected):
+        result.pop("backend")
+        result.pop("backend_version")
+    assert actual == expected
+    # No configured Java or JADX is necessary on the production path.
+    isolated = replace(settings, jadx_home=None, java_executable=None)
+    assert query_references(isolated, bundle, query)["items"] == expected["items"]
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_bulk_cursor_matches_simple_cursor(
+    smali_dex_files, boundary_dex_file, graph_dex_files, accelerator
+):
+    from droidasc_mcp.native_dex import METHOD_NAMES
+    from droidasc_mcp.native_scan import scanner
+
+    for path in [*smali_dex_files, boundary_dex_file, *graph_dex_files]:
+        dex = Dex(path.read_bytes())
+        assert dex.classes() == dex.classes(accelerator=False)
+        for _, cls in dex.classes():
+            assert dex.raw_members(cls) == dex.raw_members(cls, accelerator=False)
+        for fields in (True, False):
+            scan = scanner(dex, set(), fields, False, accelerator=accelerator)
+            for _, cls in dex.classes():
+                for _, _, code in dex.members(cls)[1]:
+                    if not code:
+                        continue
+                    simple = list(dex.instructions(code))
+                    bulk = list(scan(code))
+                    assert sum(row[3] for row in bulk) == len(simple)
+                    expected = [
+                        row
+                        for row in simple
+                        if (0x52 <= row[2] <= 0x6D if fields else row[2] in METHOD_NAMES)
+                        or row[2] >= 0xFA
+                        and row[2] <= 0xFE
+                        or row[2] == 0
+                        and dex.data[row[0] + 1] != 0
+                    ]
+                    assert [row[:3] for row in bulk if row[2] != -1] == expected
+        dex.close()
+
+
+def test_native_rejects_truncated_payload(boundary_dex_file):
+    dex = Dex(boundary_dex_file.read_bytes())
+    for _, cls in dex.classes():
+        for _, _, code in dex.members(cls)[1]:
+            if not code:
+                continue
+            data = bytearray(dex.data)
+            data[code + 16 : code + 20] = b"\x00\x03\x08\x00"
+            data[code + 20 : code + 24] = b"\xff\xff\xff\x7f"
+            altered = Dex(bytes(data))
+            with pytest.raises(InvalidDex):
+                list(altered.instructions(code))
+            return
+    pytest.fail("Fixture has no code")
+
+
+def code_dex(stream, version=39, pool=1):
+    import struct
+
+    data = bytearray(128) + stream
+    data[:8] = f"dex\n{version:03d}\0".encode()
+    struct.pack_into("<III", data, 32, len(data), 112, 0x12345678)
+    struct.pack_into("<I", data, 124, len(stream) // 2)
+    dex = Dex(bytes(data))
+    for table in (3, 4):
+        dex.tables[table] = (pool, 0, 8)
+    return dex
+
+
+def test_large_payload_rendering_is_bounded():
+    import struct
+
+    from droidasc_mcp.native_structure import render
+    from droidasc_mcp.runner import DroidAscError
+
+    stream = struct.pack("<HHI", 0x300, 8, 50000) + bytes(400000)
+    dex = code_dex(stream)
+    with pytest.raises(DroidAscError, match="Payload rendering exceeds"):
+        render(dex, None, 128, 0, 0, budget=4096)
+
+
+@pytest.mark.parametrize("fields", [False, True])
+def test_query_without_native_extension_matches_accelerated(
+    tmp_path, smali_dex_files, monkeypatch, fields
+):
+    import droidasc_mcp.native_dex as native
+    import droidasc_mcp.native_scan as scan
+
+    bundle = tmp_path / "analysis.apk"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        for index, path in enumerate(smali_dex_files):
+            archive.write(path, f"classes{index}.dex")
+    query = {
+        "operation": "find_field_refs" if fields else "find_method_refs",
+        "field_descriptor" if fields else "method_descriptor": (
+            "Lfixture/Ordering;->value:I" if fields else "Lfixture/Target;->pick(I)V"
+        ),
+        "offset": 0,
+        "limit": 100,
+    }
+    expected = query_references(Settings.from_env(), bundle, query)
+    original_scan, original_classes = scan.scanner, Dex.classes
+    monkeypatch.setattr(native, "_native_members", None)
+    monkeypatch.setattr(scan, "method_selector", lambda *args: None)
+    monkeypatch.setattr(scan, "scanner", lambda *args: original_scan(*args, accelerator=False))
+    monkeypatch.setattr(Dex, "classes", lambda self: original_classes(self, accelerator=False))
+    assert query_references(Settings.from_env(), bundle, query) == expected
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+@pytest.mark.parametrize(
+    "stream,version",
+    [
+        (b"\x00\x04", 39),
+        (b"\x3e\x00", 39),
+        (b"\x6e\x00\x00\x00", 39),
+        (b"\xfa\x00\x00\x00\x00\x00\x00\x00", 37),
+        (b"\xfe\x00\x00\x00", 38),
+        (b"\x00\x03\x03\x00\x00\x00\x00\x00", 39),
+        (b"\x00\x03\x08\x00\xff\xff\xff\x7f", 39),
+        (b"\x00\x01\x01\x00", 39),
+        (b"\x00\x02\x01\x00", 39),
+        (b"\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00", 39),
+    ],
+)
+def test_all_scanners_reject_malformed_instructions(stream, version, accelerator):
+    from droidasc_mcp.native_scan import scanner
+
+    dex = code_dex(stream, version)
+    with pytest.raises(InvalidDex):
+        list(dex.instructions(112))
+    with pytest.raises(InvalidDex):
+        list(scanner(dex, {0}, False, True, accelerator=accelerator)(112))
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+@pytest.mark.parametrize(
+    "fields,stream", [(False, b"\x6e\x00\x01\x00\x00\x00"), (True, b"\x60\x00\x01\x00")]
+)
+def test_scanners_validate_nonmatching_reference_indexes(accelerator, fields, stream):
+    from droidasc_mcp.native_scan import scanner
+
+    dex = code_dex(stream)
+    with pytest.raises(InvalidDex):
+        list(scanner(dex, set(), fields, True, accelerator=accelerator)(112))
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_dense_method_streaming_preserves_sites_and_counts(accelerator):
+    from droidasc_mcp.native_scan import scanner
+
+    dex = code_dex(b"\x6e\x00\x00\x00\x00\x00" * 10000 + b"\x0e\x00")
+    rows = list(scanner(dex, {0}, False, True, accelerator=accelerator)(112))
+    assert sum(row[3] for row in rows) == 10001
+    assert [row[1] for row in rows if row[2] == 0x6E] == list(range(0, 30000, 3))
+    if accelerator:
+        try:
+            from droidasc_mcp._dexscan import scan
+        except ImportError:
+            return  # Source installs without a compiler intentionally retain the Python path.
+        from droidasc_mcp.native_dex import WIDTHS
+
+        batch = scan(dex.data, 112, 39, WIDTHS, bytes([1]) + bytes(65535), 0, 1, 1)
+        assert len(batch) == 1025 and batch[-1][2] == -2
+
+
+def test_fuzzy_reference_entry_matches_exact_unions(tmp_path, smali_dex_files):
+    bundle = tmp_path / "analysis.apk"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        for i, path in enumerate(smali_dex_files):
+            archive.write(path, f"classes{i}.dex")
+    settings = replace(Settings.from_env(), jadx_home=None, java_executable="must-not-run")
+    base = {
+        "operation": "search_refs",
+        "kind": "method",
+        "value": "PiCk",
+        "member_match": "exact_name",
+        "case_sensitive": False,
+        "offset": 0,
+        "limit": 100,
+    }
+    result = query_references(settings, bundle, base)
+    expected = []
+    for signature in ("(I)V", "(Ljava/lang/String;)V"):
+        exact = query_references(
+            settings,
+            bundle,
+            {
+                "operation": "find_method_refs",
+                "method_descriptor": "Lfixture/Target;->pick" + signature,
+                "offset": 0,
+                "limit": 100,
+            },
+        )
+        expected.extend(exact["items"])
+    assert result["total"] == len(expected) == 2
+    assert sorted(result["items"], key=str) == sorted(expected, key=str)
+    assert query_references(settings, bundle, {**base, "case_sensitive": True})["total"] == 0
+    assert (
+        query_references(settings, bundle, {**base, "class_name": "Missing", "fuzzy_class": True})[
+            "total"
+        ]
+        == 0
+    )
+    prototype = query_references(
+        settings, bundle, {**base, "member_match": "prototype", "value": "(I)V"}
+    )
+    assert any(row["callee"] == "Lfixture/Target;->pick(I)V" for row in prototype["items"])
+    selected = query_references(settings, bundle, {**base, "target_descriptor": "(I)V"})
+    assert selected["total"] == 1
+    assert selected["items"][0]["callee"] == "Lfixture/Target;->pick(I)V"
+    owner_only = query_references(
+        settings, bundle, {**base, "value": "", "class_name": "Lfixture/Target;"}
+    )
+    assert all(row["callee"].startswith("Lfixture/Target;->") for row in owner_only["items"])
+    lower_owner = query_references(settings, bundle, {**base, "class_name": "lfixture/target;"})
+    assert lower_owner["items"] == result["items"]
+
+
+@pytest.mark.parametrize(
+    "stream",
+    [
+        b"\x80" * 5,
+        b"\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00",
+        b"\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00",
+        b"\x01\x01\x00\x00\x00\x00\x00\x00",
+    ],
+)
+def test_member_decoders_reject_malformed_class_data(stream):
+    from droidasc_mcp.native_dex import _native_members
+
+    dex = code_dex(b"\x00\x00")
+    data = bytearray(dex.data)
+    import struct
+
+    struct.pack_into("<I", data, 24, len(data))
+    dex.data = bytes(data) + stream
+    with pytest.raises(InvalidDex):
+        dex.raw_members(0, accelerator=False)
+    if _native_members is not None:
+        with pytest.raises(InvalidDex):
+            dex.raw_members(0)

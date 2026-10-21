@@ -1,14 +1,12 @@
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-import com.google.gson.Gson;
 import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
 import com.android.tools.smali.dexlib2.iface.*;
 import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 import com.android.tools.smali.dexlib2.writer.io.DexDataStore;
 import com.android.tools.smali.dexlib2.writer.io.FileDataStore;
-import jadx.api.JadxDecompiler;
 
 /** Re-encode one logical DEX while retaining physical container offsets during reading. */
 public class DexContainerBridge {
@@ -41,8 +39,6 @@ public class DexContainerBridge {
         public void close() throws IOException { delegate.close(); }
     }
     public static void main(String[] args) throws Exception {
-        if (!"1.5.5".equals(JadxDecompiler.getVersion()))
-            throw new IllegalArgumentException("Expected JADX 1.5.5");
         byte[] data = Files.readAllBytes(Path.of(args[0]));
         var logical = new LogicalDex(data, Integer.parseInt(args[1]));
         DexFile standalone = new DexFile() {
@@ -51,6 +47,6 @@ public class DexContainerBridge {
         };
         BoundedStore store = new BoundedStore(args[2], Long.parseLong(args[3]));
         try { DexPool.writeTo(store, standalone); } finally { store.close(); }
-        System.out.print(new Gson().toJson(Map.of("status", "ok")));
+        System.out.print("{\"status\":\"ok\"}");
     }
 }

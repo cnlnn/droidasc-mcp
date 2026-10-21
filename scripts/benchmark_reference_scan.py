@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 import zipfile
@@ -18,6 +19,9 @@ def main():
     parser.add_argument("--java", type=Path, required=True)
     parser.add_argument("--jadx-home", type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument(
+        "--native", action="store_true", help="Compare the JVM oracle with native DEX"
+    )
     parser.add_argument("--candidate-java-option", action="append", default=[])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -29,6 +33,8 @@ def main():
         "baseline": args.baseline_source.resolve(strict=True),
         "candidate": Path(droidasc_mcp.__file__).with_name("MethodBridge.java").resolve(),
     }
+    if args.native:
+        sources["candidate"] = Path(droidasc_mcp.__file__).with_name("native_dex.py").resolve()
     report = {
         "apk_sha256": hashlib.sha256(args.apk.read_bytes()).hexdigest(),
         "source_sha256": {
@@ -54,34 +60,63 @@ def main():
             for number in range(args.rounds):
                 for label in list(sources) if number % 2 == 0 else list(reversed(sources)):
                     start = time.monotonic()
-                    reply = subprocess.run(
-                        [
-                            str(args.java.resolve()),
-                            "-Xmx512m",
-                            "-Xss512k",
-                            "-XX:+UseSerialGC",
-                            "-XX:CompressedClassSpaceSize=64m",
-                            "-XX:ReservedCodeCacheSize=64m",
-                            *(args.candidate_java_option if label == "candidate" else []),
-                            "-cp",
-                            jars,
-                            str(sources[label]),
+                    command = [
+                        str(args.java.resolve()),
+                        "-Xmx512m",
+                        "-Xss512k",
+                        "-XX:+UseSerialGC",
+                        "-XX:CompressedClassSpaceSize=64m",
+                        "-XX:ReservedCodeCacheSize=64m",
+                        *(args.candidate_java_option if label == "candidate" else []),
+                        "-cp",
+                        jars,
+                        str(sources[label]),
+                        str(bundle),
+                        "",
+                        "",
+                        operation,
+                        descriptor,
+                        "auto",
+                        "0",
+                        str(2**31 - 1),
+                        "all",
+                    ]
+                    if args.native and label == "candidate":
+                        command = [
+                            sys.executable,
+                            "-c",
+                            (
+                                "import json,sys; from dataclasses import replace; "
+                                "from droidasc_mcp.config import Settings; "
+                                "from droidasc_mcp.native_dex import query_references; "
+                                "q={'operation':sys.argv[2],'offset':0,'limit':2**31-1,"
+                                "('field_descriptor' if sys.argv[2]=='find_field_refs' "
+                                "else 'method_descriptor'):sys.argv[3]}; "
+                                "print(json.dumps(query_references(replace(Settings.from_env(),max_page_size=2**31-1),sys.argv[1],q)))"
+                            ),
                             str(bundle),
-                            "",
-                            "",
                             operation,
                             descriptor,
-                            "auto",
-                            "0",
-                            str(2**31 - 1),
-                            "all",
-                        ],
+                        ]
+                    reply = subprocess.run(
+                        command,
                         capture_output=True,
                         check=True,
                         timeout=120,
                     )
                     elapsed = time.monotonic() - start
                     result = json.loads(reply.stdout)
+                    if args.native:
+                        for key in (
+                            "backend",
+                            "backend_version",
+                            "offset",
+                            "limit",
+                            "has_more",
+                            "truncated",
+                            "next_offset",
+                        ):
+                            result.pop(key, None)
                     assert result["status"] == "ok" and result["instruction_scan_complete"], result
                     assert len(result["items"]) == result["total"]
                     if expected is None:

@@ -199,11 +199,11 @@ MCP 错误和结构化 `status`。
 `cleanup_pending` 标明是否仍等待。MCP 正常退出会清理文件，进程被强杀时仍可能留下系统临时目录。
 未知或过期 ID 返回 `session_not_found`，不会自动重新加载已变化的原文件。
 
-可选精确方法后端需要官方 [JADX 1.5.5](https://github.com/skylot/jadx/releases/tag/v1.5.5) 和 JDK 17 以上版本。
+核心 DEX 查询、发现、结构视图和索引均不依赖 Java 或 JADX。`source_format=auto`（默认）与
+`smali` 直接使用 ASC 0.1.2.post3，可设置 `debug_info=true` 包含调试指令。
+只有显式 `source_format=java` 需要官方 [JADX 1.5.5](https://github.com/skylot/jadx/releases/tag/v1.5.5) 和 JDK 17 以上版本。
 设置 `DROIDASC_MCP_JADX_HOME` 为包含 `lib/` 的解压目录，`DROIDASC_MCP_JAVA` 为 JDK 的 `java` 路径
 （也可使用 PATH）。仅有 JRE 不够。普通 ASC 功能不依赖 Java，安装 Python 包也不会下载 JADX。
-显式指定 `source_format=smali` 直接调用 ASC 0.1.2.post3，不依赖 JVM/JADX；可同时设置
-`debug_info=true` 返回调试指令。`auto` 和 `java` 仍使用可选后端。
 
 ```text
 asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
@@ -211,13 +211,13 @@ asc_query_dex_session(session_id="...", operation="get_method_source", method_de
 asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z", source_format="smali")
 ```
 
-方法清单由 dexlib2 直接读取 DEX 定义，包含构造函数、synthetic/bridge、native/abstract 方法、完整参数和
+方法清单原生读取 DEX 定义，包含构造函数、synthetic/bridge、native/abstract 方法、完整参数和
 返回类型，按完整描述符排序分页。查询必须给出 `L类;->方法(参数)返回类型`，不存在的重载返回
 `method_not_found`，不会按名称猜选或退到其他重载。当前入口是 DEX 文件或会话，不直接接收 APK 路径。
 
-`source_format=auto` 通过 JADX 公开 API 精确查找 Java 方法；Java 未输出该方法（如省略的默认构造函数）
-或引擎报错时，只反汇编同一个 dexlib2 方法对象。返回 `format`、`fell_back`、`fallback_reason`、后端版本、
-原始哈希和 `dex_entry`。`java` 模式不自动回退，`smali` 模式始终返回该方法的反汇编。引擎错误和警告计数
+`source_format=auto` 返回 ASC 的精确方法 Smali，不尝试 Java 反编译。返回 `format`、`fell_back`、
+`fallback_reason`、后端版本、原始哈希和 `dex_entry`。`java` 模式不自动回退，缺少配置返回
+`backend_unavailable`，无精确 Java 方法体返回 `java_unavailable`。引擎错误和警告计数
 不是 Java 语义正确性的证明；原 `find_refs` 仍保留 ASC 的名称级尽力解析结果。
 
 新增 `find_field_refs`，通过完整 `field_descriptor`（如 `Lcom/example/Config;->enabled:Z`）
@@ -225,7 +225,7 @@ asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source
 字段描述符、读写类型、静态/实例访问、指令、DEX 来源及方法内 code-unit 偏移。先过滤再分页，
 同名不同类型字段不会混在一起；未使用或不存在的字段返回零匹配，外部字段引用保留空的目标 DEX。
 定义查找按字面描述符进行，不解析继承字段；反射、JNI、方法句柄目标和编码初始值不计为直接读写。
-该操作需要可选 JADX/dexlib2 后端，同时支持单次分析和 DEX 会话。
+该操作使用原生指令扫描器，不依赖 Java，同时支持单次分析和 DEX 会话。
 
 ```python
 asc_query_dex_session(
@@ -237,7 +237,7 @@ asc_query_dex_session(
 ```
 
 新增 `find_method_refs`（谁引用该方法）和 `get_method_calls`（该方法引用谁），均要求完整方法描述符，
-支持 DEX 文件和会话，使用上述可选后端。每条结果包含完整 `caller`、`callee`、调用者 `dex_entry`、
+支持 DEX 文件和会话，使用原生指令扫描器。每条结果包含完整 `caller`、`callee`、调用者 `dex_entry`、
 `opcode` 和 `instruction_offset`。偏移单位是从方法首条指令起算的 **16 位 code unit**，不是文件偏移。
 `target_resolution`、`target_dex_entry` 表明操作数所指的方法是否定义在输入中。入向查询可查外部方法；
 出向查询要求该方法存在。分页顺序固定为 DEX entry、类、调用者描述符和指令位置。
@@ -251,8 +251,8 @@ asc_query_dex_session(session_id="...", operation="get_method_calls", method_des
 动态位置最多返回 20 条诊断。`instruction_scan_complete` 仅指指定范围的指令解码完成，不代表完整运行时
 调用图。虚调用分派、反射、JNI 和动态加载仍未解析；未知指令或解码失败直接报错，不返回伪完整结果。
 
-未配置可选后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。源码查询和未索引查询启动一个受现有进程树限制的
-JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，因此有启动开销。方法分页包含 `total`、
+仅显式 Java 源码查询启动可选 JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束；
+非 1.5.5 版本明确拒绝。方法分页包含 `total`、
 `offset`、`limit`、`next_offset`、`truncated` 和 `has_more`，超大结果明确报错而不是静默截断。
 
 会话限制可通过 `DROIDASC_MCP_MAX_DEX_SESSIONS`、`DROIDASC_MCP_DEX_SESSION_TTL_SECONDS`、
@@ -264,7 +264,8 @@ JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，
 `operation="get_call_graph"` 根据完整 `method_descriptor` 探索多跳静态调用图。
 `direction=incoming|outgoing|both`，默认双向；`depth=1..5`，默认 2；
 `max_nodes=1..500`，默认 200；`max_edges=1..1000`，默认 500。
-首次调用会构建完整索引，大型应用可能需要数分钟，不代表冷查询提速；会话内后续调用复用索引。
+首次调用仅构建调用关系索引，或复用已有完整索引，不额外构建字段和类型索引。
+仍有冷建库时间和磁盘成本；会话内后续调用复用索引。
 节点保留最短跳数及定义 DEX；边保留每个独立调用点，重复调用、opcode、偏移及目标来源均保留。
 循环和递归不会无限展开，外部方法操作数也可以作为根节点。
 图内容另有 128 KiB 预算，`truncation_reasons` 分别报告深度、节点、边及输出字节边界。
@@ -273,7 +274,7 @@ JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，
 动态调用诊断仅统计返回节点，最多附 20 个示例；`invoke-custom` 不伪造目标边，虚调用运行时分派仍未解析。
 
 `build_xref_index` 完整扫描所提供 DEX，成功后原子发布 SQLite 索引。之后精确方法/字段引用查询
-无需再次启动 JVM。`find_type_refs` 自动建库或复用，`type_relation` 可选 `instruction`、
+无需再次扫描指令。`find_type_refs` 自动建库或复用，`type_relation` 可选 `instruction`、
 `declaration`、`annotation`、`all`，覆盖声明和嵌套注解类型值；数组按完整描述符匹配，不展开元素类型。
 
 ```python
@@ -293,21 +294,47 @@ Smali 查询，不必猜重载。它不是 DEX 字符串池搜索，也不是运
 DEX 字符串池，使用区分大小写的字面子串，返回 `dex_entry`、`string_index` 和 `value`；
 字符串池中存在不等于代码使用。两种发现操作均返回 `instruction_scan_complete=false`。
 
-会话内的发现与未建库精确引用查询支持相同查询页复用。磁盘 LRU 缓存最多 32 页、总计 4 MiB、
-每页 256 KiB，与索引共用磁盘预留，完整建库前清空。缓存绑定不可变输入与后端哈希，换页可能
-重新扫描；`query_cache.hit` 表示是否命中。仍保留独立工作进程，不常驻整份 APK 解析对象。
+`search_refs` 单次扫描返回匹配引用的并集，无需先枚举声明或完整建库：
 
-另有每会话最多 32 页、4 MiB 的常驻序列化页缓存，单页上限 256 KiB，命中时无需启动工作进程。
+```python
+asc_query_dex_session(
+    session_id=sid,
+    operation="search_refs",
+    kind="method",
+    class_name="java.lang",
+    fuzzy_class=True,
+    value="equal",
+    member_match="name",
+)
+asc_query_dex_session(
+    session_id=sid,
+    operation="search_refs",
+    kind="field",
+    class_name="android.os.Build",
+    target_descriptor="Ljava/lang/String;",
+    access="read",
+)
+```
+
+`member_match` 可选 `name`（名称字面子串）、`exact_name`、`prototype`（方法原型子串）或 `descriptor`（完整描述符字面子串）。
+`case_sensitive` 默认 true；`fuzzy_class` 使用所属类字面子串，不是正则。可省略 `value` 查询所属类，
+但名称与所属类不能同时为空。`target_descriptor` 精确筛选方法原型或字段类型。
+`matched_targets` 统计实际被引用的身份，不含未使用声明；分页覆盖完整并集，保留精确身份和指令边界。
+
+会话打开通过 MCP 上报真实校验进度，只做输入快照、完整性校验和类目录读取；重型索引按需构建，
+不会后台全量反编译，也不会将尚未校验的数据伪装成已就绪。
+
+每会话最多 32 页、4 MiB 的常驻序列化页缓存，单页上限 256 KiB，命中时无需启动工作进程。
 实现、引擎或索引文件身份变化后失效，不常驻 DEX 解析对象和工作进程。全部 18 个工具提供
 MCP 类型化输出 Schema，覆盖嵌套结果行与诊断字段。
 
-建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 256 MiB，从会话磁盘总额预留；
+建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 512 MiB（磁盘，不是内存），从会话磁盘总额预留；
 大应用可能需要显式调整索引配额、会话总额和超时。取消、配额耗尽和解码失败不会发布部分索引。
 索引绑定输入哈希、Schema 和后端文件，会话关闭/过期或服务退出即删除工作副本；默认单次查询索引也是临时的。
 
 需要跨会话和服务重启复用时，显式设置 `DROIDASC_MCP_XREF_CACHE_DIR` 到专用私有目录
 （POSIX 权限 0700，Windows 配置私有 ACL）。持久缓存保留派生标识和关系，不保留原始 APK；
-身份包含有序输入哈希、Schema、索引解析源码及后端 JAR 哈希。重新打开仍验证输入 DEX，
+身份包含有序输入哈希、Schema、索引范围和原生解析源码哈希。重新打开仍验证输入 DEX，
 匹配的完整索引经校验和验证后复制进新会话。精确引用和成员发现会恢复已有索引，但缓存未命中
 不触发完整建库。`index.durable_cache` 区分 `stored`、`restored`、`not_accessed`、`disabled`
 和 `too_large`；工作副本本身仍为 `session_lifetime`。

@@ -18,7 +18,7 @@ def test_dex041_import_and_exact_instruction_views(tmp_path, names, shared):
     data = dex041_container(names, shared_strings=shared)
     path.write_bytes(data)
     service = DroidAscService(
-        replace(Settings.from_env(), allowed_roots=(tmp_path,), timeout_seconds=90)
+        replace(Settings.from_env(), allowed_roots=(tmp_path,), timeout_seconds=90, jadx_home=None)
     )
     try:
         opened = service.open_dex_session([str(path)])

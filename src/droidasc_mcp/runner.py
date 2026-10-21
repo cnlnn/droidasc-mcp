@@ -17,6 +17,7 @@ from concurrent.futures import CancelledError as FutureCancelledError
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -28,6 +29,7 @@ from anyio import from_thread
 from .config import Settings
 
 ReferenceKind = Literal["string", "type", "method", "field", "extends", "impl"]
+PREPARATION_PROGRESS = ContextVar("droidasc_preparation_progress", default=None)
 
 
 class DroidAscError(RuntimeError):
@@ -180,6 +182,7 @@ class DroidAscRunner:
             "max_xref_cache_bytes": self.settings.max_xref_cache_bytes,
             "xref_cache_ttl_seconds": self.settings.xref_cache_ttl_seconds,
             "jadx_home": str(self.settings.jadx_home) if self.settings.jadx_home else None,
+            "dexlib_home": str(self.settings.dexlib_home) if self.settings.dexlib_home else None,
             "java_executable": self.settings.java_executable,
             "query": query,
         }
@@ -441,6 +444,14 @@ class DroidAscRunner:
 
         deadline = time.monotonic() + self.settings.timeout_seconds
         memory_check_at = 0.0
+        progress_at = 0.0
+        last_progress = None
+        progress_callback = PREPARATION_PROGRESS.get()
+        progress_path = (
+            Path(args[0]).parent / "progress.json"
+            if (progress_callback and module_name == "droidasc_mcp.dex_worker" and args)
+            else None
+        )
         started = []
         try:
             readers = [
@@ -463,6 +474,18 @@ class DroidAscRunner:
             while True:
                 _check_cancelled()
                 now = time.monotonic()
+                if progress_path is not None and (now >= progress_at or process.poll() is not None):
+                    progress_at = now + 0.1
+                    try:
+                        encoded = progress_path.read_bytes()
+                        if encoded != last_progress:
+                            update = json.loads(encoded)
+                            progress_callback(
+                                update["completed"], update["total"], update["message"]
+                            )
+                            last_progress = encoded
+                    except (FileNotFoundError, ValueError, KeyError):
+                        pass
                 if now >= memory_check_at:
                     if _process_tree_rss(process.pid) > self.settings.max_worker_memory_bytes:
                         raise DroidAscError(

@@ -2,6 +2,7 @@
 
 import json
 import shutil
+import threading
 from collections import OrderedDict
 from importlib.metadata import version
 from pathlib import Path
@@ -15,16 +16,20 @@ def signature(settings, root):
     """Track local implementation, engine and index replacement before reusing a page."""
     home = settings.jadx_home
     java = shutil.which(settings.java_executable or "java")
-    if not home or not java:
-        return None
-    jars = sorted((home / "lib").glob("*.jar"))
-    if not jars:
-        return None
+    jars = sorted((home / "lib").glob("*.jar")) if home else []
     source = Path(__file__).parent
-    paths = [*sorted(source.glob("*.py")), *sorted(source.glob("*.java")), *jars, Path(java)]
-    index = root / "xrefs.sqlite"
-    if index.exists():
-        paths.append(index)
+    paths = [
+        *sorted(source.glob("*.py")),
+        *sorted(source.glob("*.java")),
+        *sorted(source.glob("_dexscan.*")),
+        *jars,
+    ]
+    if java:
+        paths.append(Path(java))
+    for name in ("xrefs.sqlite", "calls.sqlite"):
+        index = root / name
+        if index.exists():
+            paths.append(index)
     try:
         identities = []
         for path in paths:
@@ -49,8 +54,18 @@ class PageCache:
         self.identity = None
         self.pages = OrderedDict()
         self.used = 0
+        self.lock = threading.RLock()
 
     def execute(self, settings, root, query, execute):
+        with self.lock:
+            cached, identity, key = self._get(settings, root, query)
+        if cached is not None:
+            return cached
+        result = execute()
+        with self.lock:
+            return self._put(settings, root, identity, key, result)
+
+    def _get(self, settings, root, query):
         identity = signature(settings, root)
         if identity != self.identity:
             self.pages.clear()
@@ -62,8 +77,10 @@ class PageCache:
             self.pages[key] = encoded
             result = json.loads(encoded)
             result["query_cache"] = {"hit": True, "scope": "exact_query_page"}
-            return result
-        result = execute()
+            return result, identity, key
+        return None, identity, key
+
+    def _put(self, settings, root, identity, key, result):
         # A first index build has one-shot 'reused=false' provenance, not a reusable page.
         if (
             identity is None
@@ -74,6 +91,9 @@ class PageCache:
             return result
         encoded = json.dumps(result, separators=(",", ":")).encode()
         if len(encoded) <= min(MAX_PAGE_BYTES, MAX_BYTES, settings.max_output_bytes):
+            old = self.pages.pop(key, None)
+            if old is not None:
+                self.used -= len(old)
             while self.pages and (
                 self.used + len(encoded) > MAX_BYTES or len(self.pages) >= MAX_ENTRIES
             ):

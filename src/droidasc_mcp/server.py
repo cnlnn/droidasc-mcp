@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 
 import anyio
 from mcp.server import MCPServer
+from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -24,7 +25,7 @@ from .contracts import (
     SecretResult,
     SigningResult,
 )
-from .runner import DroidAscRunner
+from .runner import PREPARATION_PROGRESS, DroidAscRunner
 from .service import DroidAscService
 from .workflows import INSTRUCTIONS, register_workflows
 
@@ -99,8 +100,10 @@ CaseSensitive = Annotated[
     bool, Field(description="Literal discovery matching case; false ignores case")
 ]
 MemberMatch = Annotated[
-    Literal["descriptor", "name"],
-    Field(description="search_members matches full identity or member name"),
+    Literal["descriptor", "name", "exact_name", "prototype"],
+    Field(
+        description="Literal identity or name; search_refs also accepts exact_name and prototype"
+    ),
 ]
 
 
@@ -194,6 +197,7 @@ def build_server(
         artifact_path: Annotated[
             str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP input within allowed roots")
         ],
+        ctx: Context = None,
         module: Annotated[
             str | None, Field(description="Exact AAB module; omitted selects base")
         ] = None,
@@ -213,9 +217,21 @@ def build_server(
         classes and nested split APKs stay inventory-only. Duplicate classes are rejected.
         Query and close the resulting ID with the existing DEX session tools.
         """
-        return service.open_artifact_session(
-            artifact_path, module=module, max_uncompressed_bytes=max_uncompressed_bytes
+        token = PREPARATION_PROGRESS.set(
+            (
+                lambda completed, total, message: anyio.from_thread.run(
+                    ctx.report_progress, completed, total, message
+                )
+            )
+            if ctx is not None
+            else None
         )
+        try:
+            return service.open_artifact_session(
+                artifact_path, module=module, max_uncompressed_bytes=max_uncompressed_bytes
+            )
+        finally:
+            PREPARATION_PROGRESS.reset(token)
 
     @mcp.tool(annotations=SESSION_STATE)
     def asc_diff_dex_sessions(
@@ -240,7 +256,7 @@ def build_server(
     ) -> DiffResult:
         """Compare class/member identities with full descriptors and old/new source hashes.
 
-        Uses optional JADX 1.5.5/JDK 17+ without building an instruction index. Unchanged
+        Uses native DEX declarations without Java or an instruction index. Unchanged
         identities say nothing about changed behavior, access flags, annotations or bodies.
         Inventory is bounded to 1M identities and 64 MiB of cumulative declaration records.
         """
@@ -480,6 +496,7 @@ def build_server(
                 "get_method_calls",
                 "get_call_graph",
                 "find_field_refs",
+                "search_refs",
                 "find_type_refs",
                 "build_xref_index",
                 "search_members",
@@ -509,6 +526,9 @@ def build_server(
         value: Value = None,
         case_sensitive: CaseSensitive = True,
         member_match: MemberMatch = "descriptor",
+        target_descriptor: Annotated[
+            str | None, Field(description="search_refs exact prototype or field-type filter")
+        ] = None,
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
         offset: Offset = 0,
@@ -522,7 +542,7 @@ def build_server(
             Field(
                 ge=1,
                 le=5,
-                description="Graph hop bound; first use builds the full static index.",
+                description="Graph hop bound; first use builds a calls-only index.",
             ),
         ] = 2,
         max_nodes: Annotated[
@@ -542,8 +562,8 @@ def build_server(
         Returns status=ok, error, or not_applicable. Errors carry a diagnostic code;
         duplicate class definitions are rejected. Manifest is not applicable to DEX.
         Coverage is limited to supplied files; this tool does not unpack applications.
-        Java, method lists and exact instruction references use optional JADX 1.5.5/JDK 17+.
-        Explicit smali uses ASC; debug_info includes DEX line/local metadata.
+        Native instruction/declaration queries need no JVM or JADX; Smali uses ASC.
+        Explicit source_format=java alone selects the optional compatibility backend.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
@@ -556,7 +576,8 @@ def build_server(
         value is a case-sensitive literal substring of the full descriptor, not regex.
         class_name restricts exact owner. search_strings scans DEX string-pool values
         using a case-sensitive literal value, not instruction use sites.
-        source_format=auto returns Java or exact-method Smali with fell_back/reason;
+        source_format=auto uses ASC exact-method Smali without Java/JADX;
+        source_format=java explicitly opts into the optional JADX compatibility backend.
         java never silently falls back, smali always disassembles that exact method.
         """
         return service.analyze_dex(
@@ -575,6 +596,7 @@ def build_server(
             value=value,
             case_sensitive=case_sensitive,
             member_match=member_match,
+            target_descriptor=target_descriptor,
             fuzzy_class=fuzzy_class,
             threads=threads,
             offset=offset,
@@ -586,13 +608,25 @@ def build_server(
         )
 
     @mcp.tool(annotations=SESSION_STATE)
-    def asc_open_dex_session(dex_paths: DexPaths) -> DexResult:
+    def asc_open_dex_session(dex_paths: DexPaths, ctx: Context = None) -> DexResult:
         """Validate and snapshot DEX inputs once; return an immutable hash-bound session.
 
         Reuses the validated bundle, not a resident engine. Idle sessions expire and may
         be evicted at capacity. Source file changes require opening a new session.
         """
-        return service.open_dex_session(dex_paths)
+        token = PREPARATION_PROGRESS.set(
+            (
+                lambda completed, total, message: anyio.from_thread.run(
+                    ctx.report_progress, completed, total, message
+                )
+            )
+            if ctx is not None
+            else None
+        )
+        try:
+            return service.open_dex_session(dex_paths)
+        finally:
+            PREPARATION_PROGRESS.reset(token)
 
     @mcp.tool(annotations=SESSION_STATE)
     def asc_close_dex_session(session_id: SessionId) -> DexResult:
@@ -615,6 +649,7 @@ def build_server(
                 "get_method_calls",
                 "get_call_graph",
                 "find_field_refs",
+                "search_refs",
                 "find_type_refs",
                 "build_xref_index",
                 "search_members",
@@ -642,6 +677,9 @@ def build_server(
         value: Value = None,
         case_sensitive: CaseSensitive = True,
         member_match: MemberMatch = "descriptor",
+        target_descriptor: Annotated[
+            str | None, Field(description="search_refs exact prototype or field-type filter")
+        ] = None,
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
         offset: Offset = 0,
@@ -655,7 +693,7 @@ def build_server(
             Field(
                 ge=1,
                 le=5,
-                description="Hop bound; first use builds the full index, later queries reuse it.",
+                description="Hop bound; first use builds a calls-only index, then reuses it.",
             ),
         ] = 2,
         max_nodes: Annotated[
@@ -672,8 +710,9 @@ def build_server(
     ) -> DexResult:
         """Query an immutable DEX session in a supervised worker, with original provenance.
 
-        Java, method lists and exact instruction references use optional JADX 1.5.5/JDK 17+.
-        Explicit smali uses ASC; debug_info includes DEX line/local metadata.
+        Native instruction/declaration queries need no JVM or JADX; Smali uses ASC.
+        search_refs combines literal owner/name/prototype filters without global preprocessing.
+        target_descriptor optionally filters exact prototypes/field types.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         method_descriptor is the full DEX class->name(args)return identity.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
@@ -689,7 +728,8 @@ def build_server(
         class_name restricts exact owner. search_strings scans DEX string-pool values
         using a case-sensitive literal value, not instruction use sites.
         Identical discovery and non-indexed reference pages reuse a bounded session cache.
-        source_format=auto may return exact-method Smali with an explicit fallback reason.
+        source_format=auto uses ASC exact-method Smali, never JADX.
+        source_format=java explicitly selects the optional compatibility backend.
         """
         return service.query_dex_session(
             session_id,
@@ -707,6 +747,7 @@ def build_server(
             value=value,
             case_sensitive=case_sensitive,
             member_match=member_match,
+            target_descriptor=target_descriptor,
             fuzzy_class=fuzzy_class,
             threads=threads,
             offset=offset,

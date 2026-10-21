@@ -243,12 +243,14 @@ release their reservations. Concurrent preparation has reserved disk/count capac
 
 ### Exact methods and Smali
 
-Optional: install the official [JADX 1.5.5 distribution](https://github.com/skylot/jadx/releases/tag/v1.5.5)
+Core DEX queries, discovery, indexes and structural views do not need Java or JADX.
+`source_format=auto` (the default) and `smali` use ASC 0.1.2.post3 directly.
+Set `debug_info=true` to include upstream debug directives.
+
+Only explicit `source_format=java` needs the official [JADX 1.5.5 distribution](https://github.com/skylot/jadx/releases/tag/v1.5.5)
 and a JDK 17 or newer. Set `DROIDASC_MCP_JADX_HOME` to its extracted directory (containing `lib/`).
 Set `DROIDASC_MCP_JAVA` to the JDK's `java` executable, or put it on `PATH`. A JRE alone cannot run
 the source bridge. The Python package does not bundle/download JADX or require Java for ASC tools.
-Explicit `source_format=smali` uses ASC 0.1.2.post3 directly and needs no JVM or JADX configuration.
-Set `debug_info=true` with that format to include upstream debug directives.
 
 ```text
 asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
@@ -256,17 +258,16 @@ asc_query_dex_session(session_id="...", operation="get_method_source", method_de
 asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z", source_format="smali")
 ```
 
-`list_methods` reads raw DEX definitions through dexlib2, including constructors, synthetic/bridge
+`list_methods` reads raw DEX definitions natively, including constructors, synthetic/bridge
 methods, native/abstract declarations, complete parameter types and return types. It sorts full
 descriptors before pagination. No method name, partial prototype, or overload index selects a body.
 `get_method_source` requires the exact full descriptor; an absent overload returns `method_not_found`.
 Class mismatches are rejected rather than choosing another owner.
 
-`source_format=auto` uses JADX's exact short-ID lookup and public method-code API. If Java is absent
-(for example an elided default constructor) or reports a decompilation error, it disassembles the
-**same dexlib2 method object**, not a name-matched slice of class Smali. Results carry `format`,
-`fell_back`, `fallback_reason`, backend version, original hashes and `dex_entry`. `java` returns
-`java_unavailable` instead of falling back; `smali` always returns exact-method disassembly.
+`source_format=auto` returns ASC's exact-method Smali without attempting Java decompilation.
+Results carry `format`, `fell_back`, `fallback_reason`, backend version, original hashes and
+`dex_entry`. Explicit `java` returns `java_unavailable` instead of falling back when no exact
+Java method body is available; missing Java configuration returns `backend_unavailable`.
 Java error/warning counts are engine diagnostics, not proof of semantic correctness. Reference
 tools named `find_refs` still use ASC's best-effort name-level text.
 
@@ -278,7 +279,7 @@ Same-name fields with different types are distinct; an unused or absent field re
 while references to external fields retain `target_dex_entry=null`. Definition lookup is literal:
 inherited field resolution is not performed. Reflection, JNI, method-handle targets and encoded
 initial values are not direct instruction accesses and are not claimed as reads or writes.
-This operation uses the optional JADX/dexlib2 backend and works on one-shot inputs and sessions.
+This operation uses the native instruction scanner on one-shot inputs and sessions, without Java.
 
 ```python
 asc_query_dex_session(
@@ -290,7 +291,7 @@ asc_query_dex_session(
 ```
 
 `find_method_refs` and `get_method_calls` are separate descriptor-exact operations on DEX inputs
-and sessions, using the optional pinned backend. Each result row carries full `caller`/`callee`
+and sessions, using the native instruction scanner. Each result row carries full `caller`/`callee`
 descriptors, caller `dex_entry`, `opcode`, and `instruction_offset` in **16-bit code units from
 the method's first instruction**, not a file offset. `target_dex_entry` and `target_resolution`
 describe whether the declared operand has a definition in the supplied files. Incoming queries
@@ -309,9 +310,8 @@ calls preserve their call-site prototype; dynamic sites include at most 20 diagn
 is complete. Virtual dispatch, reflection, JNI and runtime-loaded code remain unresolved. Unknown
 instructions or decoding failures return an error rather than partial results marked complete.
 
-Missing configuration returns `backend_unavailable`; other JADX versions are rejected. Source and
-unindexed optional-backend queries start a JVM (512 MiB maximum heap) inside the worker tree, sharing its
-timeout, aggregate memory, output and cancellation limits. This adds startup cost, not a speedup.
+Only explicit Java source queries start the optional JVM (512 MiB maximum heap), sharing the
+worker's timeout, aggregate memory, output and cancellation limits. Other JADX versions are rejected.
 Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
 responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
 
@@ -320,8 +320,8 @@ responses fail explicitly. The API currently takes DEX inputs/sessions, not an A
 `operation="get_call_graph"` explores an exact `method_descriptor` with
 `direction="incoming"|"outgoing"|"both"` (default both), `depth=1..5` (default 2),
 `max_nodes=1..500` (default 200) and `max_edges=1..1000` (default 500).
-It builds/reuses the full static index: first use on a large application can take minutes;
-this is not a cold-query speedup. Use sessions to retain that work.
+It builds/reuses a calls-only static index, or an existing complete xref index. No field/type
+index is built just for a graph. This still has a cold construction cost; sessions retain it.
 Nodes retain minimum hop distance and definition DEX; edges retain **individual call sites**
 including repeated calls, original opcode, offset and target provenance. Cycles and recursive
 calls terminate without duplicate call sites. External method operands can be roots too.
@@ -335,7 +335,7 @@ sites only in returned nodes (at most 20 examples), including unresolved invoke-
 these do not become fabricated call edges. Runtime dispatch remains unresolved.
 
 `build_xref_index` scans all supplied DEX files once and atomically publishes a bounded SQLite
-index. Subsequent exact method/field references need no JVM. `find_type_refs` builds/reuses it
+index. Subsequent exact method/field references reuse it without rescanning. `find_type_refs` builds/reuses it
 and separates `type_relation=instruction|declaration|annotation|all`, including nested annotation
 type values. Types and arrays match exactly, not by assignability or array component expansion.
 `search_members` discovers full method/field declarations without knowing their class first:
@@ -358,19 +358,47 @@ Member discovery reads declarations only and does not build the full xref index.
 search with `dex_entry`, `string_index` and `value` provenance; pool presence is not a use site.
 Both discovery operations return `instruction_scan_complete=false`.
 
-Discovery and non-indexed exact reference results reuse identical query pages within a session.
-The disk LRU cache holds at most 32 pages / 4 MiB, with a 256 KiB per-page cap, and shares the
-index reservation rather than adding unaccounted storage. Full index construction clears it.
-Cache identity includes immutable input and backend hashes; different pages may rescan.
-`query_cache.hit` reports reuse. This keeps worker isolation rather than retaining parsed APKs
-in a long-lived process.
+Use `search_refs` for a single-pass union of matching reference sites, without first enumerating
+declarations or building a full index. For example:
 
-A separate resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
+```python
+asc_query_dex_session(
+    session_id=sid,
+    operation="search_refs",
+    kind="method",
+    class_name="java.lang",
+    fuzzy_class=True,
+    value="equal",
+    member_match="name",
+)
+asc_query_dex_session(
+    session_id=sid,
+    operation="search_refs",
+    kind="field",
+    class_name="android.os.Build",
+    target_descriptor="Ljava/lang/String;",
+    access="read",
+)
+```
+
+`member_match` selects `name` (literal substring), `exact_name`, `prototype` (method prototype
+substring), or `descriptor` (literal
+substring of the complete identity). `case_sensitive` defaults to true; `fuzzy_class` applies a
+literal owner substring rather than a regex. Omit `value` to select an owner; either a value or
+an owner is required. `target_descriptor` filters an exact method prototype or field type.
+`matched_targets` counts referenced identities, not unused declarations. Pagination spans the
+entire union, preserving exact descriptors and checked instruction boundaries.
+
+Session preparation reports actual validation progress over MCP. It snapshots and checks input
+integrity and the class directory, but defers heavy indexes until requested. It does not hide
+unvalidated data behind a successful response or start background whole-program decompilation.
+
+A resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
 page). It avoids worker startup for repeated exact pages, and invalidates on implementation,
 engine or index-file identity changes. It never retains parsed DEX or worker processes.
 All 18 tools expose typed MCP output schemas, including nested result rows and diagnostics.
 
-Index construction costs time/disk upfront. Default per-session index quota is 256 MiB, reserved
+Index construction costs time/disk upfront. Default per-session index quota is 512 MiB of disk, reserved
 from the session storage budget; large applications may need an explicitly larger index quota,
 session budget and timeout. Cancellation, malformed input or quota failures do not publish a
 partial index. Identity includes input hashes, schema and backend files. Close/expiry/server
@@ -379,7 +407,7 @@ shutdown deletes the working copy. By default, one-shot indexes are temporary to
 To retain reusable indexes across sessions and server restarts, explicitly set
 `DROIDASC_MCP_XREF_CACHE_DIR` to a dedicated private directory (0700 on POSIX; private ACLs on
 Windows). This opt-in store retains derived identifiers and relationships, not the original APK.
-It is keyed by ordered input hashes, schema, bridge/parser source and backend JAR hashes.
+It is keyed by ordered input hashes, schema, index scope and native parser source hashes.
 Reopening still validates the supplied DEX files; a matching complete index is copied into the
 new session and checksum-verified before use. Exact references and member discovery restore an
 available index without rebuilding it. `index.durable_cache` reports `stored`, `restored`,
@@ -423,8 +451,9 @@ Both engines share scope/concurrency/process-tree budgets. See [backend details]
 | `DROIDASC_MCP_DEX_SESSION_TTL_SECONDS` | `1800` | Idle session expiry |
 | `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage plus concurrent preparation reservations |
 | `DROIDASC_MCP_JADX_HOME` | unset | Optional JADX 1.5.5 distribution directory |
+| `DROIDASC_MCP_DEXLIB_HOME` | unset | Standalone Google Smali 3.0.9 JAR directory, for DEX 041 normalization only |
 | `DROIDASC_MCP_JAVA` | `java` on PATH | Optional JDK 17+ executable |
-| `DROIDASC_MCP_MAX_XREF_INDEX_BYTES` | `268435456` | Per-session index disk quota/reservation |
+| `DROIDASC_MCP_MAX_XREF_INDEX_BYTES` | `536870912` | Per-session index disk quota/reservation, not resident memory |
 | `DROIDASC_MCP_RUST_ASC` | unset | Optional Rust ASC executable path |
 
 ## Design
