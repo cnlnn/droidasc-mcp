@@ -84,9 +84,15 @@ class DroidAscService:
                 "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 "max_disk_bytes": self.settings.max_dex_session_bytes,
                 "reuse": "validated_dex_bundle",
-                "optional_index": "explicit_build_or_first_type_or_member_search",
+                "optional_index": "explicit_build_or_first_type_search",
                 "index_persistence": "session_lifetime",
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
+                "durable_index_cache": {
+                    "enabled": self.settings.xref_cache_dir is not None,
+                    "max_bytes": self.settings.max_xref_cache_bytes,
+                    "idle_ttl_seconds": self.settings.xref_cache_ttl_seconds,
+                    "scope": "content_and_backend_identity_across_sessions_and_restarts",
+                },
             },
         }
 

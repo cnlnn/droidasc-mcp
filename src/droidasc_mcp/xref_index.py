@@ -19,7 +19,7 @@ REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs
 SCHEMA = "3"
 
 
-def backend_identity(settings, sources=("IndexBridge.java",)):
+def backend_identity(settings, sources=("IndexBridge.java", "xref_index.py")):
     if not settings.jadx_home:
         return None
     jars = sorted((settings.jadx_home / "lib").glob("*.jar"))
@@ -175,13 +175,20 @@ def _unpack_edge(kind, payload, source, target, relation, entry):
 
 
 def query_index(settings, bundle, common, query, workspace):
+    from .durable_index import DurableIndexes
+
     target = bundle.parent / "xrefs.sqlite"
     fingerprint = backend_identity(settings)
     if fingerprint is None:
         return {"status": "error", "code": "backend_unavailable", "message": "Configure JADX 1.5.5"}
     identity = {"schema": SCHEMA, "input_id": common["input_id"], "backend_id": fingerprint}
     try:
+        cache = DurableIndexes(settings)
         reused = target.is_file()
+        cache_status = "not_accessed" if settings.xref_cache_dir else "disabled"
+        if not reused and cache.restore(identity, target, workspace):
+            reused = True
+            cache_status = "restored"
         if reused:
             with closing(sqlite3.connect(target.as_uri() + "?mode=ro", uri=True)) as db:
                 if dict(db.execute("SELECT key,value FROM metadata")) != identity:
@@ -191,12 +198,15 @@ def query_index(settings, bundle, common, query, workspace):
                         "message": "Reopen the session after engine/schema changes",
                     }
         else:
+            if query["operation"] not in INDEX_OPERATIONS:
+                return None
             from .query_cache import clear_cache
 
             clear_cache(bundle.parent)
             error = _build(settings, bundle, target, workspace, identity)
             if error:
                 return error
+            cache_status = cache.publish(identity, target)
         with closing(sqlite3.connect(target.as_uri() + "?mode=ro", uri=True)) as db:
             result = _query(db, query, settings)
         result["index"] = {
@@ -204,6 +214,7 @@ def query_index(settings, bundle, common, query, workspace):
             "reused": reused,
             "stored_bytes": target.stat().st_size,
             "persistence": "session_lifetime",
+            "durable_cache": cache_status,
             "format": "sqlite",
         }
         return result

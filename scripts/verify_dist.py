@@ -57,6 +57,7 @@ def main():
                 "src/droidasc_mcp/IndexBridge.java",
                 "src/droidasc_mcp/DiscoveryBridge.java",
                 "src/droidasc_mcp/query_cache.py",
+                "src/droidasc_mcp/durable_index.py",
                 "src/droidasc_mcp/native_worker.py",
                 "scripts/setup_rust.py",
                 "tests/fixtures/xrefs/first/Types.smali",

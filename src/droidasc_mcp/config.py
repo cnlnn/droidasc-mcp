@@ -46,6 +46,9 @@ class Settings:
     java_executable: str | None = None
     rust_asc_executable: Path | None = None
     max_xref_index_bytes: int = 256 * 1024**2
+    xref_cache_dir: Path | None = None
+    max_xref_cache_bytes: int = 1024**3
+    xref_cache_ttl_seconds: int = 7 * 86400
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -81,6 +84,11 @@ class Settings:
             if os.getenv("DROIDASC_MCP_RUST_ASC")
             else None,
             max_xref_index_bytes=_positive_int("DROIDASC_MCP_MAX_XREF_INDEX_BYTES", 256 * 1024**2),
+            xref_cache_dir=Path(os.environ["DROIDASC_MCP_XREF_CACHE_DIR"]).expanduser().absolute()
+            if os.getenv("DROIDASC_MCP_XREF_CACHE_DIR")
+            else None,
+            max_xref_cache_bytes=_positive_int("DROIDASC_MCP_MAX_XREF_CACHE_BYTES", 1024**3),
+            xref_cache_ttl_seconds=_positive_int("DROIDASC_MCP_XREF_CACHE_TTL_SECONDS", 7 * 86400),
         )
 
     def validate_apk(self, value: str) -> Path:

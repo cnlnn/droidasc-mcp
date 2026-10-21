@@ -2,8 +2,9 @@
 
 Reviewed: 2026-10-21. Competitor commit:
 [`848c711f1d80a1c2577283f1fa5f475ff734aa40`](https://github.com/aimardcr/asc-mcp/tree/848c711f1d80a1c2577283f1fa5f475ff734aa40).
-Our committed baseline was `8cab43f4159ddc7252322f12a831dd98146d88d6`, plus the
-in-progress index, type relationships, optional Rust backend and workflow-guidance changes.
+Our original baseline was `8cab43f4159ddc7252322f12a831dd98146d88d6`; the measured
+index, type relationships, optional Rust backend and workflow-guidance changes
+are now committed in `a96ea4c` and the discovery/cache changes in `88de70b`.
 This report is not a claim of complete parity, a performance victory, or a release gate.
 No competitor implementation was copied into our package.
 
@@ -125,6 +126,26 @@ Private complete evidence is retained in
 `artifacts/reverse-acceptance/field-reference-oracle.json` with its repeatable
 `audit_field_refs.py` harness; neither is shipped.
 
+### Confirmed call-graph integration failure
+
+The same unchanged competitor, using Androguard 4.1.4, was also exercised through
+real stdio MCP on our public source-built Android fixture. Opening the APK
+succeeded; `apk_get_call_graph` for
+`org.example.droidascfixture.MethodCases.choose(I)Ljava/lang/String;` at depth 1
+returned `isError=true` with `'list' object has no attribute 'get_class_name'`.
+The index builder calls `dex.get_cm_method(...)`, which returns a list in this
+dependency version, then invokes object-style accessors on it. This fails before
+graph expansion; the implemented graph feature therefore did not pass this
+integration check. Its 52 passing synthetic tests do not cover this real-library
+contract. [Index builder](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/service.py#L141-L173).
+
+The boundary-reference fixture was independently repeated through real stdio MCP
+in the same run and reproduced both extra callers. Local evidence is
+`artifacts/reverse-acceptance/check_competitor_regressions.json`; the corresponding
+`check_competitor_regressions.py` harness uses only our public fixtures. This does
+not establish that our one-hop tools implement the competitor's multi-hop API;
+bounded graph exploration remains a separate feature gap.
+
 | Area | What the pinned implementation actually does | Our status / next action |
 | --- | --- | --- |
 | Agent routing | Server instructions distinguish declarations, string-pool matches, const-string use sites and type operands; each parameter has a description; read-only tools have MCP annotations. | Candidate now has initialization instructions, an analysis-guide resource, two prompts and annotations distinguishing read-only queries from session state. Per-parameter guidance and typed output contracts still need alignment. |
@@ -132,7 +153,7 @@ Private complete evidence is retained in
 | Query reuse | Resident workers cache parsed DEX and complete reference result sets by path/size/mtime; the reference cache has an eight-key LRU. | Candidate reuses exact query pages by immutable input/backend identity, capped at 32 pages / 4 MiB and charged to the existing index reservation. Different pages may rescan; isolation and byte bounds are retained, but warm queries remain slower than its resident cache. |
 | APK contents | Sorted entry inventory, asset/resource reads, binary XML decoding and native-library ABI inventory. | Our baseline APK info does not replace this workflow. Add bounded reads with provenance and explicit decoding/truncation status. |
 | Manifest analysis | Package/SDK/component structure, inherited application permission, and separate effective provider read/write permissions. | Raw XML is available; structured summaries would reduce client parsing mistakes. Do not equate an absent exported attribute or permission with a confirmed exposure. |
-| Calls and hierarchy | Full method prototype selection, overload rejection, cached caller/callee adjacency, depth 1-3 exploration; direct interfaces/subclasses and superclass chain. | Our exact one-hop edges are more explicit about evidence, but are not yet a multi-hop investigation operation. Reuse our index for a bounded, provenance-preserving graph. |
+| Calls and hierarchy | Source implements full method prototype selection, overload rejection, cached adjacency and depth 1-3 exploration, but real call-graph execution failed as documented above. Direct interfaces/subclasses and superclass chain are also implemented. | Our exact one-hop edges are more explicit about evidence, but are not yet a multi-hop investigation operation. Reuse our index for a bounded, provenance-preserving graph. |
 | Signing | Androguard signing-scheme presence and certificate metadata/fingerprints. | Useful missing triage metadata. Scheme presence must not be advertised as cryptographic verification. |
 | Formats | APK/raw DEX; directly embedded DEX in JAR/AAB/APKS/XAPK/ZIP; JVM `.class` inventory, including embedded JARs such as AAR `classes.jar`. | Our raw DEX and APK paths should evolve toward capability-based containers without falsely promising split-APK reconstruction or JVM decompilation. |
 | Version comparison | Class inventory added/removed sets and common count. | Useful, but not a code/behavior diff. A bounded inventory comparison can precede later method-body or manifest comparisons. |
@@ -149,7 +170,8 @@ Primary implementation references for the table:
 
 ## Boundaries not to copy blindly
 
-These are source observations, not reproduced vulnerability claims:
+Unless explicitly linked to an execution result above, these are source observations,
+not reproduced vulnerability claims:
 
 - The reusable `ProcessPoolExecutor` awaits jobs without an explicit per-operation
   timeout, aggregate memory budget, output byte cap or process-tree cancellation
@@ -169,8 +191,9 @@ These are source observations, not reproduced vulnerability claims:
   capped. The index handles `invoke-*` as method references; special dynamic
   instruction coverage is not separately declared here. Do not inherit that as
   a runtime-resolution guarantee. Our graph must preserve external and unresolved
-  dynamic diagnostics and expose fan-out truncation. No failure on dynamic
-  instructions was reproduced in this review.
+  dynamic diagnostics and expose fan-out truncation. The real MCP graph failure
+  above concerns an ordinary method-reference API contract, not proof of dynamic
+  instruction coverage.
   [Index](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/service.py#L141-L173),
   [depth expansion](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/service.py#L632-L659).
 - `resource_content` permits archive members up to 64 MiB, reads the complete

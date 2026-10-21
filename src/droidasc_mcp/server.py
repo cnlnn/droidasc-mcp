@@ -256,6 +256,7 @@ def build_server(
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         build_xref_index persists an atomic static index for this session's lifetime.
+        An optional configured durable cache restores matching indexes across server restarts.
         find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.
         type_descriptor is exact (including arrays); type_relation filters before pagination.
         search_members scans declarations or reuses an existing index; kind=method/field.

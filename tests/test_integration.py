@@ -11,7 +11,7 @@ import threading
 import time
 import xml.etree.ElementTree as ET
 import zipfile
-from contextlib import suppress
+from contextlib import contextmanager, nullcontext, suppress
 from dataclasses import replace
 from pathlib import Path
 
@@ -673,6 +673,12 @@ def test_metadata_uses_worker_and_semaphore(process_runner, tmp_path, monkeypatc
 
 @pytest.fixture
 def http_endpoint(tmp_path):
+    with running_http_endpoint(tmp_path) as endpoint:
+        yield endpoint
+
+
+@contextmanager
+def running_http_endpoint(tmp_path):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -1372,6 +1378,60 @@ def test_real_invalid_regex_reports_engine_error(settings, kind, value, message)
             limit=100,
         )
     assert message in str(error.value)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_durable_index_server_restart(transport, tmp_path, smali_dex_files, monkeypatch):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_XREF_CACHE_DIR", str(tmp_path / "persistent"))
+    expected = None
+    for restarted in (False, True):
+        if restarted:
+            monkeypatch.setenv("DROIDASC_MCP_JAVA", "missing-java-for-restart-test")
+        endpoint = (
+            running_http_endpoint(tmp_path)
+            if transport == "http"
+            else nullcontext(
+                StdioServerParameters(
+                    command=sys.executable,
+                    args=["-m", "droidasc_mcp"],
+                    env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+                )
+            )
+        )
+        with endpoint as address:
+            async with Client(address) as client:
+                opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+                assert not opened.is_error, opened
+                key = opened.structured_content["session_id"]
+                if not restarted:
+                    built = await client.call_tool(
+                        "asc_query_dex_session",
+                        {"session_id": key, "operation": "build_xref_index"},
+                    )
+                    assert not built.is_error, built
+                    assert built.structured_content["index"]["durable_cache"] == "stored"
+                reply = await client.call_tool(
+                    "asc_query_dex_session",
+                    {
+                        "session_id": key,
+                        "operation": "find_field_refs",
+                        "field_descriptor": "Lfixture/Target;->value:I",
+                    },
+                )
+                assert not reply.is_error, reply
+                result = reply.structured_content
+                assert result["status"] == "ok" and result["total"] > 0, result
+                if restarted:
+                    assert result["index"]["durable_cache"] == "restored"
+                    assert result["items"] == expected["items"]
+                    assert result["total"] == expected["total"]
+                else:
+                    expected = result
+                closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+                assert not closed.is_error, closed
 
 
 @pytest.mark.anyio

@@ -140,6 +140,11 @@ class DroidAscRunner:
             "max_output_bytes": self.settings.max_output_bytes,
             "max_page_size": self.settings.max_page_size,
             "max_xref_index_bytes": self.settings.max_xref_index_bytes,
+            "xref_cache_dir": str(self.settings.xref_cache_dir)
+            if self.settings.xref_cache_dir
+            else None,
+            "max_xref_cache_bytes": self.settings.max_xref_cache_bytes,
+            "xref_cache_ttl_seconds": self.settings.xref_cache_ttl_seconds,
             "jadx_home": str(self.settings.jadx_home) if self.settings.jadx_home else None,
             "java_executable": self.settings.java_executable,
             "query": query,

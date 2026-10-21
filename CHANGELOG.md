@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add an opt-in durable xref cache across sessions/server restarts, keyed by input/schema/backend
+  hashes, with checksum verification, a separate byte/entry budget, TTL/LRU eviction, OS process
+  locks and atomic publication. Keep default session cleanup and fresh-worker supervision.
+  Verify restart reuse with Java unavailable, concurrent writers, corruption and killed writers.
 - Make member discovery declaration-only rather than implicitly building the full xref index;
   add literal DEX string-pool discovery with entry/index provenance. Add bounded, hash-bound
   exact-page caching without retaining worker processes, and measure large-APK cold/warm costs.

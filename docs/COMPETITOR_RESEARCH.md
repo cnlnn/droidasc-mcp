@@ -84,8 +84,11 @@ Its method route accepts a signature parameter, including one embedded in the me
 
 This table is the original prioritization, not a blanket parity claim. The candidate now implements
 bounded immutable DEX preparations, exact-method source and instruction-level method/field references.
-Cross-platform evidence is recorded separately in validation results. A persistent reverse index,
-annotation/type/declaration edges and runtime target resolution remain outside this implementation.
+The later candidate adds a bounded on-disk reverse index with annotation/type/declaration
+relationships. Working copies belong to a session; an explicitly configured, checksum-verified
+durable cache can restore matching indexes across sessions and server restarts. It does not
+resolve runtime targets. Cross-platform and large-input evidence is recorded separately in
+[validation results](VALIDATION.md).
 
 ### Second alignment implementation
 
@@ -115,5 +118,7 @@ annotation/type/declaration edges and runtime target resolution remain outside t
   are claimed. This does not reproduce all relationships in Qtty's reverse index.
 - Independent source-built Smali fixtures verify positions and types. Both MCP transports test
   source-read history independence; Kotlin/R8 fixtures test renamed method identity and coroutines.
-  Sessions reuse validated input preparations, not a resident JVM or cached reverse index, so no
-  repeated-query speed parity or whole-APK benchmark advantage is claimed.
+  Sessions reuse validated input preparations, an optional reverse index and bounded exact-query
+  pages, not a resident JVM. [Measured cold/warm behavior](VALIDATION.md#interactive-discovery-and-exact-page-reuse)
+  and the [later aimard comparison](AIMARD_COMPARISON.md) separate specific improvements from
+  remaining latency and feature gaps; no universal benchmark advantage is claimed.

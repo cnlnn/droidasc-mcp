@@ -133,6 +133,9 @@ def analyze(request: dict, root: Path) -> dict:
         jadx_home=Path(request["jadx_home"]) if request.get("jadx_home") else None,
         java_executable=request.get("java_executable"),
         max_xref_index_bytes=request.get("max_xref_index_bytes", 256 * 1024**2),
+        xref_cache_dir=Path(request["xref_cache_dir"]) if request.get("xref_cache_dir") else None,
+        max_xref_cache_bytes=request.get("max_xref_cache_bytes", 1024**3),
+        xref_cache_ttl_seconds=request.get("xref_cache_ttl_seconds", 7 * 86400),
     )
     query = request["query"]
     runner = PublicCliRunner(settings)
@@ -251,9 +254,11 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
     page = {"offset": query["offset"], "limit": query["limit"]}
     if operation in INDEX_OPERATIONS or (
         operation in REFERENCE_OPERATIONS | {"search_members"}
-        and (bundle.parent / "xrefs.sqlite").is_file()
+        and ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir)
     ):
-        return {**common, **query_index(runner.settings, bundle, common, query, workspace)}
+        indexed = query_index(runner.settings, bundle, common, query, workspace)
+        if indexed is not None:
+            return {**common, **indexed}
     if operation in REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS:
         from .method_backend import query_discovery, query_methods
 

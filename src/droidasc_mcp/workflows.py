@@ -14,7 +14,9 @@ reference pages reuse a bounded session cache.
 Use the returned full descriptors unchanged; never guess an overload. Exact references
 use find_method_refs/get_method_calls/find_field_refs. find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;
-its complete SQLite index is reused only until that session closes/expires or the server stops.
+its working copy lasts until that session closes/expires or the server stops. An explicitly
+configured durable index cache can restore matching indexes across sessions and restarts;
+asc_ping reports its budget and retention, and index.durable_cache reports reuse status.
 Explicit Smali needs no Java; exact references and Java require the optional configured backend.
 Follow has_more/next_offset before claiming complete results. Empty rows are limited to the stated
 scope, not absence of behavior. Offsets are 16-bit code units, not byte/file offsets. Runtime

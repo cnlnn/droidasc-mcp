@@ -247,7 +247,19 @@ DEX 字符串池，使用区分大小写的字面子串，返回 `dex_entry`、`
 
 建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 256 MiB，从会话磁盘总额预留；
 大应用可能需要显式调整索引配额、会话总额和超时。取消、配额耗尽和解码失败不会发布部分索引。
-索引绑定输入哈希、Schema 和后端文件，会话关闭/过期或服务退出即删除，不跨重启恢复；单次查询索引是临时的。
+索引绑定输入哈希、Schema 和后端文件，会话关闭/过期或服务退出即删除工作副本；默认单次查询索引也是临时的。
+
+需要跨会话和服务重启复用时，显式设置 `DROIDASC_MCP_XREF_CACHE_DIR` 到专用私有目录
+（POSIX 权限 0700，Windows 配置私有 ACL）。持久缓存保留派生标识和关系，不保留原始 APK；
+身份包含有序输入哈希、Schema、索引解析源码及后端 JAR 哈希。重新打开仍验证输入 DEX，
+匹配的完整索引经校验和验证后复制进新会话。精确引用和成员发现会恢复已有索引，但缓存未命中
+不触发完整建库。`index.durable_cache` 区分 `stored`、`restored`、`not_accessed`、`disabled`
+和 `too_large`；工作副本本身仍为 `session_lifetime`。
+
+持久缓存默认总额 1 GiB（`DROIDASC_MCP_MAX_XREF_CACHE_BYTES`）、最多 64 项、闲置七天
+（`DROIDASC_MCP_XREF_CACHE_TTL_SECONDS`），独立于会话配额。跨进程串行读写，访问时执行
+TTL/LRU 清理，校验和及原子发布防止使用中断写入结果；淘汰不影响已恢复的会话副本。
+大型索引需要同时满足两处配额。手动删除专用缓存目录前先停止服务。
 
 服务增加初始化指引、`droidasc://analysis-guide` 资源以及 `triage_apk` / `trace_exact_method` prompts。
 样本字符串和反编译结果始终是非可信数据。与竞品的实测差距见[源码对比](docs/AIMARD_COMPARISON.md)。

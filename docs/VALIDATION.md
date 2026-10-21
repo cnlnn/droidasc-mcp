@@ -15,6 +15,41 @@ identical evidence separately from the expected cache-hit transition. A new inde
 assembled boundary/payload reference regression also passed. Complete candidate package and
 Windows gates are tracked separately; these narrow checks do not replace them.
 
+### Clean-package regression at `88de70b`
+
+On 2026-10-21, `scripts/verify_dist.py` extracted the built sdist into a new temporary
+project, installed its locked dependencies, then replaced the editable package with the
+built wheel and verified that imports came from `site-packages`:
+
+| Installation | Result | Duration |
+| --- | --- | --- |
+| Clean sdist | 260 passed, zero skips | 440.67 s |
+| Wheel replacing sdist installation | 260 passed, zero skips | 377.11 s |
+
+Both runs supplied the public Android and R8/Kotlin fixtures, their mapping, JDK 17,
+JADX 1.5.5 and the pinned optional Rust binary. The package-content assertions and
+installed CLI `--help` also passed. These are Linux/Python 3.13 results, separate
+from the native Windows/Linux [CI run](https://github.com/cnlnn/droidasc-mcp/actions/runs/39618031586).
+
+Downloaded JUnit artifacts from that exact commit establish **260 passed, zero
+failures/errors/skips** in each of the eight Windows/Linux Python 3.10-3.13 jobs.
+Linux suite durations were 265.14-284.76 seconds; Windows durations were
+284.36-412.77 seconds. Counts were read from the XML, not inferred from job status.
+The complete run finished successfully, including both native Rust builds, both
+stability jobs and both clean-distribution jobs. This is the `88de70b` baseline,
+not evidence for subsequent durable-cache changes.
+
+### Durable-cache completion audit
+
+The previous index persisted only within its session. The new opt-in durable store
+closes the cross-session/restart requirement without retaining inputs by default.
+Targeted acceptance passed **12 tests** on Linux, including real stdio/HTTP server
+restarts with an intentionally unavailable Java executable during reuse, identical
+field rows, an entirely new service instance, corrupt/oversized manifests, checksum
+failure, TTL/quota eviction, separate-process writers and lock recovery after a killed
+writer. The existing real index-JVM cancellation tests still passed. Large-input,
+full-suite and native Windows gates for this extension remain pending until recorded.
+
 ### Large-sample index and backend evidence
 
 Real stdio MCP, all 12 top-level DEX files from local Taobao 10.62.0, 99,712 classes:
@@ -92,8 +127,10 @@ identity rejection, disk-quota failure without publication, and actual index-JVM
 over stdio and HTTP with temporary-directory cleanup and successful recovery. Literal member
 discovery checks overloads, same-name/different-type fields, arrays, case sensitivity, literal
 wildcard characters, pagination and feeding discovered identities back into exact references.
-The index persists only for the session lifetime. Large-corpus acceptance is a separate gate;
-small fixtures do not establish large-input resource suitability.
+The working index persists for the session lifetime. An explicitly configured durable
+cache can retain a verified copy across restarts, within its separate budget/retention.
+Large-corpus acceptance is a separate gate; small fixtures do not establish large-input
+resource suitability.
 
 New gates cover immutable sessions after source replacement/deletion, concurrent sample isolation,
 warm/cold output equivalence, preparation capacity, TTL/close pinning, cancellation/failure cleanup

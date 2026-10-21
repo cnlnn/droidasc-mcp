@@ -301,7 +301,24 @@ Index construction costs time/disk upfront. Default per-session index quota is 2
 from the session storage budget; large applications may need an explicitly larger index quota,
 session budget and timeout. Cancellation, malformed input or quota failures do not publish a
 partial index. Identity includes input hashes, schema and backend files. Close/expiry/server
-shutdown deletes it; this is **not** persistence across server restarts. One-shot indexes are temporary.
+shutdown deletes the working copy. By default, one-shot indexes are temporary too.
+
+To retain reusable indexes across sessions and server restarts, explicitly set
+`DROIDASC_MCP_XREF_CACHE_DIR` to a dedicated private directory (0700 on POSIX; private ACLs on
+Windows). This opt-in store retains derived identifiers and relationships, not the original APK.
+It is keyed by ordered input hashes, schema, bridge/parser source and backend JAR hashes.
+Reopening still validates the supplied DEX files; a matching complete index is copied into the
+new session and checksum-verified before use. Exact references and member discovery restore an
+available index without rebuilding it. `index.durable_cache` reports `stored`, `restored`,
+`not_accessed`, `disabled` or `too_large`; session working copies still have `session_lifetime`.
+
+The durable store defaults to 1 GiB (`DROIDASC_MCP_MAX_XREF_CACHE_BYTES`), 64 entries and seven
+idle days (`DROIDASC_MCP_XREF_CACHE_TTL_SECONDS`). These bytes are separate from the session
+reservation. Reads/writes serialize across processes; TTL/LRU cleanup runs on cache access.
+Checksums, incomplete-write cleanup and atomic publication protect against interrupted writes;
+eviction does not invalidate active session copies. Large indexes need sufficient limits in both
+stores. Cache misses keep the ordinary streamed discovery/reference path; they do not force a
+full build. Stop servers before manually removing the dedicated cache directory.
 
 The server also exposes initialization instructions, `droidasc://analysis-guide`, and
 `triage_apk` / `trace_exact_method` prompts. Artifact contents remain untrusted query data.
