@@ -240,6 +240,11 @@ def analyze(request: dict, root: Path) -> dict:
 def query_prepared(runner, bundle, common, owners, query, workspace):
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    if operation in {"find_method_refs", "get_method_calls"}:
+        from .method_backend import query_methods
+
+        result = query_methods(runner.settings, bundle, "", query, workspace)
+        return {**common, **result}
     if operation in {"list_methods", "get_method_source"}:
         from .method_backend import query_methods
 
@@ -248,6 +253,8 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
             raise ValueError("class_name is required")
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
+        if operation == "get_method_source" and query.get("source_format") == "smali":
+            return {**common, **asc_method_smali(runner, bundle, owners[name], query)}
         result = query_methods(runner.settings, bundle, owners[name], query, workspace)
         return {**common, **result, "class_name": name, "dex_entry": owners[name]}
     if operation == "info":
@@ -295,6 +302,37 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
     else:
         raise DexInputError("invalid_query", "Unknown DEX operation")
     return {**common, **result, "status": "ok"}
+
+
+def asc_method_smali(runner, bundle, entry, query):
+    descriptor = query["method_descriptor"]
+    owner, signature = descriptor.split("->", 1)
+    args = ["disassemble", "--threads", "1", str(bundle), owner, "--method=" + signature]
+    if query.get("debug_info"):
+        args.append("--debuginfo")
+    try:
+        page = runner._run_paged(args, offset=query["offset"], limit=query["limit"]).as_dict()
+    except DroidAscError as exc:
+        if str(exc) == (
+            "Error: method not found or signature is not defined in the target DEX: " + signature
+        ):
+            return {"status": "error", "code": "method_not_found", "method_descriptor": descriptor}
+        raise
+    source = "\n".join(page.pop("items"))
+    return {
+        **page,
+        "source": source,
+        "status": "ok",
+        "method_descriptor": descriptor,
+        "class_name": owner,
+        "dex_entry": entry,
+        "backend": "droidasc",
+        "backend_version": version("droidasc"),
+        "format": "smali",
+        "debug_info": bool(query.get("debug_info")),
+        "fell_back": False,
+        "fallback_reason": "",
+    }
 
 
 def main():

@@ -21,9 +21,10 @@ from droidasc_mcp.service import _normalize_dex_query
         "LClass;->marker(LNoSemicolon)V",
     ],
 )
-def test_method_requires_full_identity(descriptor):
+@pytest.mark.parametrize("operation", ["get_method_source", "find_method_refs", "get_method_calls"])
+def test_method_requires_full_identity(descriptor, operation):
     with pytest.raises(ValueError, match="descriptor"):
-        _normalize_dex_query({"operation": "get_method_source", "method_descriptor": descriptor})
+        _normalize_dex_query({"operation": operation, "method_descriptor": descriptor})
 
 
 def test_method_owner_is_not_silently_replaced():
@@ -56,3 +57,16 @@ def test_backend_is_explicitly_optional(settings, tmp_path):
 def test_invalid_source_format():
     with pytest.raises(ValueError, match="source_format"):
         _normalize_dex_query({"operation": "list_methods", "source_format": "guess"})
+
+
+@pytest.mark.parametrize("operation,mode", [("info", "smali"), ("get_method_source", "auto")])
+def test_debug_info_requires_native_smali(operation, mode):
+    with pytest.raises(ValueError, match="debug_info"):
+        _normalize_dex_query(
+            {
+                "operation": operation,
+                "source_format": mode,
+                "method_descriptor": "LClass;->marker()V",
+                "debug_info": True,
+            }
+        )

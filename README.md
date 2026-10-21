@@ -196,6 +196,8 @@ Optional, unreleased: install the official [JADX 1.5.5 distribution](https://git
 and a JDK 17 or newer. Set `DROIDASC_MCP_JADX_HOME` to its extracted directory (containing `lib/`).
 Set `DROIDASC_MCP_JAVA` to the JDK's `java` executable, or put it on `PATH`. A JRE alone cannot run
 the source bridge. The Python package does not bundle/download JADX or require Java for ASC tools.
+Explicit `source_format=smali` uses ASC 0.1.2.post3 directly and needs no JVM or JADX configuration.
+Set `debug_info=true` with that format to include upstream debug directives.
 
 ```text
 asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
@@ -215,10 +217,30 @@ Class mismatches are rejected rather than choosing another owner.
 `fell_back`, `fallback_reason`, backend version, original hashes and `dex_entry`. `java` returns
 `java_unavailable` instead of falling back; `smali` always returns exact-method disassembly.
 Java error/warning counts are engine diagnostics, not proof of semantic correctness. Reference
-tools still use ASC's best-effort name-level text; this does not introduce descriptor-exact xrefs.
+tools named `find_refs` still use ASC's best-effort name-level text.
+
+`find_method_refs` and `get_method_calls` are separate descriptor-exact operations on DEX inputs
+and sessions, using the optional pinned backend. Each result row carries full `caller`/`callee`
+descriptors, caller `dex_entry`, `opcode`, and `instruction_offset` in **16-bit code units from
+the method's first instruction**, not a file offset. `target_dex_entry` and `target_resolution`
+describe whether the declared operand has a definition in the supplied files. Incoming queries
+may target external methods; outgoing queries require a definition. Rows sort by DEX entry,
+class, caller descriptor and instruction position before pagination.
+
+```text
+asc_query_dex_session(session_id="...", operation="find_method_refs", method_descriptor="Lcom/example/Main;->check(I)Z")
+asc_query_dex_session(session_id="...", operation="get_method_calls", method_descriptor="Lcom/example/Main;->check(I)Z")
+```
+
+These scan declared method operands, not resolved runtime targets. Counts report scanned methods
+and instructions, declarations without code, undefined operands and dynamic sites. Polymorphic
+calls preserve their call-site prototype; dynamic sites include at most 20 diagnostic examples.
+`instruction_scan_complete` means the selected scope was decoded, not that a runtime call graph
+is complete. Virtual dispatch, reflection, JNI and runtime-loaded code remain unresolved. Unknown
+instructions or decoding failures return an error rather than partial results marked complete.
 
 Missing configuration returns `backend_unavailable`; other JADX versions are rejected. Each
-method query starts a JVM (512 MiB maximum heap) inside the existing worker tree, sharing its
+optional-backend query starts a JVM (512 MiB maximum heap) inside the existing worker tree, sharing its
 timeout, aggregate memory, output and cancellation limits. This adds startup cost, not a speedup.
 Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
 responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.

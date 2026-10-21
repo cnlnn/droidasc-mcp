@@ -29,7 +29,7 @@ def main():
     roots = []
     identities = []
 
-    def cycle(method=False):
+    def cycle(mode=0):
         opened = service.open_dex_session(paths)
         assert opened["status"] == "ok", opened
         key = opened["session_id"]
@@ -37,27 +37,30 @@ def main():
         identities.append(opened["input_id"])
         try:
             query = {"operation": "info", "offset": 0, "limit": 100}
-            if method:
+            if mode:
                 query.update(
-                    operation="get_method_source",
+                    operation="get_method_calls" if mode == 2 else "get_method_source",
                     method_descriptor=args.method_descriptor,
-                    source_format="auto",
+                    source_format="smali" if mode == 3 else "auto",
                 )
             result = service.query_dex_session(key, **query)
             assert result["status"] == "ok", result
             assert result["input_id"] == opened["input_id"]
-            if method:
+            if mode == 2:
+                assert result["instruction_scan_complete"] is True
+                assert result["method_descriptor"] == args.method_descriptor
+            elif mode:
                 assert result["method_descriptor"] == args.method_descriptor and result["source"]
         finally:
             assert service.sessions.close(key)["cleanup_pending"] is False
 
     owner = psutil.Process()
     try:
-        cycle(True)
+        cycle(1)
         gc.collect()
         baseline_rss, baseline_handles = owner.memory_info().rss, _resource_count(owner)
         with ThreadPoolExecutor(max_workers=2) as pool:
-            list(pool.map(lambda index: cycle(index % 2 == 0), range(args.iterations * 2)))
+            list(pool.map(lambda index: cycle(index % 4), range(args.iterations * 2)))
     finally:
         service.close()
     gc.collect()

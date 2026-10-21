@@ -2,17 +2,25 @@
 
 ## Unreleased
 
+- Upgrade the minimum and lock to ASC 0.1.2.post3. Explicit method Smali now uses its public
+  `disassemble --method` CLI without a JVM, with optional debug directives and stable not-found errors.
+- Add descriptor-exact incoming/outgoing method operands with DEX provenance, code-unit offsets,
+  dynamic/unresolved diagnostics and bounded pagination through the optional dexlib2 backend.
+  Decode opcodes according to each DEX version; reject unknown instructions instead of claiming
+  complete coverage. These are static operands, not a resolved runtime call graph.
+- Add cross-DEX and polymorphic-call instruction oracles, Smali reassembly, and a source-built
+  Kotlin 2.1.0/R8 release fixture tested over both transports and clean package installations.
 - Add immutable hash-bound DEX sessions with explicit close, idle TTL, count/disk limits,
   concurrent preparation reservations, active-query pinning and lifecycle cleanup.
 - Add optional JADX 1.5.5/JDK 17 method queries: raw DEX full descriptors, exact Java lookup,
   exact-method baksmali fallback and explicit engine/fallback diagnostics. Existing ASC tools
-  remain Java-independent. Reference queries remain best-effort ASC text, not exact bytecode xrefs.
+  remain Java-independent. Existing `find_refs` remains best-effort ASC text.
 - Add overload, constructor, synthetic bridge, Unicode, array/native method and real JVM
   cancellation acceptance over stdio/HTTP; package the Java source bridge in sdist and wheel.
 
 - Add exact `extends` / `impl` queries for APK and DEX, with structured direct-declaration
   records, descriptor normalization and explicit rejection of inapplicable class filters.
-- Require Droid ASC 0.1.2.post2 or newer; the previous minimum 0.1.1.post1 lacks hierarchy
+- Hierarchy queries require Droid ASC 0.1.2.post2 or newer; the previous minimum 0.1.1.post1 lacks hierarchy
   commands and fails the new real-engine acceptance.
 - Verify reference caller sets before and after decompilation through both MCP transports,
   forcing fresh queries so cached output cannot hide a call-order regression.

@@ -44,8 +44,14 @@ class DroidAscService:
                 "configured": self.settings.jadx_home is not None,
                 "required_jadx_version": "1.5.5",
                 "required_java": "JDK 17+",
-                "operations": ["list_methods", "get_method_source"],
+                "operations": [
+                    "list_methods",
+                    "get_method_source",
+                    "find_method_refs",
+                    "get_method_calls",
+                ],
                 "identity": "full_dex_method_descriptor",
+                "explicit_smali_backend": "droidasc",
             },
             "dex_sessions": {
                 "max_count": self.settings.max_dex_sessions,
@@ -153,7 +159,7 @@ class DroidAscService:
 
 
 def _normalize_dex_query(query):
-    if query.get("operation") == "get_method_source":
+    if query.get("operation") in {"get_method_source", "find_method_refs", "get_method_calls"}:
         descriptor = query.get("method_descriptor")
         owner_type = r"L[^;\[\]]+;"
         value_type = rf"\[*(?:[ZBCSIJFD]|{owner_type})"
@@ -168,6 +174,10 @@ def _normalize_dex_query(query):
         query["class_name"] = owner
     if query.get("source_format", "auto") not in {"auto", "java", "smali"}:
         raise ValueError("source_format must be auto, java, or smali")
+    if query.get("debug_info") and (
+        query.get("operation") != "get_method_source" or query.get("source_format") != "smali"
+    ):
+        raise ValueError("debug_info requires get_method_source with source_format=smali")
     if query.get("operation") == "find_refs":
         query["value"] = _normalize_reference_value(query.get("kind"), query.get("value"))
     if query.get("class_name") and (

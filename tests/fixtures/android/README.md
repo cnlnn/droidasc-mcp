@@ -12,14 +12,17 @@ Set `ANDROID_HOME` to your SDK installation, then run from the repository root:
 
 ```bash
 sdkmanager "platforms;android-35" "build-tools;35.0.0"
-gradle --no-daemon -p tests/fixtures/android :app:assembleDebug
+gradle --no-daemon -p tests/fixtures/android :app:assembleDebug :complex:assembleRelease
 ASC_TEST_EXPECT_FIXTURE=1 \
   ASC_TEST_APK="$PWD/tests/fixtures/android/app/build/outputs/apk/debug/app-debug.apk" \
+  ASC_TEST_COMPLEX_APK="$PWD/tests/fixtures/android/complex/build/outputs/apk/release/complex-release-unsigned.apk" \
+  ASC_TEST_COMPLEX_MAPPING="$PWD/tests/fixtures/android/complex/build/outputs/mapping/release/mapping.txt" \
   uv run pytest -q -s
 ```
 
 In PowerShell, set `$env:ASC_TEST_EXPECT_FIXTURE = "1"` and `$env:ASC_TEST_APK` to
-the absolute APK path before running pytest.
+the absolute APK path before running pytest. Set the two complex fixture variables as well.
+Full acceptance also requires the pinned JADX backend described in `docs/VALIDATION.md`.
 
 The APK is generated, not committed or bundled into the Python distributions. CI uploads
 only this public-source APK as `acceptance-apk` and passes the same artifact to Linux and
@@ -52,6 +55,20 @@ requiring a particular decompiler formatting style. `ASC_TEST_EXPECT_FIXTURE=1` 
 missing APK an error. It is only for this fixture; arbitrary local APKs can still use
 `ASC_TEST_APK` alone for the generic smoke checks.
 
-This small two-DEX debug app checks discovery beyond the first DEX. It does not cover
-large multidex workloads, obfuscation, Kotlin, native libraries, malformed APKs, Android
-UI execution. Process cleanup is covered by separate supervisor integration tests.
+## Complex method fixtures
+
+The separate `complex` module pins Kotlin 2.1.0 and builds a minified release with R8.
+It uses the Kotlin standard library, two suspend points, generated continuation state and two
+overloads. Rules retain the test classes/methods while allowing obfuscation and disabling
+optimization, so this is an obfuscation/coroutine identity test, not an R8 optimization benchmark.
+Tests require renamed classes, derive exact descriptors from the generated R8 mapping and check
+both overload bodies and the continuation's call back to its workflow. Only the DEX goes to the
+MCP tool; mapping data remains an independent acceptance oracle. CI uploads this fixture and
+mapping separately as `complex-fixture`. No application execution or network permission is needed.
+
+`../xrefs` contains independent Smali source assembled with the pinned backend on each test OS.
+Its two DEX files establish exact call offsets 1, 6 and 9 code units, overload separation,
+external references, a polymorphic call, native parameters, debug information and a catch handler.
+ASC output is reassembled, and a checksum-valid unknown-opcode mutation must fail without partial
+success. Large multidex performance, native execution and Android UI execution are not covered by
+these fixtures. Supervisor integration tests separately check resource limits and cancellation.

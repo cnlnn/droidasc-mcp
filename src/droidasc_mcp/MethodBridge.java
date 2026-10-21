@@ -1,10 +1,12 @@
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.android.tools.smali.dexlib2.DexFileFactory;
-import com.android.tools.smali.dexlib2.Opcodes;
 import com.android.tools.smali.dexlib2.iface.*;
+import com.android.tools.smali.dexlib2.iface.instruction.*;
+import com.android.tools.smali.dexlib2.iface.instruction.formats.UnknownInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.*;
 import com.android.tools.smali.baksmali.BaksmaliOptions;
 import com.android.tools.smali.baksmali.Adaptors.ClassDefinition;
 import com.android.tools.smali.baksmali.Adaptors.MethodDefinition;
@@ -13,7 +15,7 @@ import jadx.api.*;
 
 /** Isolated optional backend. Identity comes from DEX, never decompiled Java text. */
 public class MethodBridge {
-    static String descriptor(Method method) {
+    static String descriptor(MethodReference method) {
         StringBuilder result = new StringBuilder(method.getDefiningClass())
             .append("->").append(method.getName()).append('(');
         for (CharSequence type : method.getParameterTypes()) result.append(type);
@@ -33,8 +35,11 @@ public class MethodBridge {
             result.put("code", "unsupported_backend_version");
             return result;
         }
+        if (operation.equals("find_method_refs") || operation.equals("get_method_calls")) {
+            return references(input, requested, operation, offset, limit, result);
+        }
         ClassDef owner = null;
-        var dex = DexFileFactory.loadDexEntry(input, entry, true, Opcodes.getDefault()).getDexFile();
+        var dex = DexFileFactory.loadDexEntry(input, entry, true, null).getDexFile();
         for (ClassDef cls : dex.getClasses()) {
             if (className.equals(cls.getType())) { owner = cls; break; }
         }
@@ -121,10 +126,121 @@ public class MethodBridge {
         return result;
     }
 
+    static Map<String, Object> references(File input, String requested, String operation,
+            int offset, int limit, Map<String, Object> result) throws Exception {
+        // Null selects opcodes from each DEX header, including modern invoke instructions.
+        var container = DexFileFactory.loadDexContainer(input, null);
+        var entries = new ArrayList<>(container.getDexEntryNames());
+        Collections.sort(entries);
+        // Index definitions only. Instructions remain streamed and output is paged while scanning.
+        Map<String, String> definitions = new HashMap<>();
+        for (String entry : entries) {
+            for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses()) {
+                for (Method method : cls.getMethods()) {
+                    if (definitions.put(descriptor(method), entry) != null)
+                        throw new IllegalArgumentException("Duplicate method definition");
+                }
+            }
+        }
+        boolean incoming = operation.equals("find_method_refs");
+        result.put("method_descriptor", requested);
+        result.put("status", "ok");
+        if (!incoming && !definitions.containsKey(requested)) {
+            result.put("status", "error");
+            result.put("code", "method_not_found");
+            return result;
+        }
+        long total = 0, scannedMethods = 0, scannedInstructions = 0, withoutCode = 0;
+        long dynamicSites = 0, unresolvedMatches = 0;
+        List<Map<String, Object>> items = new ArrayList<>();
+        List<Map<String, Object>> unresolved = new ArrayList<>();
+        for (String entry : entries) {
+            TreeMap<String, ClassDef> classes = new TreeMap<>();
+            for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses())
+                classes.put(cls.getType(), cls);
+            for (ClassDef cls : classes.values()) {
+                TreeMap<String, Method> methods = new TreeMap<>();
+                for (Method method : cls.getMethods()) methods.put(descriptor(method), method);
+                for (var member : methods.entrySet()) {
+                    String caller = member.getKey();
+                    if (!incoming && !caller.equals(requested)) continue;
+                    scannedMethods++;
+                    MethodImplementation implementation = member.getValue().getImplementation();
+                    if (implementation == null) { withoutCode++; continue; }
+                    long address = 0;
+                    for (Instruction instruction : implementation.getInstructions()) {
+                        if (instruction instanceof UnknownInstruction || instruction.getOpcode().odexOnly())
+                            throw new IllegalArgumentException("Unknown or optimized DEX instruction");
+                        scannedInstructions++;
+                        String opcode = instruction.getOpcode().name;
+                        if (instruction instanceof ReferenceInstruction referenced) {
+                            Reference reference = referenced.getReference();
+                            if (reference instanceof MethodReference method) {
+                                String callee = descriptor(method);
+                                if (!incoming || callee.equals(requested)) {
+                                    String targetEntry = definitions.get(callee);
+                                    if (targetEntry == null) unresolvedMatches++;
+                                    if (total >= offset && total - offset < limit) {
+                                        Map<String, Object> row = new LinkedHashMap<>();
+                                        row.put("caller", caller);
+                                        row.put("callee", callee);
+                                        row.put("dex_entry", entry);
+                                        row.put("instruction_offset", address);
+                                        row.put("offset_unit", "code_units_from_method_start");
+                                        row.put("opcode", opcode);
+                                        row.put("target_resolution", targetEntry == null
+                                            ? "not_defined_in_input" : "defined_in_input");
+                                        row.put("target_dex_entry", targetEntry);
+                                        if (instruction instanceof DualReferenceInstruction dual
+                                                && dual.getReference2() instanceof MethodProtoReference proto) {
+                                            StringBuilder prototype = new StringBuilder("(");
+                                            for (CharSequence type : proto.getParameterTypes()) prototype.append(type);
+                                            row.put("call_site_prototype", prototype.append(')')
+                                                .append(proto.getReturnType()).toString());
+                                        }
+                                        items.add(row);
+                                    }
+                                    total++;
+                                }
+                            }
+                            if (reference instanceof CallSiteReference
+                                    || reference instanceof MethodHandleReference
+                                    || opcode.startsWith("invoke-polymorphic")) {
+                                dynamicSites++;
+                                if (unresolved.size() < 20) unresolved.add(Map.of(
+                                    "caller", caller, "dex_entry", entry,
+                                    "instruction_offset", address, "opcode", opcode,
+                                    "reason", "dynamic_target_not_resolved"));
+                            }
+                        }
+                        address += instruction.getCodeUnits();
+                    }
+                }
+            }
+        }
+        result.put("backend", "dexlib2-instructions");
+        result.put("total", total);
+        result.put("items", items);
+        result.put("reference_semantics", "declared_method_operand");
+        result.put("scan_scope", incoming ? "supplied_dex_methods" : "selected_method");
+        result.put("scanned_methods", scannedMethods);
+        result.put("scanned_instructions", scannedInstructions);
+        result.put("methods_without_code", withoutCode);
+        result.put("scan_errors", 0);
+        result.put("unresolved_matches", unresolvedMatches);
+        result.put("dynamic_sites", dynamicSites);
+        result.put("unresolved_sites", unresolved);
+        result.put("unresolved_sites_truncated", dynamicSites > unresolved.size());
+        result.put("instruction_scan_complete", true);
+        result.put("runtime_target_resolution", "not_performed");
+        result.put("limitations", List.of("virtual_dispatch", "reflection", "jni", "runtime_loaded_code"));
+        return result;
+    }
+
     public static void main(String[] args) throws Exception {
         PrintStream output = System.out;
         System.setOut(System.err);
         Map<String, Object> result = run(args);
-        output.write(new Gson().toJson(result).getBytes(StandardCharsets.UTF_8));
+        output.write(new GsonBuilder().serializeNulls().create().toJson(result).getBytes(StandardCharsets.UTF_8));
     }
 }

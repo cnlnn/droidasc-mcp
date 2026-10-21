@@ -1,0 +1,4 @@
+-dontoptimize
+-keepattributes SourceFile,LineNumberTable
+-keep,allowobfuscation class org.example.complex.** { *; }
+-dontwarn org.jetbrains.annotations.**

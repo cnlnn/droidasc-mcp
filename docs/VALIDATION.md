@@ -6,7 +6,8 @@ Candidate exact-method acceptance additionally needs the optional pinned backend
 `uv run python scripts/setup_jadx.py`, JDK 17 on PATH, and
 `DROIDASC_MCP_JADX_HOME=/absolute/path/to/artifacts/jadx-1.5.5`.
 CI verifies the upstream ZIP SHA-256 before extracting it. Use the newly built fixture (including
-`MethodCases.java`), set `ASC_TEST_EXPECT_FIXTURE=1` and `ASC_TEST_APK`, then run the full suite.
+`MethodCases.java`) and the `complex` release fixture; set `ASC_TEST_EXPECT_FIXTURE=1`,
+`ASC_TEST_APK`, `ASC_TEST_COMPLEX_APK` and `ASC_TEST_COMPLEX_MAPPING`, then run the full suite.
 Strict fixture mode fails on skipped optional-backend tests as well as missing APK tests.
 
 New gates cover immutable sessions after source replacement/deletion, concurrent sample isolation,
@@ -15,6 +16,23 @@ and normal server lifespan teardown. Exact-method transport gates check overload
 constructors, synthetic bridges, array signatures, native declarations, Unicode identifiers,
 Java-to-Smali target preservation and actual descendant JVM cancellation/recovery. These are small
 fixture checks; they do not establish equivalent Java correctness or speed on arbitrary obfuscation.
+
+ASC post3 gates additionally reassemble native method Smali (debug info, native parameters and
+catch labels) with the JVM disabled in the server configuration. Source-built Smali oracles verify
+descriptor-exact cross-DEX references and instruction positions, undefined targets, polymorphic
+call-site prototypes, pagination, single-shot/session equivalence and unknown-opcode rejection.
+The independent Kotlin/R8 fixture proves obfuscated overload identity and continuation-to-workflow
+references, with R8 mappings kept on the test side. Both MCP transports run these checks.
+Clean sdist/wheel verification requires `--complex-apk` and `--complex-mapping` alongside
+`--fixture-apk`. Its per-command budget is 600 seconds to accommodate the additional JVM queries;
+worker deadlines, cleanup latency assertions and the no-skips gate are unchanged.
+
+Upstream inspection: [ASC dev-0.1.2-post3](https://github.com/MG1937/ASC/releases/tag/dev-0.1.2-post3),
+tag commit `9216fe234e1fc80f3148ca42e361e67e3174d0e2`. The public CLI adds exact `--method` and
+`--debuginfo` disassembly. Its implementation rebuilds the owning class DEX and passes the exact
+prototype to the disassembler; it does not expose structured exact-method xrefs. Consequently,
+native Smali uses that public CLI, while structured operands use the pinned dexlib2 API. Nothing
+here claims to implement ASC-internal API access or a complete runtime call graph.
 
 Method JVM scratch files and user-home state are confined to the parent-owned query directory;
 cancellation tests plant a sentinel there and require both the JVM and directory to disappear.

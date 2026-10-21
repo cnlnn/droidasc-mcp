@@ -116,11 +116,14 @@ def build_server(
             "get_manifest",
             "list_methods",
             "get_method_source",
+            "find_method_refs",
+            "get_method_calls",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
         source_format: Literal["auto", "java", "smali"] = "auto",
+        debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
         value: str | None = None,
         fuzzy_class: bool = False,
@@ -133,7 +136,9 @@ def build_server(
         Returns status=ok, error, or not_applicable. Errors carry a diagnostic code;
         duplicate class definitions are rejected. Manifest is not applicable to DEX.
         Coverage is limited to supplied files; this tool does not unpack applications.
-        list_methods/get_method_source require optional JADX 1.5.5 and JDK 17+.
+        Java, method lists and exact instruction references use optional JADX 1.5.5/JDK 17+.
+        Explicit smali uses ASC; debug_info includes DEX line/local metadata.
+        find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
         source_format=auto returns Java or exact-method Smali with fell_back/reason;
         java never silently falls back, smali always disassembles that exact method.
@@ -145,6 +150,7 @@ def build_server(
             class_name=class_name,
             method_descriptor=method_descriptor,
             source_format=source_format,
+            debug_info=debug_info,
             kind=kind,
             value=value,
             fuzzy_class=fuzzy_class,
@@ -178,11 +184,14 @@ def build_server(
             "get_manifest",
             "list_methods",
             "get_method_source",
+            "find_method_refs",
+            "get_method_calls",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
         source_format: Literal["auto", "java", "smali"] = "auto",
+        debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
         value: str | None = None,
         fuzzy_class: bool = False,
@@ -192,7 +201,9 @@ def build_server(
     ) -> dict[str, object]:
         """Query an immutable DEX session in a supervised worker, with original provenance.
 
-        list_methods/get_method_source require optional JADX 1.5.5 and JDK 17+.
+        Java, method lists and exact instruction references use optional JADX 1.5.5/JDK 17+.
+        Explicit smali uses ASC; debug_info includes DEX line/local metadata.
+        find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         method_descriptor is the full DEX class->name(args)return identity.
         source_format=auto may return exact-method Smali with an explicit fallback reason.
         """
@@ -203,6 +214,7 @@ def build_server(
             class_name=class_name,
             method_descriptor=method_descriptor,
             source_format=source_format,
+            debug_info=debug_info,
             kind=kind,
             value=value,
             fuzzy_class=fuzzy_class,

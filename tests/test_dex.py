@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shutil
 import struct
 import zipfile
 import zlib
@@ -194,3 +195,52 @@ async def test_real_dex_duplicate_and_error_recovery(settings, real_dex_files, t
         result = await client.call_tool("asc_analyze_dex", {"dex_paths": [str(real_dex_files[0])]})
         assert result.structured_content["status"] == "ok"
         assert result.structured_content["sources"][0]["class_count"] > 0
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("opcode", [0x3E, 0x73])
+async def test_unknown_instruction_never_reports_complete_scan(
+    settings, tmp_path, smali_dex_files, opcode
+):
+    import os
+
+    path = Path(shutil.copy(smali_dex_files[0], tmp_path))
+    data = bytearray(path.read_bytes())
+    # The independent Smali oracle starts run() with const/4 v0,1 then invoke-static.
+    marker = b"\x12\x10\x71\x10"
+    assert data.count(marker) == 1
+    # Unknown 0x3e and optimized-only 0x73 must not become a complete standard-DEX scan.
+    data[data.index(marker) + 2] = opcode
+    data[12:32] = hashlib.sha1(data[32:]).digest()
+    struct.pack_into("<I", data, 8, zlib.adler32(data[12:]))
+    path.write_bytes(data)
+    configured = replace(
+        settings,
+        timeout_seconds=60,
+        jadx_home=Path(os.environ["DROIDASC_MCP_JADX_HOME"]),
+        java_executable=os.getenv("DROIDASC_MCP_JAVA"),
+    )
+    async with Client(build_server(configured)) as client:
+        reply = await client.call_tool(
+            "asc_analyze_dex",
+            {
+                "dex_paths": [str(path)],
+                "operation": "get_method_calls",
+                "method_descriptor": "Lfixture/Caller;->run()V",
+            },
+        )
+        assert not reply.is_error, reply
+        result = reply.structured_content
+        assert result["status"] == "error" and result["code"] == "engine_error", result
+        assert "items" not in result and "instruction_scan_complete" not in result
+        assert path.read_bytes() == data
+        shutil.copy(smali_dex_files[0], path)
+        recovered = await client.call_tool(
+            "asc_analyze_dex",
+            {
+                "dex_paths": [str(path)],
+                "operation": "get_method_calls",
+                "method_descriptor": "Lfixture/Caller;->run()V",
+            },
+        )
+        assert recovered.structured_content["instruction_scan_complete"] is True

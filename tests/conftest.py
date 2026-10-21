@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -14,6 +16,9 @@ def pytest_sessionstart(session):
         apk = os.getenv("ASC_TEST_APK")
         if not apk or not Path(apk).is_file():
             raise pytest.UsageError("Fixture acceptance requires an existing ASC_TEST_APK")
+        for name in ("ASC_TEST_COMPLEX_APK", "ASC_TEST_COMPLEX_MAPPING"):
+            if not os.getenv(name) or not Path(os.environ[name]).is_file():
+                raise pytest.UsageError(f"Fixture acceptance requires an existing {name}")
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -64,4 +69,37 @@ def real_dex_files(tmp_path):
             path = root / name
             path.write_bytes(archive.read(name))
             paths.append(path)
+    return paths
+
+
+@pytest.fixture(scope="session")
+def smali_dex_files(tmp_path_factory):
+    home = os.getenv("DROIDASC_MCP_JADX_HOME")
+    java = os.getenv("DROIDASC_MCP_JAVA") or shutil.which("java")
+    if not home or not java:
+        pytest.skip("Configure JADX 1.5.5 and JDK 17 for instruction acceptance")
+    root = tmp_path_factory.mktemp("instruction-oracle")
+    jars = os.pathsep.join(str(p) for p in sorted((Path(home) / "lib").glob("*.jar")))
+    paths = []
+    for number, name in enumerate(("first", "second"), 1):
+        output = root / f"input{number}.dex"
+        subprocess.run(
+            [
+                java,
+                "-cp",
+                jars,
+                "com.android.tools.smali.smali.Main",
+                "assemble",
+                "--api",
+                "28",
+                str(Path(__file__).parent / "fixtures" / "xrefs" / name),
+                "-o",
+                str(output),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=60,
+        )
+        assert output.is_file()
+        paths.append(output)
     return paths

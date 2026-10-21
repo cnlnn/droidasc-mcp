@@ -2,12 +2,15 @@
 
 import hashlib
 import os
+import re
+import shutil
 import socket
 import subprocess
 import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -24,6 +27,7 @@ from droidasc_mcp.runner import (
     _start_process,
     _terminate_process_tree,
 )
+from droidasc_mcp.server import build_server
 
 
 @pytest.fixture
@@ -32,6 +36,258 @@ def process_runner(settings, monkeypatch):
     return DroidAscRunner(
         replace(settings, timeout_seconds=2, max_output_bytes=32768), module_name="process_fixture"
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_kotlin_r8_methods(transport, tmp_path, request, monkeypatch):
+    apk, mapping = os.getenv("ASC_TEST_COMPLEX_APK"), os.getenv("ASC_TEST_COMPLEX_MAPPING")
+    if not apk or not mapping:
+        pytest.skip("Build the public complex release APK and provide its R8 mapping")
+    if not os.getenv("DROIDASC_MCP_JADX_HOME"):
+        pytest.skip("Configure JADX 1.5.5 and JDK 17 for exact method acceptance")
+    # Mapping is an acceptance-side oracle; the tool sees only the compiled DEX files.
+    blocks = {}
+    current = None
+    for line in Path(mapping).read_text(encoding="utf-8").splitlines():
+        if line and not line.startswith((" ", "#")) and " -> " in line:
+            original, renamed = line.removesuffix(":").split(" -> ")
+            current = (renamed, [])
+            blocks[original] = current
+        elif current and line.startswith("    ") and not line.lstrip().startswith("#"):
+            current[1].append(line)
+    original = "org.example.complex.CoroutineCases"
+    renamed, members = blocks[original]
+    assert renamed != original, "R8 did not obfuscate the fixture"
+    owner = "L" + renamed.replace(".", "/") + ";"
+
+    def method(java_signature, dex_signature):
+        names = {line.rsplit(" -> ", 1)[1] for line in members if java_signature in line}
+        assert len(names) == 1, (java_signature, names)
+        return owner + "->" + names.pop() + dex_signature
+
+    integer = method("java.lang.String overload(int)", "(I)Ljava/lang/String;")
+    string = method(
+        "java.lang.String overload(java.lang.String)", "(Ljava/lang/String;)Ljava/lang/String;"
+    )
+    workflow = method(
+        "java.lang.Object workflow(java.lang.String,kotlin.coroutines.Continuation)",
+        "(Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+    )
+    # R8 may rename the Continuation interface as well; use its mapping, not a guessed name.
+    if "kotlin.coroutines.Continuation" in blocks:
+        continuation = "L" + blocks["kotlin.coroutines.Continuation"][0].replace(".", "/") + ";"
+        workflow = workflow.replace("Lkotlin/coroutines/Continuation;", continuation)
+    state_name = blocks[original + "$workflow$1"][0]
+    state_owner = "L" + state_name.replace(".", "/") + ";"
+    paths = []
+    with zipfile.ZipFile(apk) as archive:
+        for name in sorted(archive.namelist()):
+            if re.fullmatch(r"classes\d*\.dex", name):
+                path = tmp_path / name
+                path.write_bytes(archive.read(name))
+                paths.append(str(path))
+    assert paths
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        assert not opened.is_error, opened
+        key = opened.structured_content["session_id"]
+
+        async def query(operation, **args):
+            reply = await client.call_tool(
+                "asc_query_dex_session", dict(session_id=key, operation=operation, **args)
+            )
+            assert not reply.is_error, reply
+            result = reply.structured_content
+            assert result["status"] == "ok", result
+            return result
+
+        listed = await query("list_methods", class_name=owner, limit=100)
+        assert {integer, string, workflow} <= {r["descriptor"] for r in listed["items"]}
+        for descriptor, marker, absent in (
+            (integer, "R8_INTEGER:", "R8_STRING:"),
+            (string, "R8_STRING:", "R8_INTEGER:"),
+        ):
+            for mode in ("auto", "smali"):
+                result = await query(
+                    "get_method_source",
+                    method_descriptor=descriptor,
+                    source_format=mode,
+                    limit=1000,
+                )
+                assert marker in result["source"] and absent not in result["source"]
+        body = await query(
+            "get_method_source", method_descriptor=workflow, source_format="smali", limit=1000
+        )
+        assert "COROUTINE_MARKER:" in body["source"]
+        state = await query("list_methods", class_name=state_owner, limit=100)
+        assert any(r["has_code"] for r in state["items"])
+        refs = await query("find_method_refs", method_descriptor=workflow, limit=1000)
+        assert refs["instruction_scan_complete"] is True
+        assert any(r["caller"].startswith(state_owner + "->") for r in refs["items"])
+        for row in refs["items"]:
+            calls = await query("get_method_calls", method_descriptor=row["caller"], limit=1000)
+            assert row in calls["items"]
+        closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+        assert closed.structured_content["cleanup_pending"] is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_structured_method_references(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    caller = "Lfixture/Caller;->run()V"
+    target = "Lfixture/Target;->pick(I)V"
+    async with Client(endpoint) as client:
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        opened = await call("asc_open_dex_session", dex_paths=paths)
+        key = opened["session_id"]
+
+        async def query(operation, method_descriptor, **args):
+            return await call(
+                "asc_query_dex_session",
+                session_id=key,
+                operation=operation,
+                method_descriptor=method_descriptor,
+                **args,
+            )
+
+        outgoing = await query("get_method_calls", caller)
+        assert outgoing["status"] == "ok", outgoing
+        assert outgoing["backend"] == "dexlib2-instructions"
+        assert outgoing["total"] == 3
+        assert outgoing["scanned_methods"] == 1 and outgoing["scanned_instructions"] == 6
+        assert outgoing["instruction_scan_complete"] is True
+        assert outgoing["scan_errors"] == 0
+        assert outgoing["unresolved_matches"] == 1
+        assert outgoing["runtime_target_resolution"] == "not_performed"
+        assert outgoing["reference_semantics"] == "declared_method_operand"
+        rows = outgoing["items"]
+        assert [r["instruction_offset"] for r in rows] == [1, 6, 9]
+        assert [r["callee"] for r in rows] == [
+            target,
+            "Lfixture/Target;->pick(Ljava/lang/String;)V",
+            "Lexternal/Missing;->absent()V",
+        ]
+        assert all(r["caller"] == caller and r["dex_entry"] == "classes.dex" for r in rows)
+        assert all(r["offset_unit"] == "code_units_from_method_start" for r in rows)
+        assert all(r["opcode"] == "invoke-static" for r in rows)
+        assert rows[0]["target_dex_entry"] == "classes2.dex"
+        assert rows[0]["target_resolution"] == "defined_in_input"
+        assert rows[2]["target_dex_entry"] is None
+        assert rows[2]["target_resolution"] == "not_defined_in_input"
+        paged = await query("get_method_calls", caller, offset=1, limit=1)
+        assert paged["items"] == rows[1:2] and paged["next_offset"] == 2
+        beyond = await query("get_method_calls", caller, offset=10, limit=1)
+        assert beyond["items"] == [] and beyond["has_more"] is False
+        incoming = await query("find_method_refs", target)
+        assert incoming["total"] == 1 and incoming["items"] == rows[:1]
+        assert incoming["methods_without_code"] == 1
+        assert incoming["dynamic_sites"] == 1
+        assert incoming["unresolved_sites"][0]["reason"] == "dynamic_target_not_resolved"
+        external = await query("find_method_refs", "Lexternal/Missing;->absent()V")
+        assert external["total"] == 2 and external["unresolved_matches"] == 2
+        assert (await query("get_method_calls", "Lexternal/Missing;->absent()V"))[
+            "code"
+        ] == "method_not_found"
+        assert (await query("find_method_refs", "Lfixture/Target;->pick(J)V"))["total"] == 0
+        dynamic = await query(
+            "get_method_calls", "Lfixture/Caller;->dynamic(Ljava/lang/invoke/MethodHandle;)V"
+        )
+        assert dynamic["dynamic_sites"] == 1
+        assert dynamic["items"][0]["instruction_offset"] == 1
+        assert dynamic["items"][0]["call_site_prototype"] == "(I)I"
+        native = await query("get_method_calls", "Lfixture/Caller;->noCode(JLjava/lang/String;)V")
+        assert native["total"] == 0 and native["methods_without_code"] == 1
+        once = await call(
+            "asc_analyze_dex",
+            dex_paths=paths,
+            operation="get_method_calls",
+            method_descriptor=caller,
+        )
+        assert {k: v for k, v in outgoing.items() if k != "session_id"} == once
+        assert (await call("asc_close_dex_session", session_id=key))["cleanup_pending"] is False
+
+
+@pytest.mark.anyio
+async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    server = build_server(
+        replace(settings, timeout_seconds=60, jadx_home=None, java_executable="java-must-not-run")
+    )
+    async with Client(server) as client:
+
+        async def query(signature, **args):
+            reply = await client.call_tool(
+                "asc_analyze_dex",
+                dict(
+                    dex_paths=paths,
+                    operation="get_method_source",
+                    method_descriptor="Lfixture/Caller;->" + signature,
+                    source_format="smali",
+                    limit=100,
+                    **args,
+                ),
+            )
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        plain = await query("run()V")
+        debug = await query("run()V", debug_info=True)
+        assert plain["backend"] == "droidasc" and plain["backend_version"] == "0.1.2.post3"
+        assert "pick(I)V" in plain["source"] and "guarded()V" not in plain["source"]
+        assert ".line 17" not in plain["source"] and ".line 17" in debug["source"]
+        assert debug["debug_info"] is True
+        missing = await query("run(I)V")
+        assert missing["code"] == "method_not_found" and "source" not in missing
+        native = await query("noCode(JLjava/lang/String;)V")
+        assert "native noCode(JLjava/lang/String;)V" in native["source"]
+        guarded = await query("guarded()V")
+        assert ".catch Ljava/lang/Exception;" in guarded["source"]
+        # Reassemble ASC's public output, not a simulated or name-matched source slice.
+        for number, result in enumerate((debug, native, guarded)):
+            source = tmp_path / f"roundtrip{number}.smali"
+            source.write_text(result["source"], encoding="utf-8")
+            output = tmp_path / f"roundtrip{number}.dex"
+            home = Path(os.environ["DROIDASC_MCP_JADX_HOME"])
+            jars = os.pathsep.join(str(p) for p in sorted((home / "lib").glob("*.jar")))
+            java = os.getenv("DROIDASC_MCP_JAVA") or shutil.which("java")
+            completed = subprocess.run(
+                [
+                    java,
+                    "-cp",
+                    jars,
+                    "com.android.tools.smali.smali.Main",
+                    "assemble",
+                    str(source),
+                    "-o",
+                    str(output),
+                ],
+                capture_output=True,
+                timeout=60,
+            )
+            assert completed.returncode == 0 and output.is_file(), completed.stderr.decode()
 
 
 def alive(pid):

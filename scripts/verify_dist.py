@@ -14,11 +14,15 @@ def main():
     parser.add_argument("sdist", type=Path)
     parser.add_argument("wheel", type=Path)
     parser.add_argument("--fixture-apk", type=Path, help="Built public acceptance APK")
+    parser.add_argument("--complex-apk", type=Path, help="R8/Kotlin release fixture")
+    parser.add_argument("--complex-mapping", type=Path, help="R8 acceptance-side mapping")
     args = parser.parse_args()
     wheel = args.wheel.resolve()
     env = os.environ.copy()
     for name in (
         "ASC_TEST_APK",
+        "ASC_TEST_COMPLEX_APK",
+        "ASC_TEST_COMPLEX_MAPPING",
         "ASC_TEST_EXPECT_FIXTURE",
         "ASC_TEST_ROOT",
         "PYTHONPATH",
@@ -31,6 +35,10 @@ def main():
             parser.error("--fixture-apk must be a file")
         env["ASC_TEST_APK"] = str(fixture_apk)
         env["ASC_TEST_EXPECT_FIXTURE"] = "1"
+        if not args.complex_apk or not args.complex_mapping:
+            parser.error("--fixture-apk requires --complex-apk and --complex-mapping")
+        env["ASC_TEST_COMPLEX_APK"] = str(args.complex_apk.resolve(strict=True))
+        env["ASC_TEST_COMPLEX_MAPPING"] = str(args.complex_mapping.resolve(strict=True))
     with tempfile.TemporaryDirectory(prefix="droidasc-dist-") as directory:
         root = Path(directory)
         with tarfile.open(args.sdist) as archive:
@@ -46,6 +54,8 @@ def main():
                 "scripts/stability_dex.py",
                 "scripts/validate_corpus.py",
                 "src/droidasc_mcp/MethodBridge.java",
+                "tests/fixtures/xrefs/first/Caller.smali",
+                "tests/fixtures/android/complex/src/main/java/org/example/complex/CoroutineCases.kt",
             )
             for name in required:
                 assert any(item.endswith("/" + name) for item in members), name
@@ -57,7 +67,7 @@ def main():
         (project,) = root.iterdir()
 
         def run(command, cwd=project):
-            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=240)
+            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=600)
 
         run(["uv", "sync", "--locked", "--extra", "dev", "--python", sys.executable])
         python = project / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")

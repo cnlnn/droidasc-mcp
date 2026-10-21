@@ -102,7 +102,7 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 因此该值会明确报错。方法和字段的精确类名支持 Java 名称和 Dalvik 描述符，模糊类名保留原语义。
 
 未发布的 `extends`、`impl` 查询只返回**直接**父类或接口声明，包括接口继承接口。
-依赖要求已提高到 Droid ASC 0.1.2.post2，旧版本缺少这些命令。
+依赖要求已提高到 Droid ASC 0.1.2.post3，包含精确方法 Smali 和调试信息输出。
 通过 `value` 传入 Java 类名或 Dalvik 描述符，这两类查询不接受类名过滤参数。
 记录包含 `dex`、`class_name`、`relation`、`target`、`raw`，并标记
 `relation_scope="direct"`；不代表传递继承关系或运行时分派图。无法识别的文本只保留
@@ -161,6 +161,8 @@ MCP 错误和结构化 `status`。
 可选精确方法后端需要官方 [JADX 1.5.5](https://github.com/skylot/jadx/releases/tag/v1.5.5) 和 JDK 17 以上版本。
 设置 `DROIDASC_MCP_JADX_HOME` 为包含 `lib/` 的解压目录，`DROIDASC_MCP_JAVA` 为 JDK 的 `java` 路径
 （也可使用 PATH）。仅有 JRE 不够。普通 ASC 功能不依赖 Java，安装 Python 包也不会下载 JADX。
+显式指定 `source_format=smali` 直接调用 ASC 0.1.2.post3，不依赖 JVM/JADX；可同时设置
+`debug_info=true` 返回调试指令。`auto` 和 `java` 仍使用可选后端。
 
 ```text
 asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
@@ -175,9 +177,24 @@ asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source
 `source_format=auto` 通过 JADX 公开 API 精确查找 Java 方法；Java 未输出该方法（如省略的默认构造函数）
 或引擎报错时，只反汇编同一个 dexlib2 方法对象。返回 `format`、`fell_back`、`fallback_reason`、后端版本、
 原始哈希和 `dex_entry`。`java` 模式不自动回退，`smali` 模式始终返回该方法的反汇编。引擎错误和警告计数
-不是 Java 语义正确性的证明；原引用查询仍是 ASC 的尽力解析结果，本次没有变成描述符精确交叉引用。
+不是 Java 语义正确性的证明；原 `find_refs` 仍保留 ASC 的名称级尽力解析结果。
 
-未配置后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。每次方法查询启动一个受现有进程树限制的
+新增 `find_method_refs`（谁引用该方法）和 `get_method_calls`（该方法引用谁），均要求完整方法描述符，
+支持 DEX 文件和会话，使用上述可选后端。每条结果包含完整 `caller`、`callee`、调用者 `dex_entry`、
+`opcode` 和 `instruction_offset`。偏移单位是从方法首条指令起算的 **16 位 code unit**，不是文件偏移。
+`target_resolution`、`target_dex_entry` 表明操作数所指的方法是否定义在输入中。入向查询可查外部方法；
+出向查询要求该方法存在。分页顺序固定为 DEX entry、类、调用者描述符和指令位置。
+
+```text
+asc_query_dex_session(session_id="...", operation="find_method_refs", method_descriptor="Lcom/example/Main;->check(I)Z")
+asc_query_dex_session(session_id="...", operation="get_method_calls", method_descriptor="Lcom/example/Main;->check(I)Z")
+```
+
+结果统计扫描方法数、指令数、无代码声明、未定义操作数和动态调用位置；多态调用保留调用点原型，
+动态位置最多返回 20 条诊断。`instruction_scan_complete` 仅指指定范围的指令解码完成，不代表完整运行时
+调用图。虚调用分派、反射、JNI 和动态加载仍未解析；未知指令或解码失败直接报错，不返回伪完整结果。
+
+未配置可选后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。每次可选后端查询启动一个受现有进程树限制的
 JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，因此有启动开销。方法分页包含 `total`、
 `offset`、`limit`、`next_offset`、`truncated` 和 `has_more`，超大结果明确报错而不是静默截断。
 
