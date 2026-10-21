@@ -71,7 +71,7 @@ def build_server(
     @mcp.tool()
     def asc_find_refs(
         apk_path: str,
-        kind: Literal["string", "type", "method", "field"],
+        kind: Literal["string", "type", "method", "field", "extends", "impl"],
         value: str | None = None,
         class_name: str | None = None,
         fuzzy_class: bool = False,
@@ -79,7 +79,10 @@ def build_server(
         offset: int = 0,
         limit: int = 200,
     ) -> dict[str, object]:
-        """Find cross-DEX references to a string, type, method, or field."""
+        """Find cross-DEX references or direct subclasses/interface implementors.
+
+        extends/impl use an exact class in value and return direct declarations only.
+        """
         return service.find_refs(
             apk_path,
             kind=kind,
@@ -99,7 +102,7 @@ def build_server(
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
-        kind: Literal["string", "type", "method", "field"] = "string",
+        kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
         value: str | None = None,
         fuzzy_class: bool = False,
         threads: int = 8,

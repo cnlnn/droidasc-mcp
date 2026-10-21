@@ -17,7 +17,7 @@
 | `asc_get_manifest` | 解码并分页读取 `AndroidManifest.xml` |
 | `asc_list_classes` | 按包名前缀分页列出类 |
 | `asc_get_class_source` | 定位并反编译单个类 |
-| `asc_find_refs` | 跨 DEX 查找字符串、类型、方法或字段引用 |
+| `asc_find_refs` | 跨 DEX 查找字符串、类型、方法、字段引用；直接继承/实现查询（未发布） |
 | `asc_analyze_dex` | 分析裸 DEX 或明确指定的 DEX 集合，保留来源和哈希（未发布） |
 
 ## 安装
@@ -84,6 +84,8 @@ DROIDASC_MCP_ALLOWED_ROOTS=/APK所在目录 \
 asc_apk_info(apk_path="/samples/app.apk")
 asc_list_classes(apk_path="/samples/app.apk", prefix="com.example", limit=100)
 asc_find_refs(apk_path="/samples/app.apk", kind="string", value="Authorization")
+asc_find_refs(apk_path="/samples/app.apk", kind="extends", value="android.app.Activity")
+asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnable")
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
 
@@ -95,6 +97,14 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 引用数量。`--help` 等值作为查询数据而非 CLI 选项；匹配仍遵循 ASC 语义，字符串和类型查询
 支持正则表达式，无效表达式明确报错。上游 CLI 在参数解析前保留了精确值 `--gui`，
 因此该值会明确报错。方法和字段的精确类名支持 Java 名称和 Dalvik 描述符，模糊类名保留原语义。
+
+未发布的 `extends`、`impl` 查询只返回**直接**父类或接口声明，包括接口继承接口。
+依赖要求已提高到 Droid ASC 0.1.2.post2，旧版本缺少这些命令。
+通过 `value` 传入 Java 类名或 Dalvik 描述符，这两类查询不接受类名过滤参数。
+记录包含 `dex`、`class_name`、`relation`、`target`、`raw`，并标记
+`relation_scope="direct"`；不代表传递继承关系或运行时分派图。无法识别的文本只保留
+`raw`。`asc_analyze_dex(operation="find_refs", ...)` 也支持这两类查询。
+
 解码与排序仅做一次，之后直接对快照分页。结果缓存 60 秒、最多 8 条，合计按解码
 后的字符串和元组指针内存计费；同一查询合并执行，不同查询和缓存命中不再等待全局计算锁。
 缓存以查询、

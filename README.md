@@ -20,7 +20,7 @@ structured data instead of unbounded terminal output.
 | `asc_get_manifest` | Decode `AndroidManifest.xml` with line pagination |
 | `asc_list_classes` | List class descriptors with prefix filtering and pagination |
 | `asc_get_class_source` | Decompile one class with line pagination |
-| `asc_find_refs` | Find string, type, method, or field references across DEX files |
+| `asc_find_refs` | Find string/type/method/field references; direct hierarchy queries (unreleased) |
 | `asc_analyze_dex` | Analyze a bare DEX or explicit DEX set with source hashes (unreleased) |
 
 ## Install
@@ -96,6 +96,8 @@ Ask an MCP host to call:
 asc_apk_info(apk_path="/samples/app.apk")
 asc_list_classes(apk_path="/samples/app.apk", prefix="com.example", limit=100)
 asc_find_refs(apk_path="/samples/app.apk", kind="string", value="Authorization")
+asc_find_refs(apk_path="/samples/app.apk", kind="extends", value="android.app.Activity")
+asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnable")
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
 
@@ -110,6 +112,15 @@ string/type queries accept regular expressions, and invalid patterns return erro
 value `--gui` returns an explicit error because ASC reserves it before parsing CLI arguments.
 Exact method/field class names accept
 Java names or Dalvik descriptors; fuzzy class patterns retain their original meaning.
+
+The unreleased `extends` and `impl` kinds query **direct** superclass/interface declarations,
+including interface-to-interface declarations. They require Droid ASC 0.1.2.post2 or newer
+(installed by the updated dependency requirement). Supply a Java name or Dalvik descriptor in
+`value`; class filters are rejected for these kinds. Records contain `dex`, `class_name`,
+`relation`, `target`, and `raw`, with `relation_scope="direct"`. They are not transitive
+subclass searches or runtime dispatch graphs. Unrecognized text remains a raw-only record.
+The same queries work with `asc_analyze_dex(operation="find_refs", ...)`.
+
 Snapshots are decoded and sorted once, then cached for 60 seconds (up to 8 entries). The cache
 budget accounts for Python strings and tuple pointers, not just original output bytes. Identical
 concurrent queries share a single computation; unrelated queries and cache hits do not wait on

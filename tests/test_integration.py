@@ -373,9 +373,22 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
         assert (await call("asc_ping", {}))["status"] == "ok"
         assert len((await client.list_tools()).tools) == 7
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
+
+            async def refs_call(**kwargs):
+                return await call("asc_find_refs", {"apk_path": apk, **kwargs})
+
+            async def source_call(**kwargs):
+                return await call("asc_get_class_source", {"apk_path": apk, **kwargs})
+
+            await assert_reference_stability(refs_call, source_call)
             await assert_fixture_tools(call, apk)
             await assert_fixture_query_boundaries(client, apk, tmp_path)
-            print(f"fixture_apk transport={transport} tools=6 reference_kinds=4")
+
+            async def hierarchy_call(**kwargs):
+                return await call("asc_find_refs", {"apk_path": apk, **kwargs})
+
+            await assert_fixture_hierarchy(hierarchy_call, apk)
+            print(f"fixture_apk transport={transport} tools=6 reference_kinds=6")
             return
         info = await call("asc_apk_info", {"apk_path": apk})
         assert len(info["sha256"]) == 64
@@ -391,6 +404,74 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
         )
         assert "total" in refs
         print(f"real_apk transport={transport} tools=6 classes={classes['total']}")
+
+
+async def assert_reference_stability(refs_call, source_call):
+    probe = "Lorg/example/droidascfixture/Probe;"
+    activity = "Lorg/example/droidascfixture/MainActivity;"
+    # Ground truth comes from fixture Java, independently of the ASC CLI baseline.
+    queries = [
+        ("string", "ASC_FIXTURE_MARKER_v1", {probe + "->marker"}),
+        ("type", "org.example.droidascfixture.Probe", {activity + "->onCreate"}),
+        ("method", "marker", {probe + "->describe"}),
+        ("field", "visits", {probe + "-><init>", probe + "->marker"}),
+    ]
+    before = []
+    for kind, value, expected in queries:
+        filters = {"class_name": probe} if kind in {"method", "field"} else {}
+        result = await refs_call(kind=kind, value=value, threads=1, limit=100, **filters)
+        assert result.get("status", "ok") == "ok", result
+        assert not result["truncated"]
+        assert {item["method"] for item in result["items"]} == expected
+        assert all(item["dex"] == "classes2.dex" for item in result["items"])
+        before.append(result)
+    for name in (probe, activity):
+        source = await source_call(class_name=name, threads=1, limit=1000)
+        assert source.get("status", "ok") == "ok", source
+        assert source["source"]
+    for (kind, value, _), previous in zip(queries, before, strict=True):
+        # A different thread count has a distinct APK snapshot key, forcing fresh analysis.
+        filters = {"class_name": probe} if kind in {"method", "field"} else {}
+        after = await refs_call(kind=kind, value=value, threads=2, limit=100, **filters)
+        assert after == previous, (kind, previous, after)
+
+
+async def assert_fixture_hierarchy(call, apk):
+    for kind, value, expected in (
+        ("extends", "HierarchyBase", {"LHierarchyChild;"}),
+        ("extends", "Login", {"LLoginChild;"}),
+        ("extends", "LLogin;", {"LLoginChild;"}),
+        ("extends", "android.app.Activity", {"Lorg/example/droidascfixture/MainActivity;"}),
+        ("impl", "InterfaceBase", {"LInterfaceChild;", "LHierarchyDirect;"}),
+        ("impl", "InterfaceChild", {"LHierarchyBase;"}),
+        ("extends", "MissingBase", set()),
+        ("impl", "--output=sentinel.txt", set()),
+    ):
+        result = await call(kind=kind, value=value, limit=100)
+        assert result.get("status", "ok") == "ok", result
+        assert result["relation_scope"] == "direct"
+        assert result["total"] == len(expected), (kind, value, result)
+        assert {item["class_name"] for item in result["items"]} == expected
+        # Query the CLI with a descriptor: its bare Login normalization loses the leading L.
+        descriptor = (
+            value
+            if value.startswith("L") and value.endswith(";")
+            else ("L" + value.replace(".", "/") + ";")
+        )
+        baseline = subprocess.run(
+            [sys.executable, "-m", "droidasc", "findrefs", apk, kind, "--", descriptor],
+            capture_output=True,
+            check=True,
+            text=True,
+            encoding="utf-8",
+            timeout=60,
+        )
+        assert [item["raw"] for item in result["items"]] == sorted(baseline.stdout.splitlines())
+        pages = []
+        for offset in range(result["total"]):
+            page = await call(kind=kind, value=value, limit=1, offset=offset)
+            pages.extend(page["items"])
+        assert pages == result["items"]
 
 
 async def assert_fixture_tools(call, apk):
@@ -474,6 +555,13 @@ async def test_real_dex_operations(transport, tmp_path, real_dex_files, request)
             assert not reply.is_error, reply
             return reply.structured_content
 
+        async def refs_call(**kwargs):
+            return await call("find_refs", **kwargs)
+
+        async def source_call(**kwargs):
+            return await call("get_class_source", **kwargs)
+
+        await assert_reference_stability(refs_call, source_call)
         info = await call()
         assert info["status"] == "ok"
         assert info["coverage"] == "supplied_files_only"
@@ -502,6 +590,11 @@ async def test_real_dex_operations(transport, tmp_path, real_dex_files, request)
         assert (await call("get_class_source", class_name="missing.Class"))[
             "code"
         ] == "class_not_found"
+
+        async def hierarchy_call(**kwargs):
+            return await call("find_refs", **kwargs)
+
+        await assert_fixture_hierarchy(hierarchy_call, os.environ["ASC_TEST_APK"])
         for kind, value in (
             ("string", marker),
             ("type", "org.example.droidascfixture.Probe"),

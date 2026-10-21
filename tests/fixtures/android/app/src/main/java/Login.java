@@ -1,4 +1,4 @@
-public final class Login {
+public class Login {
     public static int visits = 0;
 
     public static String marker() {

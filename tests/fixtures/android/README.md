@@ -30,7 +30,7 @@ the analyzed artifact's SHA-256 rather than requiring byte-identical APK rebuild
 
 - Manifest package: `org.example.droidascfixture`; no requested permissions.
 - DEX classes: `MainActivity`, `Probe`, and the Android-generated `R` in that package,
-  plus a default-package `Login` class for exact-name normalization checks.
+  plus default-package `Login` and hierarchy classes for exact-name and direct-relation checks.
 - Pinned debug build layout: generated `R` in `classes.dex`; app classes in `classes2.dex`.
 - Decompiled `Probe`: `marker`, `visits`, and `ASC_FIXTURE_MARKER_v1`.
 - String reference: the marker in `Probe.marker`.
@@ -39,6 +39,11 @@ the analyzed artifact's SHA-256 rather than requiring byte-identical APK rebuild
 - Field reference: `Probe.visits` accessed by `Probe.marker`.
 - Default-package method/field queries: `Login` and `LLogin;` return the same nonempty hits;
   a fuzzy `Log` pattern still matches them.
+- Direct hierarchy: `HierarchyBase` has `HierarchyChild`, not `HierarchyGrandchild`, as a
+  direct subclass; `InterfaceBase` has `InterfaceChild` and `HierarchyDirect`, not indirect
+  implementors. `Login` and `LLogin;` both find `LoginChild`.
+- String/type/method/field refs match fixture-source caller sets both before and after class
+  decompilation, using fresh analyses rather than an identical-query cache hit, for APK and DEX.
 - Option-shaped query values preserve a disposable sentinel outside the APK root, return literal
   search results rather than CLI help, and leave the session usable after a reserved-token error.
 

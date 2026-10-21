@@ -36,6 +36,8 @@ class DroidAscService:
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
         paths = self.settings.validate_dex_paths(dex_paths)
+        if query.get("operation") == "find_refs":
+            query["value"] = _normalize_reference_value(query.get("kind"), query.get("value"))
         if query.get("class_name") and (
             query.get("operation") == "get_class_source" or not query.get("fuzzy_class", False)
         ):
@@ -115,6 +117,7 @@ class DroidAscService:
         apk = self.settings.validate_apk(apk_path)
         if kind in {"method", "field"} and class_name is not None and not fuzzy_class:
             class_name = _normalize_class_name(class_name)
+        value = _normalize_reference_value(kind, value)
         result = self.runner.find_refs(
             apk,
             kind=kind,
@@ -128,6 +131,12 @@ class DroidAscService:
         result["apk_path"] = str(apk)
         result["kind"] = kind
         return result
+
+
+def _normalize_reference_value(kind: str | None, value: str | None) -> str | None:
+    if kind in {"extends", "impl"} and value is not None and value != "--gui":
+        return _normalize_class_name(value)
+    return value
 
 
 def _normalize_class_name(value: str) -> str:

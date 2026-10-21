@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add exact `extends` / `impl` queries for APK and DEX, with structured direct-declaration
+  records, descriptor normalization and explicit rejection of inapplicable class filters.
+- Require Droid ASC 0.1.2.post2 or newer; the previous minimum 0.1.1.post1 lacks hierarchy
+  commands and fails the new real-engine acceptance.
+- Verify reference caller sets before and after decompilation through both MCP transports,
+  forcing fresh queries so cached output cannot hide a call-order regression.
 - Add `asc_analyze_dex` for explicit single/multi-DEX inputs through the public ASC entry point.
   Preserve original bytes and SHA-256 provenance; validate standard DEX headers, table bounds
   and integrity fields before creating private, temporary analysis containers.

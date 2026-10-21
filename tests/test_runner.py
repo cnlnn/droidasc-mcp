@@ -129,7 +129,7 @@ def test_find_refs_validates_query(settings: Settings, apk_file: Path, fake_droi
         )
 
 
-@pytest.mark.parametrize("kind", ["string", "type", "method", "field"])
+@pytest.mark.parametrize("kind", ["string", "type", "method", "field", "extends", "impl"])
 @pytest.mark.parametrize("value", ["--help", "--output=sentinel.txt", "-osentinel.txt", "--"])
 def test_reference_values_are_cli_positionals(settings, apk_file, monkeypatch, kind, value):
     subject = runner(settings, "unused")
@@ -139,8 +139,8 @@ def test_reference_values_are_cli_positionals(settings, apk_file, monkeypatch, k
         apk_file,
         kind=kind,
         value=value,
-        class_name="--help",
-        fuzzy_class=True,
+        class_name="--help" if kind in {"method", "field"} else None,
+        fuzzy_class=kind in {"method", "field"},
         threads=1,
         offset=0,
         limit=1,
@@ -152,7 +152,7 @@ def test_reference_values_are_cli_positionals(settings, apk_file, monkeypatch, k
         assert "--fuzzy-class" in args[: args.index("--")]
 
 
-@pytest.mark.parametrize("kind", ["string", "type", "method", "field"])
+@pytest.mark.parametrize("kind", ["string", "type", "method", "field", "extends", "impl"])
 def test_reference_gui_dispatch_is_rejected_before_launch(settings, apk_file, monkeypatch, kind):
     subject = runner(settings, "unused")
 

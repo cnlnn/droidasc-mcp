@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -25,7 +26,7 @@ from anyio import from_thread
 
 from .config import Settings
 
-ReferenceKind = Literal["string", "type", "method", "field"]
+ReferenceKind = Literal["string", "type", "method", "field", "extends", "impl"]
 
 
 class DroidAscError(RuntimeError):
@@ -195,7 +196,12 @@ class DroidAscRunner:
         # ASC dispatches this token before argparse processes the option terminator.
         if value == "--gui":
             raise ValueError("The droidasc CLI reserves '--gui'; use a narrower search value")
-        if kind in {"string", "type"}:
+        if kind not in {"string", "type", "method", "field", "extends", "impl"}:
+            raise ValueError("Unknown reference kind")
+        hierarchy = kind in {"extends", "impl"}
+        if hierarchy and (class_name is not None or fuzzy_class):
+            raise ValueError("Hierarchy searches use value only; class filters are not supported")
+        if kind in {"string", "type", "extends", "impl"}:
             if not value:
                 raise ValueError(f"value is required for {kind} searches")
             query_args = [kind, "--", value]
@@ -212,7 +218,10 @@ class DroidAscRunner:
 
         args = ["findrefs", "--threads", str(_threads(threads)), str(apk), *query_args]
         page = self._run_paged(args, offset=offset, limit=limit)
-        parsed = [_parse_reference(line) for line in page.items]
+        parsed = [
+            _parse_hierarchy(line, kind) if hierarchy else _parse_reference(line)
+            for line in page.items
+        ]
         result = page.as_dict()
         result["items"] = parsed
         result["format"] = "cli-text-best-effort"
@@ -220,6 +229,12 @@ class DroidAscRunner:
             "CLI text may contain embedded newlines; "
             "total counts output lines, not semantic references."
         )
+        if hierarchy:
+            result["relation_scope"] = "direct"
+            result["warning"] = (
+                "Direct DEX declarations only, not transitive inheritance or runtime dispatch. "
+                "CLI text is parsed best-effort; raw output is preserved."
+            )
         return result
 
     def _run_paged(self, args: list[str], *, offset: int, limit: int) -> LinePage:
@@ -426,6 +441,23 @@ def _threads(value: int) -> int:
     if value <= 0:
         raise ValueError("threads must be greater than zero")
     return min(value, 32)
+
+
+def _parse_hierarchy(line: str, kind: str) -> dict[str, str]:
+    relation = "extends" if kind == "extends" else "implements"
+    match = re.fullmatch(
+        rf"(classes(?:[0-9]+)?\.dex) \| (L[^\s;|]+;) {relation} (L[^\s;|]+;)", line
+    )
+    if not match:
+        return {"raw": line}
+    dex, class_name, target = match.groups()
+    return {
+        "dex": dex,
+        "class_name": class_name,
+        "relation": relation,
+        "target": target,
+        "raw": line,
+    }
 
 
 def _parse_reference(line: str) -> dict[str, str]:
