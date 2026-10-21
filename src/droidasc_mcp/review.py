@@ -57,5 +57,6 @@ def query_review(settings, bundle, common, query, workspace):
         str(min(offset, 2**63 - 1)),
         str(limit),
         str(query["max_scan_bytes"]),
+        str(query.get("include_values", False)).lower(),
     ]
     return _execute_java(settings, command, workspace, offset, limit)

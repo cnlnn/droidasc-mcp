@@ -97,7 +97,7 @@ public class ReviewBridge {
         PATTERNS.put("github_classic_token", Pattern.compile("(?<![A-Za-z0-9_])gh[pousr]_[A-Za-z0-9]{36}(?![A-Za-z0-9])"));
         PATTERNS.put("google_api_key", Pattern.compile("(?<![A-Za-z0-9_])AIza[0-9A-Za-z_-]{35}(?![A-Za-z0-9_-])"));
         PATTERNS.put("private_key_marker", Pattern.compile("-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"));
-        PATTERNS.put("credential_assignment", Pattern.compile("(?i)(?:api[_-]?key|client[_-]?secret|access[_-]?token)[ \\t]*[:=][ \\t]*[\"']?([A-Za-z0-9_./+~-]{16,256})"));
+        PATTERNS.put("credential_assignment", Pattern.compile("(?i)(?:api[_-]?key|client[_-]?secret|access[_-]?token|secret|password|token)\\s*[:=]\\s*[\"']?([^\\s'\"]{8,})"));
         PATTERNS.put("jwt_like", Pattern.compile("(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,2048}\\.[A-Za-z0-9_-]{8,4096}\\.[A-Za-z0-9_-]{8,2048}(?![A-Za-z0-9_-])"));
     }
 
@@ -136,10 +136,12 @@ public class ReviewBridge {
                         int group = pattern.getKey().equals("credential_assignment") ? 1 : 0;
                         String token = matcher.group(group);
                         if (total >= offset && total - offset < limit) {
-                            items.add(Map.of("pattern", pattern.getKey(), "dex_entry", entry,
+                            Map<String, Object> item = new LinkedHashMap<>(Map.of("pattern", pattern.getKey(), "dex_entry", entry,
                                 "string_index", index, "utf16_offset", matcher.start(group),
                                 "length_utf16", token.length(), "candidate_sha256", fingerprint(token),
                                 "redacted", "[REDACTED]", "confidence", "candidate"));
+                            if (Boolean.parseBoolean(args[6])) item.put("value", token);
+                            items.add(item);
                         }
                         total++;
                     }
@@ -156,9 +158,10 @@ public class ReviewBridge {
         result.put("capped_pattern_string_pairs", capped);
         result.put("coverage_complete", skipped == 0 && capped == 0);
         result.put("scope", "dex_string_pool_fixed_patterns_only");
+        result.put("values_included", Boolean.parseBoolean(args[6]));
         result.put("credential_validity", "not_checked");
         result.put("instruction_use_sites", "not_resolved");
-        result.put("pattern_version", 1);
+        result.put("pattern_version", 2);
         return result;
     }
 

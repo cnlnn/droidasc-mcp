@@ -34,6 +34,12 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
+0.4.0 在现有 DEX 查询工具中增加类搜索、结构、继承关系、字符串使用位置、指令文本检索、
+结构化反汇编和源码 token 引用；补充 DEX 041 容器、一级嵌套 JAR 的 JVM 清单与身份对比、
+资源字节续页、Manifest/类资源模板、版本对比提示和候选密钥原值的显式开关。
+[逐项源码对照表](docs/COMPETITOR_API_AUDIT.md) 覆盖竞品全部 25 个工具、2 个资源、3 个提示及
+87 个参数，同时列出接口差异和限制。功能工作流对齐不代表所有性能指标都优于竞品。
+
 ## 安装
 
 需要 Python 3.10 或更高版本。CI 覆盖 Linux 和原生
@@ -44,14 +50,14 @@ Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.0/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.0/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
@@ -355,7 +361,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/droidasc_mcp-0.3.0-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.4.0.tar.gz dist/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 ## 许可证

@@ -48,6 +48,9 @@ def main():
                 "tests/process_fixture.py",
                 "README.zh-CN.md",
                 "docs/VALIDATION.md",
+                "docs/COMPETITOR_API_AUDIT.md",
+                "scripts/audit_competitor.py",
+                "tests/test_competitor_audit.py",
                 "uv.lock",
                 "scripts/verify_dist.py",
                 "scripts/verify_archive_workflow.py",
@@ -77,6 +80,20 @@ def main():
                 "src/droidasc_mcp/MethodBridge.java",
                 "src/droidasc_mcp/IndexBridge.java",
                 "src/droidasc_mcp/DiscoveryBridge.java",
+                "src/droidasc_mcp/StructureBridge.java",
+                "tests/test_structure.py",
+                "tests/fixtures/xrefs/structure/Base.smali",
+                "tests/fixtures/xrefs/structure/Child.smali",
+                "tests/fixtures/xrefs/structure/Contract.smali",
+                "tests/fixtures/xrefs/structure/CycleA.smali",
+                "tests/fixtures/xrefs/structure/CycleB.smali",
+                "tests/fixtures/xrefs/structure/Payload.smali",
+                "tests/fixtures/xrefs/structure/SecretPatterns.smali",
+                "src/droidasc_mcp/source_metadata.py",
+                "src/droidasc_mcp/DexContainerBridge.java",
+                "src/droidasc_mcp/dex_container.py",
+                "tests/test_dex_container.py",
+                "tests/dex041_fixture.py",
                 "src/droidasc_mcp/query_cache.py",
                 "src/droidasc_mcp/durable_index.py",
                 "src/droidasc_mcp/native_worker.py",
@@ -100,7 +117,7 @@ def main():
         (project,) = root.iterdir()
 
         def run(command, cwd=project):
-            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=900)
+            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=1800)
 
         run(["uv", "sync", "--locked", "--extra", "dev", "--python", sys.executable])
         python = project / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")

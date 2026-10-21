@@ -1,6 +1,7 @@
 """Real subprocess, transport, and optional real-APK acceptance checks."""
 
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -15,12 +16,14 @@ import zipfile
 from contextlib import contextmanager, nullcontext, suppress
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import quote, urlencode
 
 import anyio
 import psutil
 import pytest
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
+from mcp.shared.exceptions import MCPError
 
 from droidasc_mcp.runner import (
     DroidAscError,
@@ -29,6 +32,90 @@ from droidasc_mcp.runner import (
     _terminate_process_tree,
 )
 from droidasc_mcp.server import build_server
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_competitor_parity_views_and_resource_templates(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(path, tmp_path)) for path in smali_dex_files]
+    artifact = tmp_path / "manifest with+spaces.jar"
+    with zipfile.ZipFile(artifact, "w") as archive:
+        archive.writestr(
+            "AndroidManifest.xml", '<manifest package="oracle"><application/></manifest>'
+        )
+        archive.writestr("oracle/Before.class", b"class")
+    newer = tmp_path / "new.jar"
+    with zipfile.ZipFile(newer, "w") as archive:
+        archive.writestr("oracle/After.class", b"class")
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        comparison = await client.call_tool(
+            "asc_inspect_artifact", {"artifact_path": str(artifact), "compare_to": str(newer)}
+        )
+        assert not comparison.is_error, comparison
+        assert comparison.structured_content["counts"] == {"added": 1, "removed": 1, "common": 0}
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        assert not opened.is_error, opened
+        key = opened.structured_content["session_id"]
+        assert (await client.call_tool("asc_ping", {})).structured_content["dex_sessions"][
+            "open_count"
+        ] == 1
+        for operation, args in (
+            ("get_class_outline", {"class_name": "fixture.Caller"}),
+            ("get_class_hierarchy", {"class_name": "fixture.Types"}),
+            ("get_string_constants", {"class_name": "fixture.Caller"}),
+            ("search_method_bodies", {"value": "const/4"}),
+            ("search_classes", {"value": "CALLER", "case_sensitive": False}),
+            (
+                "search_members",
+                {"kind": "method", "value": "RUN", "member_match": "name", "case_sensitive": False},
+            ),
+            ("disassemble_method", {"method_descriptor": "Lfixture/Caller;->run()V"}),
+            ("get_class_source_metadata", {"class_name": "fixture.Caller"}),
+        ):
+            response = await client.call_tool(
+                "asc_query_dex_session", {"session_id": key, "operation": operation, **args}
+            )
+            assert not response.is_error, response
+            assert response.structured_content["status"] == "ok", response
+        templates = (await client.list_resource_templates()).resource_templates
+        assert len(templates) == 2
+        manifest_uri = "droidasc://artifact/manifest?" + urlencode(
+            {"apk_path": str(artifact), "limit": 1}, quote_via=quote
+        )
+        manifest = json.loads((await client.read_resource(manifest_uri)).contents[0].text)
+        assert manifest["status"] == "ok" and manifest["has_more"]
+        assert manifest["artifact_sha256"] == hashlib.sha256(artifact.read_bytes()).hexdigest()
+        class_uri = f"droidasc://session/{key}/class?" + urlencode(
+            {"class_name": "Lfixture/Caller;", "offset": 0, "limit": 1}, quote_via=quote
+        )
+        source = json.loads((await client.read_resource(class_uri)).contents[0].text)
+        assert source["status"] == "ok" and source["has_more"]
+        assert source["input_id"] == opened.structured_content["input_id"]
+        prompt = await client.get_prompt(
+            "compare_versions", {"old_session_id": key, "new_session_id": 'new"quoted'}
+        )
+        assert 'new\\"quoted' in prompt.messages[0].content.text
+        assert "Unchanged identifiers" in prompt.messages[0].content.text
+        with pytest.raises(MCPError):
+            await client.read_resource(
+                "droidasc://artifact/manifest?"
+                + urlencode({"apk_path": str(tmp_path.parent / "outside.apk")})
+            )
+        await client.call_tool("asc_close_dex_session", {"session_id": key})
+        closed = json.loads((await client.read_resource(class_uri)).contents[0].text)
+        assert closed["code"] == "session_not_found"
 
 
 @pytest.fixture
@@ -86,6 +173,11 @@ async def test_remaining_reverse_workflow_over_transport(
                 row["redacted"] == "[REDACTED]" for row in secrets["items"]
             )
             assert "AKIA0000000000000000" not in str(secrets)
+            values = await query(
+                "asc_secret_candidates", session_id=a["session_id"], include_values=True
+            )
+            assert values["values_included"]
+            assert any(row["value"] == "AKIA0000000000000000" for row in values["items"])
             signing = await query("asc_signing_inventory", apk_path=str(apk))
             assert signing["cryptographic_verification"] == "not_performed"
             assert all(not s["container_present"] for s in signing["schemes"])
@@ -1750,6 +1842,7 @@ async def test_persistent_index_transport(
         assert {p.name for p in (await client.list_prompts()).prompts} == {
             "triage_apk",
             "trace_exact_method",
+            "compare_versions",
         }
         assert (
             "16-bit code units"

@@ -1,5 +1,24 @@
 # Local acceptance checks
 
+## v0.4.0 feature-frozen gate, 2026-10-22
+
+The competitor's main commit was rechecked as `848c711f1d80a1c2577283f1fa5f475ff734aa40`.
+The AST audit reports 25 tools, two resource templates, three prompts and 87 parameters,
+with zero inventory omissions. [The source map](COMPETITOR_API_AUDIT.md) separately records
+behavioral tests and intentional interface differences; an inventory check alone is not parity.
+The final focused structural/container/real-transport regression passed 43 tests. The independent
+signing oracle passed seven variants with the original APK unchanged. Local 20-second/two-worker
+stability completed 190 operations with no errors or live children, unchanged five handles and
+1,314,816 bytes host RSS growth. Thirteen DEX/index lifecycle cycles ended with no child,
+session, storage, reaper or handle growth (host RSS growth 1,388,544 bytes).
+
+These development results do not approve a release. The feature-frozen full Linux suite,
+native Windows/Linux Python 3.10-3.13 matrix, real stdio/HTTP, both clean sdist/wheel installs,
+independent signing and both stability jobs must all pass on the candidate commit. Only then
+may main and the v0.4.0 release advance. The release notes must link the exact successful CI run,
+tested commit and published artifact hashes. Older receipts below apply only to their named
+versions/commits and must not be reused as this candidate's acceptance.
+
 ## Index/Rust candidate, 2026-10-21
 
 Local Linux/Python 3.13 regression: **248 passed, zero skips**, 345.29 seconds,

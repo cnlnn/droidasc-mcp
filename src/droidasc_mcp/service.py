@@ -40,6 +40,15 @@ class DroidAscService:
 
         path = self.settings.validate_artifact(artifact_path)
         validate_budget(query.get("max_uncompressed_bytes", 128 * 1024**2), self.settings)
+        if query.get("compare_to"):
+            query["compare_to"] = str(self.settings.validate_artifact(query["compare_to"]))
+            if query.get("class_query") is not None or query.get("class_prefix") is not None:
+                raise ValueError("Class filters select inventory, not revision comparison")
+        for key in ("class_query", "class_prefix"):
+            if query.get(key) is not None and not isinstance(query[key], str):
+                raise ValueError(f"{key} must be a literal string")
+        if query.get("class_prefix") and not query["class_prefix"].startswith("L"):
+            query["class_prefix"] = "L" + query["class_prefix"].replace(".", "/")
         return self.runner.query_archive(path, {"operation": "artifact_inventory", **query})
 
     def open_artifact_session(
@@ -71,12 +80,21 @@ class DroidAscService:
         )
 
     def secret_candidates(
-        self, session_id, *, pattern="all", max_scan_bytes=64 * 1024**2, offset=0, limit=100
+        self,
+        session_id,
+        *,
+        pattern="all",
+        max_scan_bytes=64 * 1024**2,
+        offset=0,
+        limit=100,
+        include_values=False,
     ):
         from .review import PATTERNS
 
         if pattern not in PATTERNS:
             raise ValueError("Unknown candidate pattern")
+        if type(include_values) is not bool:
+            raise ValueError("include_values must be a boolean")
         if type(max_scan_bytes) is not int or not 1 <= max_scan_bytes <= 256 * 1024**2:
             raise ValueError("max_scan_bytes must be within 1 byte and 256 MiB")
         offset, limit = self.runner._page_bounds(offset, limit)
@@ -85,6 +103,7 @@ class DroidAscService:
             {
                 "operation": "secret_candidates",
                 "pattern": pattern,
+                "include_values": include_values,
                 "max_scan_bytes": max_scan_bytes,
                 "offset": offset,
                 "limit": limit,
@@ -120,7 +139,7 @@ class DroidAscService:
                 "signing": "v1_v2_v3_certificate_inventory_without_signature_verification",
                 "v31": "block_presence_only",
                 "revision_diff": "class_method_field_identities_only",
-                "secret_candidates": "redacted_fixed_patterns_in_dex_string_pools",
+                "secret_candidates": "fixed_patterns_in_dex_string_pools_redacted_unless_opted_in",
             },
             "rust_backend": {
                 "configured": self.settings.rust_asc_executable is not None,
@@ -145,12 +164,19 @@ class DroidAscService:
                     "build_xref_index",
                     "search_members",
                     "search_strings",
+                    "search_classes",
+                    "get_class_outline",
+                    "get_class_hierarchy",
+                    "get_string_constants",
+                    "search_method_bodies",
+                    "disassemble_method",
                 ],
                 "identity": "full_dex_method_descriptor",
                 "field_identity": "full_dex_field_descriptor",
                 "explicit_smali_backend": "droidasc",
             },
             "dex_sessions": {
+                **self.sessions.status(),
                 "max_count": self.settings.max_dex_sessions,
                 "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 "max_disk_bytes": self.settings.max_dex_session_bytes,
@@ -174,7 +200,7 @@ class DroidAscService:
         return self.runner.apk_info(apk, include_sha256)
 
     def query_archive(self, apk_path: str, **query) -> dict[str, object]:
-        apk = self.settings.validate_apk(apk_path)
+        apk = self.settings.validate_artifact(apk_path)
         return self.runner.query_archive(apk, query)
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
@@ -280,6 +306,34 @@ class DroidAscService:
 
 
 def _normalize_dex_query(query):
+    operation = query.get("operation")
+    discoveries = {"search_members", "search_strings", "search_classes", "search_method_bodies"}
+    if type(query.get("case_sensitive", True)) is not bool:
+        raise ValueError("case_sensitive must be a boolean")
+    if query.get("member_match", "descriptor") not in {"descriptor", "name"}:
+        raise ValueError("member_match must be descriptor or name")
+    if query.get("member_match", "descriptor") != "descriptor" and operation != "search_members":
+        raise ValueError("member_match requires search_members")
+    if not query.get("case_sensitive", True) and operation not in discoveries:
+        raise ValueError("case_sensitive requires a discovery operation")
+    if operation in {
+        "get_class_outline",
+        "get_class_hierarchy",
+        "get_string_constants",
+        "get_class_source_metadata",
+    }:
+        if not query.get("class_name") or query.get("fuzzy_class"):
+            raise ValueError(f"{operation} requires an exact class_name")
+        if query.get("method_descriptor") or query.get("value"):
+            raise ValueError(f"{operation} does not accept method_descriptor or value")
+    if operation in {"search_classes", "search_method_bodies"}:
+        if not query.get("value"):
+            raise ValueError(f"{operation} requires a nonempty literal value")
+        if query.get("method_descriptor") or query.get("fuzzy_class"):
+            raise ValueError(f"{operation} uses literal value and optional exact class_name")
+    if operation == "search_classes" and query.get("prefix"):
+        prefix = query["prefix"]
+        query["prefix"] = prefix if prefix.startswith("L") else "L" + prefix.replace(".", "/")
     if query.get("operation") == "get_call_graph":
         for key, default, maximum in (
             ("depth", 2, 5),
@@ -338,6 +392,7 @@ def _normalize_dex_query(query):
         "find_method_refs",
         "get_method_calls",
         "get_call_graph",
+        "disassemble_method",
     }:
         descriptor = query.get("method_descriptor")
         owner_type = r"L[^;\[\]]+;"

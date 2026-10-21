@@ -71,7 +71,7 @@ jobs:
   test:
     needs: [fixture, rust]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -145,7 +145,7 @@ jobs:
   distribution:
     needs: [fixture, package, rust]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

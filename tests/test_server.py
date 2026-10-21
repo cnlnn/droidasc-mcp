@@ -98,7 +98,11 @@ async def test_ping_exposes_effective_scope(settings: Settings):
 async def test_workflow_prompts_and_resource(settings):
     async with Client(build_server(settings)) as client:
         prompts = await client.list_prompts()
-        assert {p.name for p in prompts.prompts} == {"triage_apk", "trace_exact_method"}
+        assert {p.name for p in prompts.prompts} == {
+            "triage_apk",
+            "trace_exact_method",
+            "compare_versions",
+        }
         guide = await client.read_resource("droidasc://analysis-guide")
         assert "16-bit code units" in guide.contents[0].text
         result = await client.get_prompt("triage_apk", {"apk_path": '/samples/name".apk'})

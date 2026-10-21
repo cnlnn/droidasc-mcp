@@ -50,6 +50,15 @@ class DexSessions:
         entry.storage.cleanup()
         del self.entries[key]
 
+    def status(self):
+        with self.lock:
+            self._expire()
+            return {
+                "open_count": sum(not entry.closing for entry in self.entries.values()),
+                "active_queries": sum(entry.users for entry in self.entries.values()),
+                "opening_count": self.opening,
+            }
+
     def _expire(self):
         now = time.monotonic()
         for key, entry in list(self.entries.items()):
@@ -67,9 +76,14 @@ class DexSessions:
     def open(self, paths, *, artifact=None, budget=None, module=None):
         # Reserve for the ZIP bundle, a temporary single-DEX ZIP, and bounded metadata.
         input_bytes = sum(path.stat().st_size for path in paths) if artifact is None else budget
+        normalization = artifact is not None
+        if artifact is None:
+            for path in paths:
+                with path.open("rb") as stream:
+                    normalization |= stream.read(8) == b"dex\n041\0"
         index_budget = self.settings.max_xref_index_bytes
         reservation = (
-            input_bytes * (2 if artifact is None else 3)
+            input_bytes * (7 if normalization else 2)
             + self.settings.max_output_bytes * 2
             + 1024**2
             + index_budget
@@ -149,11 +163,19 @@ class DexSessions:
                 return error("session_not_found", "Session is unknown, expired, or closed")
             entry.users += 1
         try:
-            from .xref_index import DISCOVERY_OPERATIONS, INDEX_OPERATIONS, REFERENCE_OPERATIONS
+            from .xref_index import (
+                DISCOVERY_OPERATIONS,
+                INDEX_OPERATIONS,
+                REFERENCE_OPERATIONS,
+                STRUCTURE_OPERATIONS,
+            )
 
             if (
                 query.get("operation")
-                in INDEX_OPERATIONS | REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS
+                in INDEX_OPERATIONS
+                | REFERENCE_OPERATIONS
+                | DISCOVERY_OPERATIONS
+                | STRUCTURE_OPERATIONS
             ):
                 # Atomic publication and one builder per session; waiting remains cancellable.
                 with self.runner._acquire(entry.index_lock):

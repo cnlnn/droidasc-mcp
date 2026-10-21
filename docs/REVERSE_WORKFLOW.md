@@ -1,6 +1,6 @@
 # Container and revision review
 
-Version 0.3.0 feature boundaries. The combined Linux/Windows, real stdio/HTTP,
+Version 0.4.0 feature boundaries. The combined Linux/Windows, real stdio/HTTP,
 independent-tool and clean sdist/wheel results establish acceptance, not this document.
 
 ## Artifact routing
@@ -13,7 +13,7 @@ separate from entry inventory: a `.class` filename is not verified JVM bytecode.
 | --- | --- | --- |
 | APK / JAR / ZIP | Any directly embedded `.dex` path, case-insensitive suffix | No recursive nested-archive extraction |
 | JVM JAR | No DEX analysis without direct DEX entries | Class-entry inventory only |
-| AAR | Direct outer DEX and DEX in `classes.jar`, including arbitrary paths | JVM entries inventory-only; `libs/*.jar` excluded |
+| AAR | Direct outer DEX and DEX in `classes.jar`, including arbitrary paths | First-level JAR JVM entries inventory-only; no DEX from `libs/*.jar` |
 | AAB | Direct DEX in one selected module's `dex/` directory | Defaults to `base`; inspect `modules`, select exact `module` |
 | APKS / XAPK | Direct DEX entries only, no reconstruction or nested APK analysis | Nested APK-entry inventory only |
 
@@ -26,7 +26,8 @@ the selected ordered DEX content and engine, not all container resources.
 
 `max_uncompressed_bytes` defaults to 128 MiB and covers expanded `classes.jar` plus
 selected DEX bytes. Its maximum is also capped by the configured input-file byte limit.
-Opening reserves three times that budget, bounded metadata and an optional xref-index
+Opening reserves seven times that budget for snapshots, normalization and bundles, plus
+bounded metadata and an optional xref-index
 allocation before starting the worker. Raising the budget can exhaust session capacity.
 ZIP names, duplicates, special entries, CRC, input stability, DEX integrity and duplicate
 class definitions are checked. Extraction uses generated filenames only, inside private
@@ -77,8 +78,9 @@ resources or native libraries. DEX relocation alone is not an added/removed decl
 `asc_secret_candidates(session_id=..., pattern="all")` scans DEX string pools using fixed
 AWS access-ID, GitHub classic-token, Google API-key, private-key-marker, credential-assignment
 and JWT-like patterns. It returns pattern family, normalized DEX entry, string-pool index,
-UTF-16 match offset/length, SHA-256 of the candidate and `[REDACTED]`, without raw token
-values or surrounding strings. Existing source rows map the DEX entry to the original input.
+UTF-16 match offset/length, SHA-256 of the candidate and `[REDACTED]`. Raw matched values
+are returned only with explicit `include_values=true`; surrounding strings are never returned.
+Existing source rows map the DEX entry to the original input.
 
 These are candidates, including test values and public/restricted identifiers. Credentials
 are never sent to providers for probing. The scan does not resolve instruction use sites,
@@ -88,3 +90,33 @@ The optional JADX backend is required. Defaults: 64 MiB cumulative decoded UTF-8
 Byte/string-count exhaustion is an error; oversize skips/match caps report partial coverage.
 The maximum requested byte budget is 256 MiB. Candidate paging rescans pools but never
 builds the full instruction index. An empty result is scoped to these patterns and limits.
+
+## Structural investigation
+
+Use `asc_query_dex_session` or `asc_analyze_dex` for `search_classes`, `get_class_outline`,
+`get_class_hierarchy`, `get_string_constants`, `search_method_bodies`, `disassemble_method`
+and `get_class_source_metadata`. Discovery accepts `case_sensitive=false`;
+`search_members(member_match="name")` matches names rather than complete descriptors.
+Exact method/field queries still require full returned identities, not guessed overloads.
+Hierarchy is limited to supplied definitions; external ancestors and cycles are explicit.
+Decoded instruction text includes registers, literals and switch/array payloads. Source token
+links use Unicode code-point spans and are not instruction references. Follow all pages.
+
+DEX 041 physical containers support multiple logical files and shared physical string data.
+Strict validation precedes version-pinned dexlib2 normalization. Original container hashes,
+logical header offsets and normalized DEX hashes are separate evidence fields. The aggregate
+normalized-byte limit is the smaller of the input limit and twice the container size.
+
+`asc_inspect_artifact(class_query=..., class_prefix=...)` filters JVM class entries, including
+first-level nested JARs. `compare_to=...` compares JVM class identities with common counts;
+mixed artifacts also need the DEX comparison. JVM decompilation and split reconstruction
+are not implemented by either this product or the pinned competitor.
+
+Entry tools accept all supported archive formats. `asc_read_apk_entry` returns at most
+128 KiB per call; follow `next_byte_offset` with `byte_offset` to reconstruct larger entries.
+Decoded XML uses UTF-8 byte offsets; raw binary uses original entry byte offsets. CRC status
+is separate from page completeness. The two resource templates expose paged JSON envelopes:
+`droidasc://artifact/manifest{?apk_path,offset,limit}` and
+`droidasc://session/{session_id}/class{?class_name,offset,limit}`. Percent-encode query values,
+including spaces and literal plus signs. The `compare_versions` prompt complements triage
+and exact-method tracing. Full source traceability is in [COMPETITOR_API_AUDIT.md](COMPETITOR_API_AUDIT.md).

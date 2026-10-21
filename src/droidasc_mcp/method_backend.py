@@ -83,6 +83,27 @@ def query_discovery(settings, bundle, query, workspace):
         query.get("class_name") or "",
         str(min(offset, 2**63 - 1)),
         str(limit),
+        str(query.get("case_sensitive", True)).lower(),
+        query.get("member_match", "descriptor"),
+        query.get("prefix") or "",
+    ]
+    return _execute_java(settings, command, workspace, offset, limit)
+
+
+def query_structure(settings, bundle, query, workspace):
+    command = java_command(settings, workspace, "StructureBridge.java")
+    if isinstance(command, dict):
+        return command
+    offset, limit = query["offset"], min(query["limit"], settings.max_page_size)
+    command += [
+        str(bundle),
+        query["operation"],
+        query.get("class_name") or "",
+        query.get("value") or "",
+        str(min(offset, 2**63 - 1)),
+        str(limit),
+        str(query.get("case_sensitive", False)).lower(),
+        query.get("method_descriptor") or "",
     ]
     return _execute_java(settings, command, workspace, offset, limit)
 

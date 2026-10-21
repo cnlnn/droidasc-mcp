@@ -48,6 +48,7 @@ class LinePage:
             "offset": self.offset,
             "limit": self.limit,
             "truncated": self.offset + len(self.items) < self.total,
+            "has_more": self.offset + len(self.items) < self.total,
             "next_offset": (
                 self.offset + len(self.items)
                 if self.offset + len(self.items) < self.total
@@ -115,7 +116,12 @@ class DroidAscRunner:
         return json.loads(data)
 
     def query_archive(self, apk: Path, query: dict) -> dict:
-        if query.get("operation") in {"list_entries", "manifest_summary", "artifact_inventory"}:
+        if query.get("operation") in {
+            "list_entries",
+            "manifest_summary",
+            "manifest_xml",
+            "artifact_inventory",
+        }:
             offset, limit = self._page_bounds(query.get("offset", 0), query.get("limit", 100))
             query = {**query, "offset": offset, "limit": limit}
         request = {

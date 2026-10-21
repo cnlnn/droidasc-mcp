@@ -33,7 +33,13 @@ def cached_query(settings, bundle, common, query, workspace, execute):
     budget = max(0, min(MAX_BYTES, remaining))
     identity = backend_identity(
         settings,
-        ("MethodBridge.java", "DiscoveryBridge.java", "method_backend.py", "query_cache.py"),
+        (
+            "MethodBridge.java",
+            "DiscoveryBridge.java",
+            "StructureBridge.java",
+            "method_backend.py",
+            "query_cache.py",
+        ),
     )
     if not identity or not budget:
         return execute()

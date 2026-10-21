@@ -213,13 +213,25 @@ def _content(archive, info, query):
     if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_READ_BYTES:
         raise ArchiveError("invalid_query", "max_bytes must be between 1 and 131072")
     decode_xml = query.get("decode_xml", True)
+    byte_offset = query.get("byte_offset", 0)
+    if type(byte_offset) is not int or byte_offset < 0:
+        raise ArchiveError("invalid_query", "byte_offset must be a nonnegative integer")
     if type(decode_xml) is not bool:
         raise ArchiveError("invalid_query", "decode_xml must be a boolean")
     is_xml = info.filename.lower().endswith(".xml") and decode_xml
     # XML needs a complete bounded document; raw reads need only the requested prefix.
     budget = MAX_XML_BYTES if is_xml and info.file_size <= MAX_XML_BYTES else max_bytes
-    data, complete = _read(archive, info, budget)
-    result = {**entry_row(info), "crc_verified": complete, "decoded": False}
+    paged_raw = byte_offset and (not is_xml or info.file_size > MAX_XML_BYTES)
+    if paged_raw:
+        if info.is_dir() or info.flag_bits & 1:
+            raise ArchiveError("invalid_entry", "Select an unencrypted regular file")
+        with archive.open(info) as stream:
+            stream.seek(min(byte_offset, info.file_size))
+            data = stream.read(max_bytes + 1)
+        complete = min(byte_offset, info.file_size) + len(data) == info.file_size
+    else:
+        data, complete = _read(archive, info, budget)
+    result = {**entry_row(info), "crc_verified": complete and not paged_raw, "decoded": False}
     if is_xml:
         if not complete or info.file_size > MAX_XML_BYTES:
             result["decoding_status"] = "input_limit"
@@ -242,6 +254,8 @@ def _content(archive, info, query):
                 result["decoding_status"] = exc.code
     else:
         result["decoding_status"] = "not_requested"
+    if is_xml and not paged_raw:
+        data = data[byte_offset:]
     truncated = not complete or len(data) > max_bytes
     data = data[:max_bytes]
     try:
@@ -256,6 +270,8 @@ def _content(archive, info, query):
         "content": content,
         "encoding": encoding,
         "returned_bytes": len(data),
+        "byte_offset": byte_offset,
+        "next_byte_offset": byte_offset + len(data) if truncated else None,
         "truncated": truncated,
         "content_complete": not truncated,
         "status": "partial" if truncated else "ok",
@@ -268,6 +284,7 @@ def _query(archive, entries, query, max_page_size):
         "list_entries",
         "read_entry",
         "manifest_summary",
+        "manifest_xml",
         "signing_inventory",
         "artifact_inventory",
     }:
@@ -276,7 +293,7 @@ def _query(archive, entries, query, max_page_size):
         from .signing import inventory
 
         return inventory(archive.fp, archive, entries)
-    if operation in {"list_entries", "manifest_summary", "artifact_inventory"}:
+    if operation in {"list_entries", "manifest_summary", "manifest_xml", "artifact_inventory"}:
         offset, limit = query.get("offset", 0), query.get("limit", 100)
         if type(offset) is not int or offset < 0 or type(limit) is not int:
             raise ArchiveError("invalid_query", "offset and limit must be integers")
@@ -300,7 +317,11 @@ def _query(archive, entries, query, max_page_size):
             and (prefix is None or name.startswith(prefix))
         ]
         return {"status": "ok", **page(rows, offset, limit)}
-    name = "AndroidManifest.xml" if operation == "manifest_summary" else query.get("entry_path")
+    name = (
+        "AndroidManifest.xml"
+        if operation in {"manifest_summary", "manifest_xml"}
+        else query.get("entry_path")
+    )
     if not isinstance(name, str):
         raise ArchiveError("invalid_query", "entry_path is required")
     safe_name(name)
@@ -309,13 +330,26 @@ def _query(archive, entries, query, max_page_size):
     info = entries[name]
     if operation == "read_entry":
         return _content(archive, info, query)
-    if operation == "manifest_summary":
+    if operation in {"manifest_summary", "manifest_xml"}:
         if info.file_size > MAX_XML_BYTES:
             raise ArchiveError("xml_limit", "Manifest exceeds the input byte budget")
         data, complete = _read(archive, info, MAX_XML_BYTES)
         if not complete:
             raise ArchiveError("invalid_xml", "Manifest entry is incomplete")
         root, xml_format, warnings = xml_document(data)
+        if operation == "manifest_xml":
+            from lxml import etree
+
+            lines = etree.tostring(root, encoding="unicode", pretty_print=True).splitlines()
+            result = page(lines, offset, limit)
+            result["xml"] = "\n".join(result.pop("items"))
+            return {
+                "status": "ok",
+                "entry": entry_row(info),
+                "xml_format": xml_format,
+                "decoding_warnings": warnings,
+                **result,
+            }
         from .manifest import summarize
 
         return {
@@ -334,12 +368,18 @@ def analyze(request):
             allowed_roots=tuple(Path(p) for p in request["allowed_roots"]),
             max_apk_bytes=request["max_input_bytes"],
         )
-        artifact = request["query"].get("operation") == "artifact_inventory"
-        apk = (settings.validate_artifact if artifact else settings.validate_apk)(
-            request["apk_path"]
+        apk = settings.validate_artifact(request["apk_path"])
+        artifact = (
+            request["query"].get("operation") == "artifact_inventory"
+            or apk.suffix.lower() != ".apk"
         )
-        if artifact:
+        if request["query"].get("operation") == "artifact_inventory":
             request["query"]["artifact_kind"] = apk.suffix.lower()[1:]
+            request["query"]["max_input_bytes"] = request["max_input_bytes"]
+            if request["query"].get("compare_to"):
+                request["query"]["compare_to"] = str(
+                    settings.validate_artifact(request["query"]["compare_to"])
+                )
         with apk.open("rb") as handle:
             before = os.fstat(handle.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size > request["max_input_bytes"]:

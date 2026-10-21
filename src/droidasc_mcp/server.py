@@ -95,6 +95,13 @@ ReferenceKind = Annotated[
     Literal["string", "type", "method", "field", "extends", "impl"],
     Field(description="Reference category; search_members accepts method or field only"),
 ]
+CaseSensitive = Annotated[
+    bool, Field(description="Literal discovery matching case; false ignores case")
+]
+MemberMatch = Annotated[
+    Literal["descriptor", "name"],
+    Field(description="search_members matches full identity or member name"),
+]
 
 
 def build_server(
@@ -112,7 +119,7 @@ def build_server(
                 await anyio.to_thread.run_sync(service.close)
 
     mcp = MCPServer("droidasc-mcp", lifespan=lifespan, instructions=INSTRUCTIONS)
-    register_workflows(mcp)
+    register_workflows(mcp, service)
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_ping() -> PingResult:
@@ -154,11 +161,22 @@ def build_server(
         limit: Annotated[
             int, Field(ge=1, le=1000, description="Entry page size, server-capped")
         ] = 100,
+        compare_to: Annotated[
+            str | None,
+            Field(description="Optional newer artifact for JVM class inventory comparison"),
+        ] = None,
+        class_query: Annotated[
+            str | None, Field(description="Case-insensitive literal substring of JVM class names")
+        ] = None,
+        class_prefix: Annotated[
+            str | None, Field(description="JVM class prefix in dotted or Dalvik form")
+        ] = None,
     ) -> ArtifactResult:
         """Inspect container capabilities before selecting a DEX analysis workflow.
 
-        JVM classes and nested APK splits are inventory-only. AAR inspects classes.jar;
-        AAB selects one module's direct DEX. Other nested libraries are outside coverage.
+        JVM classes and nested APK splits are inventory-only. First-level JAR class names
+        are included. compare_to compares JVM identities; DEX declarations use session diff.
+        AAB selects one module's direct DEX; nested APKs are not reconstructed.
         """
         return service.inspect_artifact(
             artifact_path,
@@ -166,6 +184,9 @@ def build_server(
             max_uncompressed_bytes=max_uncompressed_bytes,
             offset=offset,
             limit=limit,
+            compare_to=compare_to,
+            class_query=class_query,
+            class_prefix=class_prefix,
         )
 
     @mcp.tool(annotations=SESSION_STATE)
@@ -242,6 +263,9 @@ def build_server(
             ],
             Field(description="Fixed candidate pattern family, not arbitrary regex"),
         ] = "all",
+        include_values: Annotated[
+            bool, Field(description="Explicit opt-in to return sensitive matched candidate values")
+        ] = False,
         max_scan_bytes: Annotated[
             int,
             Field(
@@ -257,13 +281,18 @@ def build_server(
     ) -> SecretResult:
         """Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.
 
-        Uses optional JADX 1.5.5/JDK 17+. Results contain no token value or surrounding text.
+        Uses optional JADX 1.5.5/JDK 17+. Values are redacted unless include_values=true.
         Candidate validity and instruction use sites remain untested. Strings over 64K UTF-16
         units are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.
         Assets, native code, runtime values and arbitrary encodings are outside this scan.
         """
         return service.secret_candidates(
-            session_id, pattern=pattern, max_scan_bytes=max_scan_bytes, offset=offset, limit=limit
+            session_id,
+            pattern=pattern,
+            max_scan_bytes=max_scan_bytes,
+            offset=offset,
+            limit=limit,
+            include_values=include_values,
         )
 
     @mcp.tool(annotations=READ_ONLY)
@@ -316,6 +345,13 @@ def build_server(
             bool,
             Field(description="Decode complete XML entries up to 4 MiB; false reads raw bytes"),
         ] = True,
+        byte_offset: Annotated[
+            int,
+            Field(
+                ge=0,
+                description="Byte offset in raw or fully decoded content; follow next_byte_offset",
+            ),
+        ] = 0,
     ) -> ArchiveResult:
         """Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.
 
@@ -328,6 +364,7 @@ def build_server(
             entry_path=entry_path,
             max_bytes=max_bytes,
             decode_xml=decode_xml,
+            byte_offset=byte_offset,
         )
 
     @mcp.tool(annotations=READ_ONLY)
@@ -447,6 +484,13 @@ def build_server(
                 "build_xref_index",
                 "search_members",
                 "search_strings",
+                "search_classes",
+                "get_class_outline",
+                "get_class_hierarchy",
+                "get_string_constants",
+                "search_method_bodies",
+                "disassemble_method",
+                "get_class_source_metadata",
             ],
             Field(
                 description="Static DEX operation; exact member/graph tools need full descriptors"
@@ -463,6 +507,8 @@ def build_server(
         debug_info: DebugInfo = False,
         kind: ReferenceKind = "string",
         value: Value = None,
+        case_sensitive: CaseSensitive = True,
+        member_match: MemberMatch = "descriptor",
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
         offset: Offset = 0,
@@ -527,6 +573,8 @@ def build_server(
             debug_info=debug_info,
             kind=kind,
             value=value,
+            case_sensitive=case_sensitive,
+            member_match=member_match,
             fuzzy_class=fuzzy_class,
             threads=threads,
             offset=offset,
@@ -571,6 +619,13 @@ def build_server(
                 "build_xref_index",
                 "search_members",
                 "search_strings",
+                "search_classes",
+                "get_class_outline",
+                "get_class_hierarchy",
+                "get_string_constants",
+                "search_method_bodies",
+                "disassemble_method",
+                "get_class_source_metadata",
             ],
             Field(description="Session operation; first indexed graph/type query builds the index"),
         ] = "info",
@@ -585,6 +640,8 @@ def build_server(
         debug_info: DebugInfo = False,
         kind: ReferenceKind = "string",
         value: Value = None,
+        case_sensitive: CaseSensitive = True,
+        member_match: MemberMatch = "descriptor",
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
         offset: Offset = 0,
@@ -648,6 +705,8 @@ def build_server(
             debug_info=debug_info,
             kind=kind,
             value=value,
+            case_sensitive=case_sensitive,
+            member_match=member_match,
             fuzzy_class=fuzzy_class,
             threads=threads,
             offset=offset,

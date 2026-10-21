@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0
+
+- Complete a source-traceable workflow map of all 25 competitor tools, two resource templates,
+  three prompts and 87 parameters, with an AST inventory regression guard.
+- Add class search, typed outlines, hierarchy/cycle diagnostics, string use sites, decoded
+  instruction search/disassembly and source-token metadata with explicit offset semantics.
+- Support strict DEX 041 logical-container imports, including shared physical string data,
+  preserving original hashes/header offsets separately from normalized standalone DEX hashes.
+- Inventory first-level nested JAR JVM classes, filter JVM names and compare hash-bound JVM
+  identities. Keep JVM decompilation and split reconstruction explicitly unsupported.
+- Read generic archive resources with resumable byte pages; add manifest/class resource
+  templates and a revision-comparison prompt. Keep allowed-root and immutable-session checks.
+- Extend credential-assignment patterns and add explicit opt-in matched values; default output
+  remains redacted and no credentials are contacted. Preserve bounded supervised execution.
+
 ## 0.3.0
 
 - Publish typed MCP output schemas for all 18 tools, preserving optional diagnostics and

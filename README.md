@@ -36,6 +36,14 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
+Version 0.4.0 adds class search/outline/hierarchy, constant use sites, decoded instruction
+search/disassembly and source-token links through the existing DEX query tools. It also adds
+strict DEX 041 imports, first-level JVM JAR inventory/diffs, resumable archive byte pages,
+manifest/class resource templates, `compare_versions` and opt-in secret candidate values.
+The [complete competitor source map](docs/COMPETITOR_API_AUDIT.md) records all 25 tools,
+two resources, three prompts and 87 parameters, including intentional interface differences.
+Functional parity does not establish universal performance superiority.
+
 Container, signing and review workflows and their support boundaries are described in
 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md). Release gates cover cross-platform,
 transport and clean-package execution.
@@ -49,14 +57,14 @@ Install the version-pinned GitHub release on Linux:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.0/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.0/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
@@ -454,7 +462,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/droidasc_mcp-0.3.0-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.4.0.tar.gz dist/droidasc_mcp-0.4.0-py3-none-any.whl
 ```
 
 ## License

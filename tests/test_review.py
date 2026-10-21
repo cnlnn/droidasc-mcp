@@ -108,3 +108,18 @@ def test_diff_close_and_missing_session(review_service):
     service, (old, new) = review_service
     service.sessions.close(new)
     assert service.diff_dex_sessions(old, new)["code"] == "session_not_found"
+
+
+def test_secret_values_require_explicit_opt_in(review_service):
+    service, (old, _) = review_service
+    shown = service.secret_candidates(old, include_values=True)
+    assert shown["status"] == "ok" and shown["values_included"]
+    assert all(
+        hashlib.sha256(row["value"].encode()).hexdigest() == row["candidate_sha256"]
+        for row in shown["items"]
+    )
+    hidden = service.secret_candidates(old)
+    assert not hidden["values_included"]
+    assert all("value" not in row for row in hidden["items"])
+    with pytest.raises(ValueError):
+        service.secret_candidates(old, include_values="true")

@@ -113,6 +113,8 @@ class ArchiveResult(Result, total=False):
     content: str
     encoding: Literal["utf-8", "base64"]
     returned_bytes: int
+    byte_offset: int
+    next_byte_offset: int | None
     content_complete: bool
     crc_verified: bool
     decoded: bool
@@ -218,6 +220,11 @@ class SigningResult(Result, total=False):
     v4_sidecar: Literal["not_inspected"]
 
 
+class ArtifactDifference(Object, total=False):
+    class_name: Required[str]
+    change: Required[Literal["added", "removed"]]
+
+
 class ArtifactResult(Result, total=False):
     status: Required[Literal["ok", "error"]]
     artifact_kind: Literal["apk", "jar", "aar", "aab", "apks", "xapk", "zip"]
@@ -229,10 +236,13 @@ class ArtifactResult(Result, total=False):
     dex_analysis: bool
     jvm_decompilation: bool
     split_reconstruction: bool
-    items: list[Entry]
+    items: list[Entry | ArtifactDifference]
 
 
 class DexRow(Object, total=False):
+    value: str
+    instruction: str
+    dispatch_kind: str
     class_name: str
     descriptor: str
     method_descriptor: str
@@ -294,7 +304,27 @@ class GraphNode(Object, total=False):
     expansion_status: Required[str]
 
 
+class SourceReference(Object, total=False):
+    start: Required[int]
+    end: Required[int]
+    kind: Required[str]
+    declaring_class: str
+    name: str
+    descriptor: str
+    declaration: bool
+
+
 class DexResult(Result, total=False):
+    member_references: list[SourceReference]
+    source_sha256: str
+    source_start: int
+    source_end: int
+    span_unit: str
+    superclass: str | None
+    access_flags: int
+    field_count: int
+    method_count: int
+    hierarchy_cycle_detected: bool
     status: Required[Literal["ok", "partial", "error", "not_applicable"]]
     input_kind: str
     runtime_completeness: str
@@ -363,6 +393,7 @@ class DiffResult(Result, total=False):
 
 
 class SecretRow(Object, total=False):
+    value: str
     pattern: Required[str]
     dex_entry: Required[str]
     string_index: Required[int]
@@ -374,6 +405,7 @@ class SecretRow(Object, total=False):
 
 
 class SecretResult(Result, total=False):
+    values_included: bool
     status: Required[Literal["ok", "partial", "error"]]
     items: list[SecretRow]
     scanned_strings: int

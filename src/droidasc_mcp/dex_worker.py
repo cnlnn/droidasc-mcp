@@ -173,9 +173,19 @@ def analyze(request: dict, root: Path) -> dict:
             paths = settings.validate_dex_paths(request["paths"])
         bundle = root / "analysis.apk"
         remaining = settings.max_apk_bytes
+        expanded = []
+        from .dex_container import expand
+
+        for index, source in enumerate(paths):
+            workspace = root / f"dex-container-{index}"
+            workspace.mkdir()
+            for logical, provenance in expand(settings, source, workspace):
+                expanded.append((logical, source, origins[index] if origins else None, provenance))
+        if len(expanded) > 64:
+            raise DexInputError("dex_count_limit", "Select at most 64 logical DEX files")
         # Temporary copies use the existing uncompressed-byte storage reservation.
         with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
-            for index, source in enumerate(paths):
+            for index, (source, original, origin, provenance) in enumerate(expanded):
                 entry = "classes.dex" if index == 0 else f"classes{index + 1}.dex"
                 try:
                     record = copy_dex(source, archive, entry, remaining)
@@ -188,11 +198,20 @@ def analyze(request: dict, root: Path) -> dict:
                         "source_path": str(source),
                     }
                 common["sources"].append(record)
+                if provenance:
+                    record.update(provenance, path=str(original))
                 if artifact_metadata is not None:
                     record["path"] = str(artifact)
-                    record["container_entry"] = origins[index]
-                    source.unlink()
+                    record["container_entry"] = origin
                 remaining -= record["size_bytes"]
+        # Only the immutable bundle is retained; normalization inputs are transient.
+        import shutil
+
+        for index in range(len(paths)):
+            shutil.rmtree(root / f"dex-container-{index}")
+        if artifact_metadata is not None:
+            for source in paths:
+                source.unlink()
         # Inspect each DEX independently so duplicate definitions cannot be hidden by merging.
         owners = {}
         duplicates = []
@@ -266,6 +285,7 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
         DISCOVERY_OPERATIONS,
         INDEX_OPERATIONS,
         REFERENCE_OPERATIONS,
+        STRUCTURE_OPERATIONS,
         query_index,
     )
 
@@ -275,17 +295,33 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
         from .review import query_review
 
         return {**common, **query_review(runner.settings, bundle, common, query, workspace)}
+    if operation == "get_class_source_metadata":
+        from .source_metadata import query_source_metadata
+
+        name = query.get("class_name")
+        if name not in owners:
+            return {**common, "status": "error", "code": "class_not_found"}
+        return {**common, **query_source_metadata(runner.settings, bundle, owners[name], query)}
     if operation in INDEX_OPERATIONS or (
-        operation in REFERENCE_OPERATIONS | {"search_members"}
+        (
+            operation in REFERENCE_OPERATIONS
+            or (
+                operation == "search_members"
+                and query.get("case_sensitive", True)
+                and query.get("member_match", "descriptor") == "descriptor"
+            )
+        )
         and ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir)
     ):
         indexed = query_index(runner.settings, bundle, common, query, workspace)
         if indexed is not None:
             return {**common, **indexed}
-    if operation in REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS:
-        from .method_backend import query_discovery, query_methods
+    if operation in REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS | STRUCTURE_OPERATIONS:
+        from .method_backend import query_discovery, query_methods, query_structure
 
         def execute():
+            if operation in STRUCTURE_OPERATIONS:
+                return query_structure(runner.settings, bundle, query, workspace)
             if operation in DISCOVERY_OPERATIONS:
                 return query_discovery(runner.settings, bundle, query, workspace)
             return query_methods(runner.settings, bundle, "", query, workspace)

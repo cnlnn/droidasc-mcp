@@ -1,5 +1,16 @@
 # aimardcr/asc-mcp: source-backed comparison
 
+## Current source audit: 2026-10-22
+
+The v0.4.0 implementation maps all 25 tools, two resource templates, three prompts and
+87 non-context parameters at the pinned commit to equivalent workflows. See the exhaustive
+[source audit](COMPETITOR_API_AUDIT.md) and its AST inventory guard. New structural views,
+decoded-body search/disassembly, source-token links, DEX 041 imports, JVM inventory/diffs,
+resource byte paging and opt-in candidate values close the remaining functional categories.
+This is workflow parity, not identical tool names, universal speed superiority or release
+acceptance. The measurements and development receipts below are historical; only the fresh
+v0.4.0 feature-frozen gates in VALIDATION.md authorize its release.
+
 Reviewed: 2026-10-21. Competitor commit:
 [`848c711f1d80a1c2577283f1fa5f475ff734aa40`](https://github.com/aimardcr/asc-mcp/tree/848c711f1d80a1c2577283f1fa5f475ff734aa40).
 Our original baseline was `8cab43f4159ddc7252322f12a831dd98146d88d6`; the measured

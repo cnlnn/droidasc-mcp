@@ -14,7 +14,14 @@ from .method_backend import java_command
 from .runner import DroidAscError
 
 INDEX_OPERATIONS = {"build_xref_index", "find_type_refs", "get_call_graph"}
-DISCOVERY_OPERATIONS = {"search_members", "search_strings"}
+DISCOVERY_OPERATIONS = {"search_members", "search_strings", "search_classes"}
+STRUCTURE_OPERATIONS = {
+    "get_class_outline",
+    "get_class_hierarchy",
+    "get_string_constants",
+    "search_method_bodies",
+    "disassemble_method",
+}
 REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs"}
 SCHEMA = "3"
 

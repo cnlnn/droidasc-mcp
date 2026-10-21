@@ -176,3 +176,73 @@ def test_aar_ambiguous_provenance_rejected(container_service, review_dex_files, 
     assert container_service.inspect_artifact(str(path))["code"] == "ambiguous_entry"
     assert container_service.open_artifact_session(str(path))["code"] == "ambiguous_entry"
     assert not container_service.sessions.entries
+
+
+def test_nested_jar_class_inventory_and_revision_diff(container_service, tmp_path):
+    old, new = tmp_path / "old.zip", tmp_path / "new.zip"
+    old.write_bytes(
+        zip_bytes(
+            [
+                ("a/Keep.CLASS", b"class"),
+                ("libs/one.jar", zip_bytes([("p/Removed.class", b"class")])),
+            ]
+        )
+    )
+    new.write_bytes(
+        zip_bytes(
+            [("a/Keep.CLASS", b"class"), ("libs/two.jar", zip_bytes([("p/Added.class", b"class")]))]
+        )
+    )
+    inventory = container_service.inspect_artifact(str(old))
+    assert inventory["status"] == "ok", inventory
+    assert inventory["jvm_class_count"] == 2
+    assert {row["class_name"] for row in inventory["items"]} == {"La/Keep;", "Lp/Removed;"}
+    result = container_service.inspect_artifact(str(old), compare_to=str(new))
+    assert result["status"] == "ok", result
+    assert result["counts"] == {"added": 1, "removed": 1, "common": 1}
+    assert result["items"] == [
+        {"class_name": "Lp/Added;", "change": "added"},
+        {"class_name": "Lp/Removed;", "change": "removed"},
+    ]
+    assert result["new_artifact_sha256"] == hashlib.sha256(new.read_bytes()).hexdigest()
+    assert not result["dex_comparison_required"]
+    filtered = container_service.inspect_artifact(
+        str(old), class_query="REMOVED", class_prefix="p."
+    )
+    assert filtered["total"] == 1
+    assert filtered["items"][0]["class_name"] == "Lp/Removed;"
+
+
+def test_generic_archive_reads_all_bytes_with_paging(container_service, tmp_path):
+    import base64
+
+    data = bytes(range(256)) * 4097
+    path = tmp_path / "resources.jar"
+    path.write_bytes(
+        zip_bytes([("data.bin", data), ("AndroidManifest.xml", b"<manifest package='oracle'/>")])
+    )
+    chunks, offset = [], 0
+    while True:
+        result = container_service.query_archive(
+            str(path),
+            operation="read_entry",
+            entry_path="data.bin",
+            max_bytes=131072,
+            byte_offset=offset,
+        )
+        assert result["status"] in {"ok", "partial"}, result
+        assert result["artifact_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+        chunks.append(base64.b64decode(result["content"]))
+        if result["content_complete"]:
+            break
+        assert result["next_byte_offset"] > offset
+        offset = result["next_byte_offset"]
+    assert b"".join(chunks) == data
+    eof = container_service.query_archive(
+        str(path), operation="read_entry", entry_path="data.bin", byte_offset=len(data) + 1
+    )
+    assert eof["content_complete"] and eof["next_byte_offset"] is None
+    manifest = container_service.query_archive(
+        str(path), operation="manifest_xml", offset=0, limit=100
+    )
+    assert manifest["status"] == "ok" and 'package="oracle"' in manifest["xml"]
