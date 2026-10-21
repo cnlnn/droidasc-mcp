@@ -31,7 +31,7 @@ def main():
     original = hashlib.sha256(args.apk.read_bytes()).hexdigest()
     results = []
     with tempfile.TemporaryDirectory(prefix="droidasc-signing-oracle-") as directory:
-        root = Path(directory)
+        root = Path(directory).resolve()
         unsigned = root / "unsigned.apk"
         marker = b"droidasc synthetic signing acceptance payload"
         with zipfile.ZipFile(args.apk) as source, zipfile.ZipFile(unsigned, "w") as target:
