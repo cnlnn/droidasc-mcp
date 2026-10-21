@@ -29,13 +29,18 @@ the analyzed artifact's SHA-256 rather than requiring byte-identical APK rebuild
 ## Expected evidence
 
 - Manifest package: `org.example.droidascfixture`; no requested permissions.
-- DEX classes: `MainActivity`, `Probe`, and the Android-generated `R` in that package.
+- DEX classes: `MainActivity`, `Probe`, and the Android-generated `R` in that package,
+  plus a default-package `Login` class for exact-name normalization checks.
 - Pinned debug build layout: generated `R` in `classes.dex`; app classes in `classes2.dex`.
 - Decompiled `Probe`: `marker`, `visits`, and `ASC_FIXTURE_MARKER_v1`.
 - String reference: the marker in `Probe.marker`.
 - Type reference: `Probe` in `MainActivity.onCreate`.
 - Method reference: `Probe.marker` called by `Probe.describe`.
 - Field reference: `Probe.visits` accessed by `Probe.marker`.
+- Default-package method/field queries: `Login` and `LLogin;` return the same nonempty hits;
+  a fuzzy `Log` pattern still matches them.
+- Option-shaped query values preserve a disposable sentinel outside the APK root, return literal
+  search results rather than CLI help, and leave the session usable after a reserved-token error.
 
 The tests check these semantics over stdio and HTTP, including pagination, rather than
 requiring a particular decompiler formatting style. `ASC_TEST_EXPECT_FIXTURE=1` makes a

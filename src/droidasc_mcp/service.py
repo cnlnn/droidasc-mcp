@@ -105,6 +105,8 @@ class DroidAscService:
         limit: int,
     ) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
+        if kind in {"method", "field"} and class_name is not None and not fuzzy_class:
+            class_name = _normalize_class_name(class_name)
         result = self.runner.find_refs(
             apk,
             kind=kind,

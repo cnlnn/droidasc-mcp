@@ -24,10 +24,10 @@ def fake_droidasc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
             import time
 
             args = sys.argv[1:]
-            if "longline" in args:
+            if "--prefix=longline" in args:
                 print("x" * 100000)
                 raise SystemExit(0)
-            if "stderr-flood" in args:
+            if "--prefix=stderr-flood" in args:
                 sys.stderr.write("x" * 100000)
                 raise SystemExit(0)
             if any(item.endswith("sleep.apk") for item in args):
@@ -127,6 +127,60 @@ def test_find_refs_validates_query(settings: Settings, apk_file: Path, fake_droi
             offset=0,
             limit=10,
         )
+
+
+@pytest.mark.parametrize("kind", ["string", "type", "method", "field"])
+@pytest.mark.parametrize("value", ["--help", "--output=sentinel.txt", "-osentinel.txt", "--"])
+def test_reference_values_are_cli_positionals(settings, apk_file, monkeypatch, kind, value):
+    subject = runner(settings, "unused")
+    calls = []
+    monkeypatch.setattr(subject, "_execute", lambda args: calls.append(args) or b"")
+    subject.find_refs(
+        apk_file,
+        kind=kind,
+        value=value,
+        class_name="--help",
+        fuzzy_class=True,
+        threads=1,
+        offset=0,
+        limit=1,
+    )
+    args = calls[0]
+    assert args[-2:] == ["--", value]
+    if kind in {"method", "field"}:
+        assert "--class=--help" in args[: args.index("--")]
+        assert "--fuzzy-class" in args[: args.index("--")]
+
+
+@pytest.mark.parametrize("kind", ["string", "type", "method", "field"])
+def test_reference_gui_dispatch_is_rejected_before_launch(settings, apk_file, monkeypatch, kind):
+    subject = runner(settings, "unused")
+
+    def fail(*args, **kwargs):
+        pytest.fail("Reserved GUI dispatch reached the subprocess")
+
+    monkeypatch.setattr(subject, "_execute", fail)
+    with pytest.raises(ValueError, match="--gui"):
+        subject.find_refs(
+            apk_file,
+            kind=kind,
+            value="--gui",
+            class_name=None,
+            fuzzy_class=False,
+            threads=1,
+            offset=0,
+            limit=1,
+        )
+
+
+@pytest.mark.parametrize("prefix", ["--help", "--gui", "--output=sentinel.txt"])
+def test_class_prefix_is_bound_to_its_option(settings, apk_file, monkeypatch, prefix):
+    subject = runner(settings, "unused")
+    calls = []
+    monkeypatch.setattr(subject, "_execute", lambda args: calls.append(args) or b"")
+    subject.list_classes(apk_file, prefix=prefix, threads=1, offset=0, limit=1)
+    assert "--prefix=" + prefix in calls[0]
+    assert prefix not in calls[0]
 
 
 def test_nonzero_exit_is_reported(settings: Settings, tmp_path: Path, fake_droidasc: str):

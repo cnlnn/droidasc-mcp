@@ -29,14 +29,14 @@ Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.1/droidasc_mcp-0.2.1-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.1/droidasc_mcp-0.2.1-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
@@ -91,7 +91,9 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 单行过大时明确报错，不静默丢弃。
 
 引用结果来自 CLI 文本的尽力解析，字符串内换行可能拆分记录，`total` 是输出行数而非语义
-引用数量。解码与排序仅做一次，之后直接对快照分页。结果缓存 60 秒、最多 8 条，合计按解码
+引用数量。`--help` 等查询值按字面量搜索；上游 CLI 在参数解析前保留了精确值 `--gui`，
+因此该值会明确报错。方法和字段的精确类名支持 Java 名称和 Dalvik 描述符，模糊类名保留原语义。
+解码与排序仅做一次，之后直接对快照分页。结果缓存 60 秒、最多 8 条，合计按解码
 后的字符串和元组指针内存计费；同一查询合并执行，不同查询和缓存命中不再等待全局计算锁。
 缓存以查询、
 文件身份、大小和时间戳标识，不是内容寻址证据库。翻页期间不要修改 APK。
@@ -132,7 +134,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.1.tar.gz dist/droidasc_mcp-0.2.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.2.tar.gz dist/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 ## 许可证

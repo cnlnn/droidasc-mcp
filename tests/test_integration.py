@@ -327,8 +327,8 @@ async def test_mcp_request_cancellation_stops_worker_and_session_recovers(tmp_pa
         args=["-m", "cancellation_server"],
         env=env,
     )
-    started = time.monotonic()
     async with Client(endpoint) as client:
+        started = time.monotonic()
         with anyio.move_on_after(0.5) as scope:
             await client.call_tool(
                 "asc_get_manifest", {"apk_path": str(apk), "offset": 0, "limit": 1}
@@ -374,6 +374,7 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
         assert len((await client.list_tools()).tools) == 6
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
             await assert_fixture_tools(call, apk)
+            await assert_fixture_query_boundaries(client, apk, tmp_path)
             print(f"fixture_apk transport={transport} tools=6 reference_kinds=4")
             return
         info = await call("asc_apk_info", {"apk_path": apk})
@@ -449,3 +450,42 @@ async def assert_fixture_tools(call, apk):
         ), (kind, refs)
         if kind == "string":
             assert any(marker in item.get("matched", "") for item in refs["items"])
+
+
+async def assert_fixture_query_boundaries(client, apk, tmp_path):
+    sentinel = tmp_path / "outside-root-sentinel.txt"
+    original = "READ_ONLY_SENTINEL\n"
+    sentinel.write_text(original, encoding="utf-8")
+    assert not sentinel.resolve().is_relative_to(Path(apk).parent)
+    for kind in ("string", "type", "method", "field"):
+        for value in ("--help", "--output=" + str(sentinel), "-o" + str(sentinel), "--"):
+            args = {"apk_path": apk, "kind": kind, "value": value}
+            if kind in {"method", "field"}:
+                args["class_name"] = "org.example.droidascfixture.Probe"
+            result = await client.call_tool("asc_find_refs", args)
+            assert sentinel.read_text(encoding="utf-8") == original
+            assert not result.is_error, result
+            assert result.structured_content["total"] == 0, result
+        reserved = await client.call_tool(
+            "asc_find_refs", {"apk_path": apk, "kind": kind, "value": "--gui"}
+        )
+        assert reserved.is_error
+
+    for prefix in ("--help", "--gui", "--output=" + str(sentinel)):
+        result = await client.call_tool("asc_list_classes", {"apk_path": apk, "prefix": prefix})
+        assert not result.is_error, result
+        assert result.structured_content["items"] == []
+        assert sentinel.read_text(encoding="utf-8") == original
+
+    for kind, value in (("method", "marker"), ("field", "visits")):
+        args = {"apk_path": apk, "kind": kind, "value": value}
+        descriptor = await client.call_tool("asc_find_refs", {**args, "class_name": "LLogin;"})
+        assert not descriptor.is_error, descriptor
+        assert descriptor.structured_content["total"] > 0
+        for name, fuzzy in (("Login", False), ("Log", True)):
+            result = await client.call_tool(
+                "asc_find_refs", {**args, "class_name": name, "fuzzy_class": fuzzy}
+            )
+            assert not result.is_error, result
+            assert result.structured_content["items"] == descriptor.structured_content["items"]
+    assert not (await client.call_tool("asc_ping", {})).is_error

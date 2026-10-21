@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.2
+
+- Bind CLI option values explicitly and terminate option parsing before reference query values.
+  Queries resembling output/help flags remain literal searches instead of changing CLI behavior.
+  The upstream pre-parser reserves the exact `--gui` query; it now returns an explicit error.
+- Normalize exact method/field reference class names consistently with source queries, including
+  default-package names beginning with `L`; preserve fuzzy class patterns.
+- Lock development/CI to the tested Droid ASC 0.1.2.post2 engine and its dependency graph.
+- Add permanent argument-boundary regressions and a default-package `Login` fixture, including
+  stdio/HTTP checks for outside-root sentinel preservation and method/field query equivalence.
+- Measure request cancellation after MCP initialization, excluding server startup from the
+  cancellation latency assertion without changing the worker cleanup deadlines.
+
 ## 0.2.1
 
 - Validate WeChat 8.0.74, Taobao 10.62.0, and Douyin 39.1.0 base APKs pulled read-only

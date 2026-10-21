@@ -32,14 +32,14 @@ Install the version-pinned GitHub release on Linux:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.1/droidasc_mcp-0.2.1-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.1/droidasc_mcp-0.2.1-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
@@ -104,6 +104,9 @@ that exceeds the budget produces an explicit error rather than silent truncation
 
 Reference fields are best-effort parsing of ASC CLI text. Embedded newlines can split records;
 `total` counts output lines, not semantic references. Reference lines are sorted before pagination.
+Values such as `--help` are literal reference queries. The exact value `--gui` returns an explicit
+error because ASC reserves it before parsing CLI arguments. Exact method/field class names accept
+Java names or Dalvik descriptors; fuzzy class patterns retain their original meaning.
 Snapshots are decoded and sorted once, then cached for 60 seconds (up to 8 entries). The cache
 budget accounts for Python strings and tuple pointers, not just original output bytes. Identical
 concurrent queries share a single computation; unrelated queries and cache hits do not wait on
@@ -163,7 +166,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.1.tar.gz dist/droidasc_mcp-0.2.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.2.tar.gz dist/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 ## License

@@ -137,7 +137,7 @@ class DroidAscRunner:
     ) -> LinePage:
         args = ["listclass", "--threads", str(_threads(threads)), str(apk)]
         if prefix:
-            args.extend(["--prefix", prefix])
+            args.append("--prefix=" + prefix)
         return self._run_paged(args, offset=offset, limit=limit)
 
     def get_class_source(
@@ -170,20 +170,23 @@ class DroidAscRunner:
         offset: int,
         limit: int,
     ) -> dict[str, object]:
+        # ASC dispatches this token before argparse processes the option terminator.
+        if value == "--gui":
+            raise ValueError("The droidasc CLI reserves '--gui'; use a narrower search value")
         if kind in {"string", "type"}:
             if not value:
                 raise ValueError(f"value is required for {kind} searches")
-            query_args = [kind, value]
+            query_args = [kind, "--", value]
         else:
             if not value and not class_name:
                 raise ValueError(f"{kind} search needs value or class_name")
             query_args = [kind]
-            if value:
-                query_args.append(value)
             if class_name:
-                query_args.extend(["--class", class_name])
+                query_args.append("--class=" + class_name)
             if fuzzy_class:
                 query_args.append("--fuzzy-class")
+            if value:
+                query_args.extend(["--", value])
 
         args = ["findrefs", "--threads", str(_threads(threads)), str(apk), *query_args]
         page = self._run_paged(args, offset=offset, limit=limit)

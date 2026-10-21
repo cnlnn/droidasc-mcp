@@ -9,7 +9,7 @@ ASC_TEST_APK=/absolute/path/to/a/local.apk uv run pytest -q -s \
   --junitxml=artifacts/validation/with-apk.xml -o junit_logging=all
 uv run ruff check .
 uv build
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.1.tar.gz dist/droidasc_mcp-0.2.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.2.tar.gz dist/droidasc_mcp-0.2.2-py3-none-any.whl
 ```
 
 User-supplied APKs are read locally, never uploaded or included in test artifacts. Tests print
@@ -58,6 +58,10 @@ below are retained as historical observations; timings and RSS deltas are worklo
   then require bounded host RSS/handle growth and no remaining child process.
 - Cancellation acceptance abandons an in-flight MCP call, observes its real worker stop, and then
   successfully calls `asc_ping` on the same session. A separate real-process test covers the tree.
+- Query-boundary acceptance sends option-shaped reference values over both transports and checks
+  that an outside-root sentinel is unchanged. The upstream-reserved `--gui` query fails explicitly.
+  Exact method/field lookups compare the default-package `Login` name with `LLogin;`, while fuzzy
+  class queries retain their substring semantics. These checks also run after sdist/wheel install.
 - Memory-limit acceptance deliberately exceeds a 96 MiB worker cap, checks the explicit failure,
   then runs a fresh operation to prove supervisor recovery.
 - The matrix defines coverage, not a success claim. Inspect the commit's Actions run for results.
