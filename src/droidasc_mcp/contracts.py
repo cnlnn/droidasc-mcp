@@ -302,7 +302,7 @@ class DexResult(Result, total=False):
     has_manifest: bool
     items: list[DexRow]
     source: str
-    format: Literal["java", "smali"]
+    format: Literal["java", "smali", "cli-text-best-effort"]
     class_name: str
     method_descriptor: str
     field_descriptor: str

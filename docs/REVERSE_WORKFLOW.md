@@ -1,6 +1,6 @@
 # Container and revision review
 
-Version 0.3.0 candidate. The final combined Linux/Windows, real stdio/HTTP,
+Version 0.3.0 feature boundaries. The combined Linux/Windows, real stdio/HTTP,
 independent-tool and clean sdist/wheel results establish acceptance, not this document.
 
 ## Artifact routing

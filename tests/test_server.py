@@ -70,6 +70,7 @@ def test_output_contract_checks_nested_types_and_preserves_wire_shape():
     adapter = TypeAdapter(DexResult)
     original = {
         "status": "ok",
+        "format": "cli-text-best-effort",
         "items": [{"caller": "LC;->f()V", "instruction_offset": 12}],
         "future_diagnostic": {"value": 1},
     }

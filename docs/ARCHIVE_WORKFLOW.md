@@ -1,4 +1,4 @@
-# APK archive workflow (candidate, unreleased)
+# APK archive workflow
 
 This slice adds `asc_list_apk_entries`, `asc_read_apk_entry` and
 `asc_manifest_summary` on the candidate branch. It does not complete every item in
@@ -106,7 +106,7 @@ uv run python scripts/verify_archive_workflow.py /path/to/app.apk \
 ```
 
 Bounded multi-hop call exploration is implemented by `get_call_graph`. Signing metadata,
-additional container formats and revision inventories are implemented in the same unreleased
-batch, with coverage described in [REVERSE_WORKFLOW.md](REVERSE_WORKFLOW.md). Their combined
+additional container formats and revision inventories are part of v0.3.0,
+with coverage described in [REVERSE_WORKFLOW.md](REVERSE_WORKFLOW.md). Their combined
 acceptance is recorded separately. Native decoding, signing verification, dynamic
 instrumentation and resource-table resolution are not claimed by these tools.

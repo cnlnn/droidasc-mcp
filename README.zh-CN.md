@@ -32,7 +32,7 @@
 | `asc_secret_candidates` | 固定模式检索 DEX 字符串，返回脱敏候选与精确位置 |
 
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
-本批仍为候选实现，统一跨平台、MCP 传输及安装包验收完成前，不标记全部通过。
+发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
 ## 安装
 

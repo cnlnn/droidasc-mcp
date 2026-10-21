@@ -19,7 +19,7 @@ advantages; implemented workflow parity awaiting final acceptance**:
 | Dimension | Current evidence / remaining gap |
 | --- | --- |
 | Exact field-reference correctness | Our complete hit set matches the independent decoder for the measured operand; the pinned competitor has 97 extra instruction hits. This is a specific correctness advantage, not an oracle for all methods or operands. |
-| Static relationships and bounded graph | Our type relationships cover additional declaration/annotation categories, and graph node/edge/byte budgets are explicit. Large-APK graph cold/warm execution and independent call-site checks remain outstanding. |
+| Static relationships and bounded graph | Our type relationships cover additional declaration/annotation categories, and graph node/edge/byte budgets are explicit. Taobao graph cold/warm execution passed, and all 260 unique emitted sites matched an independent sequential decoder. This checks emitted-site soundness, not full-corpus graph completeness. |
 | Query latency | Historical method/field cold measurements were 6.8328 / 5.3987 seconds versus the pinned competitor's 4.5192 / 3.5706 seconds. A resident exact-page cache now avoids repeated worker startup, and full-index secondary indexes are bulk-built. Cold queries and initial full-index cost still require measurement, not a universal speed claim. |
 | Container scope | Generic ZIP, arbitrary directly embedded DEX paths, exact AAB modules and combined outer/AAR classes.jar DEX are implemented, including case-insensitive `.dex` suffixes. JVM and nested APK entries remain inventory-only; neither product's format list implies nested split reconstruction. |
 | MCP output contracts | All 18 public tools now expose typed nested output schemas, strict wire-type validation and preserved optional diagnostics/extension fields. Public input descriptions and state-aware annotations are present. |
@@ -41,6 +41,21 @@ the loaded host, cold method/field scans took 11.2826 / 9.7120 seconds; these mu
 not be represented as a speed improvement or compared as a controlled competitor trial.
 Receipt: `artifacts/validation/gap-interactive.json`. Final Linux/Windows and clean
 distribution gates apply to the v0.3.0 candidate, not the older receipts below.
+
+The large-APK graph gate passed on all 12 DEX files: cold graph including the full
+2,238,009,344-byte index took 406.8324 seconds; the first indexed repeat took
+0.2727 seconds, then resident exact-page hits took 0.0172 / 0.0184 seconds.
+Depth-5 bidirectional exploration respected node, edge and output-byte bounds.
+Androguard 4.1.4 independently decoded all 260 unique emitted call sites, with
+callee, opcode and code-unit offset equality. Input SHA-256 remained unchanged.
+Receipt: `artifacts/validation/gap-large-graph.json`. Host load and workload differ
+from earlier timings; this does not establish a controlled 460-to-407-second gain.
+
+The fresh local batch found four failures (392 passes): the typed DEX schema
+omitted the existing `cli-text-best-effort` reference format. The schema now
+accepts that wire value without changing or weakening the underlying reference
+semantics, with a dedicated wire-roundtrip regression. Full gates are rerun on
+the corrected candidate rather than reusing the earlier partial success.
 
 ## What the stars do and do not establish
 

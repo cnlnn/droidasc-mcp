@@ -36,12 +36,12 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Candidate container, signing and review workflows are described in
-[REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md). These are implementation candidates until
-the combined cross-platform, transport and clean-package gates have passed.
+Container, signing and review workflows and their support boundaries are described in
+[REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md). Release gates cover cross-platform,
+transport and clean-package execution.
 
 Python 3.10 or newer is required. CI checks Linux and native Windows runners on Python 3.10-3.13, including
-the released tools and candidate additions over stdio/HTTP against a source-built
+all 18 tools over stdio/HTTP against a source-built
 [acceptance APK](tests/fixtures/android/README.md)
 and package installation. macOS remains unverified.
 
