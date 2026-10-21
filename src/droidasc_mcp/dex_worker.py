@@ -240,7 +240,7 @@ def analyze(request: dict, root: Path) -> dict:
 def query_prepared(runner, bundle, common, owners, query, workspace):
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
-    if operation in {"find_method_refs", "get_method_calls"}:
+    if operation in {"find_method_refs", "get_method_calls", "find_field_refs"}:
         from .method_backend import query_methods
 
         result = query_methods(runner.settings, bundle, "", query, workspace)

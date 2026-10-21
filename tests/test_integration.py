@@ -231,6 +231,145 @@ async def test_structured_method_references(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_structured_field_references(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    hashes = [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    target = "Lfixture/Target;->value:I"
+    caller = "Lfixture/Caller;->fields(Lfixture/Target;)V"
+    async with Client(endpoint) as client:
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        ping = await call("asc_ping")
+        assert "find_field_refs" in ping["method_backend"]["operations"]
+        assert ping["method_backend"]["field_identity"] == "full_dex_field_descriptor"
+        opened = await call("asc_open_dex_session", dex_paths=paths)
+        key = opened["session_id"]
+
+        async def query(descriptor=target, **args):
+            return await call(
+                "asc_query_dex_session",
+                session_id=key,
+                operation="find_field_refs",
+                field_descriptor=descriptor,
+                **args,
+            )
+
+        incoming = await query()
+        assert incoming["status"] == "ok", incoming
+        assert incoming["total"] == 2
+        assert incoming["reference_semantics"] == "declared_field_operand"
+        assert incoming["scan_scope"] == "supplied_dex_methods"
+        assert incoming["instruction_scan_complete"] is True
+        assert incoming["runtime_target_resolution"] == "not_performed"
+        assert "inherited_field_resolution" in incoming["limitations"]
+        assert incoming["unresolved_matches"] == 0
+        assert incoming["field_descriptor"] == target
+        assert incoming["field_access"] == "all"
+        rows = incoming["items"]
+        assert rows == [
+            {
+                "caller": caller,
+                "field_descriptor": target,
+                "access": access,
+                "storage": "static",
+                "dex_entry": "classes.dex",
+                "instruction_offset": offset,
+                "offset_unit": "code_units_from_method_start",
+                "opcode": opcode,
+                "target_resolution": "defined_in_input",
+                "target_dex_entry": "classes2.dex",
+            }
+            for access, offset, opcode in (("read", 0, "sget"), ("write", 2, "sput"))
+        ]
+        for access, expected in (("read", rows[:1]), ("write", rows[1:])):
+            filtered = await query(field_access=access)
+            assert filtered["items"] == expected and filtered["total"] == 1
+            assert filtered["field_access"] == access
+            assert filtered["next_offset"] is None
+        page = await query(limit=1)
+        assert page["items"] == rows[:1] and page["next_offset"] == 1
+        page2 = await query(offset=page["next_offset"], limit=1)
+        assert page2["items"] == rows[1:] and page2["next_offset"] is None
+        beyond = await query(offset=20, limit=1)
+        assert beyond["items"] == [] and beyond["total"] == 2 and not beyond["has_more"]
+        for descriptor, offsets, opcodes, storage in (
+            ("Lfixture/Target;->value:J", [4, 6], ["iget-wide", "iput-wide"], "instance"),
+            (
+                "Lfixture/Target;->names:[Ljava/lang/String;",
+                [8, 10],
+                ["sget-object", "sput-object"],
+                "static",
+            ),
+            ("Lexternal/Missing;->value:I", [12, 14], ["sget", "sput"], "static"),
+        ):
+            result = await query(descriptor)
+            assert result["total"] == 2
+            assert [r["instruction_offset"] for r in result["items"]] == offsets
+            assert [r["opcode"] for r in result["items"]] == opcodes
+            assert [r["access"] for r in result["items"]] == ["read", "write"]
+            assert all(
+                r["field_descriptor"] == descriptor and r["storage"] == storage
+                for r in result["items"]
+            )
+            if descriptor.startswith("Lexternal/"):
+                assert result["unresolved_matches"] == 2
+                assert all(
+                    r["target_dex_entry"] is None
+                    and r["target_resolution"] == "not_defined_in_input"
+                    for r in result["items"]
+                )
+        for descriptor in ("Lfixture/Target;->value:Z", "Lfixture/Target;->unused:I"):
+            empty = await query(descriptor)
+            assert empty["status"] == "ok" and empty["total"] == 0
+        source = await call(
+            "asc_query_dex_session",
+            session_id=key,
+            operation="get_method_source",
+            method_descriptor=caller,
+            source_format="smali",
+        )
+        assert source["status"] == "ok" and target in source["source"]
+        # Every query starts a fresh worker; history equality cannot be a response-cache hit.
+        assert await query() == incoming
+        once = await call(
+            "asc_analyze_dex", dex_paths=paths, operation="find_field_refs", field_descriptor=target
+        )
+        assert {k: v for k, v in incoming.items() if k != "session_id"} == once
+        for bad in (
+            {"field_descriptor": "value"},
+            {"class_name": "Other"},
+            {"field_access": "guess"},
+        ):
+            invalid = await client.call_tool(
+                "asc_query_dex_session",
+                {
+                    "session_id": key,
+                    "operation": "find_field_refs",
+                    "field_descriptor": target,
+                    **bad,
+                },
+            )
+            assert invalid.is_error, invalid
+        assert (await call("asc_query_dex_session", session_id=key))["status"] == "ok"
+        assert (await call("asc_close_dex_session", session_id=key))["cleanup_pending"] is False
+    assert [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths] == hashes
+
+
+@pytest.mark.anyio
 async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files):
     paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
     server = build_server(
@@ -265,6 +404,17 @@ async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files)
         assert "native noCode(JLjava/lang/String;)V" in native["source"]
         guarded = await query("guarded()V")
         assert ".catch Ljava/lang/Exception;" in guarded["source"]
+        unavailable = await client.call_tool(
+            "asc_analyze_dex",
+            {
+                "dex_paths": paths,
+                "operation": "find_field_refs",
+                "field_descriptor": "Lfixture/Target;->value:I",
+            },
+        )
+        assert not unavailable.is_error
+        assert unavailable.structured_content["code"] == "backend_unavailable"
+        assert "items" not in unavailable.structured_content
         # Reassemble ASC's public output, not a simulated or name-matched source slice.
         for number, result in enumerate((debug, native, guarded)):
             source = tmp_path / f"roundtrip{number}.smali"

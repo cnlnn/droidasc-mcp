@@ -179,6 +179,22 @@ asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source
 原始哈希和 `dex_entry`。`java` 模式不自动回退，`smali` 模式始终返回该方法的反汇编。引擎错误和警告计数
 不是 Java 语义正确性的证明；原 `find_refs` 仍保留 ASC 的名称级尽力解析结果。
 
+新增 `find_field_refs`，通过完整 `field_descriptor`（如 `Lcom/example/Config;->enabled:Z`）
+精确定位字段；`field_access` 可选 `all`（默认）、`read` 或 `write`。每条记录返回完整调用方法、
+字段描述符、读写类型、静态/实例访问、指令、DEX 来源及方法内 code-unit 偏移。先过滤再分页，
+同名不同类型字段不会混在一起；未使用或不存在的字段返回零匹配，外部字段引用保留空的目标 DEX。
+定义查找按字面描述符进行，不解析继承字段；反射、JNI、方法句柄目标和编码初始值不计为直接读写。
+该操作需要可选 JADX/dexlib2 后端，同时支持单次分析和 DEX 会话。
+
+```python
+asc_query_dex_session(
+    session_id="...",
+    operation="find_field_refs",
+    field_descriptor="Lcom/example/Config;->enabled:Z",
+    field_access="write",
+)
+```
+
 新增 `find_method_refs`（谁引用该方法）和 `get_method_calls`（该方法引用谁），均要求完整方法描述符，
 支持 DEX 文件和会话，使用上述可选后端。每条结果包含完整 `caller`、`callee`、调用者 `dex_entry`、
 `opcode` 和 `instruction_offset`。偏移单位是从方法首条指令起算的 **16 位 code unit**，不是文件偏移。

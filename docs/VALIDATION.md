@@ -23,6 +23,10 @@ descriptor-exact cross-DEX references and instruction positions, undefined targe
 call-site prototypes, pagination, single-shot/session equivalence and unknown-opcode rejection.
 The independent Kotlin/R8 fixture proves obfuscated overload identity and continuation-to-workflow
 references, with R8 mappings kept on the test side. Both MCP transports run these checks.
+Field-reference gates use independently authored Smali positions for static, instance-wide and
+object-array accesses, same-name/different-type fields, external and unused fields. They verify
+read/write filtering before pagination, history independence, one-shot/session equivalence, input
+hash preservation, invalid identities and fail-closed scanning even after matching earlier accesses.
 Clean sdist/wheel verification requires `--complex-apk` and `--complex-mapping` alongside
 `--fixture-apk`. Its per-command budget is 600 seconds to accommodate the additional JVM queries;
 worker deadlines, cleanup latency assertions and the no-skips gate are unchanged.

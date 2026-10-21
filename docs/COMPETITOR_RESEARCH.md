@@ -28,7 +28,7 @@ Our immediate alignment: retain ASC's bounded fresh-worker architecture and raw 
 
 Qtty resolves pinned aliases, current aliases and raw DEX names in separate precedence tiers, then narrows by the complete `(arguments)return` descriptor. Ambiguous names produce an explicit notice; an invalid signature raises an error instead of masquerading as an empty caller list. Tests cover ambiguity, descriptor selection and invalid signatures. This is a better contract than picking the first same-name method. [Resolver](https://github.com/Qtty/jadx-mcp-server/blob/4e6d890d1d3753d2bb47d492a9523ef98874df85/src/main/java/com/example/jadxmcpserver/core/JadxAnalyzerCore.java#L1615-L1692), [ambiguity and errors](https://github.com/Qtty/jadx-mcp-server/blob/4e6d890d1d3753d2bb47d492a9523ef98874df85/src/main/java/com/example/jadxmcpserver/core/JadxAnalyzerCore.java#L1695-L1755), [MethodIdentityTest](https://github.com/Qtty/jadx-mcp-server/blob/4e6d890d1d3753d2bb47d492a9523ef98874df85/src/test/java/com/example/jadxmcpserver/core/MethodIdentityTest.java#L219-L272).
 
-Our gap: the public ASC CLI output consumed by [runner.py](../src/droidasc_mcp/runner.py) is currently `cli-text-best-effort`; it does not supply a trustworthy full caller descriptor or instruction offset. Do not manufacture those fields from displayed Java names or count references as bytecode offsets. Exact method source/Smali and descriptor-aware xrefs require a supported engine contract, with overloaded constructors and synthetic methods included in acceptance.
+Original gap: the public ASC CLI output consumed by [runner.py](../src/droidasc_mcp/runner.py) is `cli-text-best-effort`; it does not supply a trustworthy full caller descriptor or instruction offset. That legacy path remains unchanged. The candidate's separate descriptor-exact operations now use dexlib2 instruction operands, never displayed Java names or text line counts; see the current alignment below.
 
 ### 3. Structured hierarchy with explicit semantics
 
@@ -44,7 +44,7 @@ Do not copy its global current-APK behavior: the implementation itself notes tha
 
 Subwire uses UUID session handles and requires a session for reads; closing removes and closes the corresponding decompiler. This is a better wire-level sample identity than a global current APK. However, its manager has no visible capacity or TTL, loads a fresh analyzer for every create, and does not bind sessions to input hashes. No tests directory was present in the inspected repository tree. [Session manager](https://github.com/subwire/jadx-mcp-server/blob/2b3e51cc115c914b2a311c64d95fd5f850c75fd3/src/main/java/jadxmcp/JadxSessionManager.java#L15-L60), [pinned repository tree](https://github.com/subwire/jadx-mcp-server/tree/2b3e51cc115c914b2a311c64d95fd5f850c75fd3).
 
-Our existing APK snapshot cache is already bounded and coalesces identical in-flight requests. DEX calls still rebuild validated temporary input on each request. A future DEX session should bind immutable validated input hashes, engine identity and options; cap disk/memory/session count; expire or close explicitly; pin in-use entries; clean up on cancellation; and never introduce a global current sample. The performance benefit must be measured on repeated real DEX queries before claiming improvement. See [runner.py](../src/droidasc_mcp/runner.py) and [dex_worker.py](../src/droidasc_mcp/dex_worker.py).
+Our APK snapshot cache is bounded and coalesces identical in-flight requests. One-shot DEX calls rebuild validated temporary input on each request; the candidate now additionally offers immutable hash/engine-bound DEX sessions with disk/count limits, TTL/close, active-query pinning and cancellation cleanup. Query options remain per request because sessions cache input preparation, not query results. There is no global current sample or resident analyzer. Real-query performance still needs representative measurement before claiming speed parity. See [sessions.py](../src/droidasc_mcp/sessions.py), [runner.py](../src/droidasc_mcp/runner.py) and [dex_worker.py](../src/droidasc_mcp/dex_worker.py).
 
 ### 5. Structured decompilation fallback, but preserve exact targets
 
@@ -83,8 +83,9 @@ Its method route accepts a signature parameter, including one embedded in the me
 | Later | Bytecode-level structured xrefs and callers/callees | Stable original identities; explicit unresolved/partial coverage; independent bytecode oracle and call-order regression |
 
 This table is the original prioritization, not a blanket parity claim. The candidate now implements
-bounded immutable DEX preparations and an optional exact-method backend; cross-platform evidence
-is recorded separately in validation results. Bytecode-index/xref parity remains future work.
+bounded immutable DEX preparations, exact-method source and instruction-level method/field references.
+Cross-platform evidence is recorded separately in validation results. A persistent reverse index,
+annotation/type/declaration edges and runtime target resolution remain outside this implementation.
 
 ### Second alignment implementation
 
@@ -95,9 +96,24 @@ is recorded separately in validation results. Bytecode-index/xref parity remains
 - Full method identities come from dexlib2 DEX method definitions, including return types and
   synthetic methods. The optional backend uses JADX 1.5.5's public exact short-ID lookup and
   `JavaMethod.getCodeStr`, not `getMethodNode`/`getClassNode` internal APIs and not Java-text slicing.
-  Smali is emitted from the same exact dexlib2 `Method` through baksmali, never all name-matched
-  overloads. See [MethodBridge.java](../src/droidasc_mcp/MethodBridge.java) and the pinned
+  Java fallback Smali is emitted from the same exact dexlib2 `Method` through baksmali, never all
+  name-matched overloads. Explicit Smali now uses ASC post3's public `--method` CLI without Java.
+  See [MethodBridge.java](../src/droidasc_mcp/MethodBridge.java) and the pinned
   [public method API](https://github.com/skylot/jadx/blob/v1.5.5/jadx-core/src/main/java/jadx/api/JavaMethod.java).
 - JADX is optional, independently installed, version-checked and not redistributed in our package.
   JVM startup cost is explicit. The bridge runs under the existing supervisor on both platforms;
-  no native GUI/debugger or descriptor-exact reference graph is claimed.
+  no native GUI/debugger or complete runtime reference graph is claimed.
+
+### Current instruction-reference alignment
+
+- `find_method_refs` and `get_method_calls` scan declared method operands with exact identities,
+  DEX ownership, code-unit offsets, deterministic paging and bounded unresolved/dynamic diagnostics.
+  Decode errors and optimized-only/unknown opcodes fail the query rather than claiming coverage.
+- `find_field_refs` scans full `class->name:type` operands, reports read/write and static/instance
+  access and filters before pagination. External targets remain visible with explicit unresolved
+  definition provenance; no inherited/reflected field resolution or encoded initializer edges
+  are claimed. This does not reproduce all relationships in Qtty's reverse index.
+- Independent source-built Smali fixtures verify positions and types. Both MCP transports test
+  source-read history independence; Kotlin/R8 fixtures test renamed method identity and coroutines.
+  Sessions reuse validated input preparations, not a resident JVM or cached reverse index, so no
+  repeated-query speed parity or whole-APK benchmark advantage is claimed.

@@ -118,10 +118,13 @@ def build_server(
             "get_method_source",
             "find_method_refs",
             "get_method_calls",
+            "find_field_refs",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
+        field_descriptor: str | None = None,
+        field_access: Literal["all", "read", "write"] = "all",
         source_format: Literal["auto", "java", "smali"] = "auto",
         debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
@@ -140,6 +143,8 @@ def build_server(
         Explicit smali uses ASC; debug_info includes DEX line/local metadata.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
+        find_field_refs requires field_descriptor (Lpkg/C;->name:I).
+        field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         source_format=auto returns Java or exact-method Smali with fell_back/reason;
         java never silently falls back, smali always disassembles that exact method.
         """
@@ -149,6 +154,8 @@ def build_server(
             prefix=prefix,
             class_name=class_name,
             method_descriptor=method_descriptor,
+            field_descriptor=field_descriptor,
+            field_access=field_access,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,
@@ -186,10 +193,13 @@ def build_server(
             "get_method_source",
             "find_method_refs",
             "get_method_calls",
+            "find_field_refs",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
+        field_descriptor: str | None = None,
+        field_access: Literal["all", "read", "write"] = "all",
         source_format: Literal["auto", "java", "smali"] = "auto",
         debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
@@ -205,6 +215,8 @@ def build_server(
         Explicit smali uses ASC; debug_info includes DEX line/local metadata.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         method_descriptor is the full DEX class->name(args)return identity.
+        find_field_refs requires field_descriptor (Lpkg/C;->name:I).
+        field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         source_format=auto may return exact-method Smali with an explicit fallback reason.
         """
         return service.query_dex_session(
@@ -213,6 +225,8 @@ def build_server(
             prefix=prefix,
             class_name=class_name,
             method_descriptor=method_descriptor,
+            field_descriptor=field_descriptor,
+            field_access=field_access,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,

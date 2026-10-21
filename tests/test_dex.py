@@ -199,8 +199,15 @@ async def test_real_dex_duplicate_and_error_recovery(settings, real_dex_files, t
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("opcode", [0x3E, 0x73])
+@pytest.mark.parametrize(
+    "operation,identity",
+    [
+        ("get_method_calls", {"method_descriptor": "Lfixture/Caller;->run()V"}),
+        ("find_field_refs", {"field_descriptor": "Lfixture/Target;->value:I"}),
+    ],
+)
 async def test_unknown_instruction_never_reports_complete_scan(
-    settings, tmp_path, smali_dex_files, opcode
+    settings, tmp_path, smali_dex_files, opcode, operation, identity
 ):
     import os
 
@@ -225,8 +232,9 @@ async def test_unknown_instruction_never_reports_complete_scan(
             "asc_analyze_dex",
             {
                 "dex_paths": [str(path)],
-                "operation": "get_method_calls",
-                "method_descriptor": "Lfixture/Caller;->run()V",
+                "operation": operation,
+                **identity,
+                "limit": 1,
             },
         )
         assert not reply.is_error, reply
@@ -239,8 +247,8 @@ async def test_unknown_instruction_never_reports_complete_scan(
             "asc_analyze_dex",
             {
                 "dex_paths": [str(path)],
-                "operation": "get_method_calls",
-                "method_descriptor": "Lfixture/Caller;->run()V",
+                "operation": operation,
+                **identity,
             },
         )
         assert recovered.structured_content["instruction_scan_complete"] is True

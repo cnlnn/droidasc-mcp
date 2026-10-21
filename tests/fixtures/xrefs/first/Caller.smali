@@ -34,3 +34,16 @@
 
 .method public native noCode(JLjava/lang/String;)V
 .end method
+
+.method public static fields(Lfixture/Target;)V
+    .registers 3
+    sget v0, Lfixture/Target;->value:I
+    sput v0, Lfixture/Target;->value:I
+    iget-wide v0, p0, Lfixture/Target;->value:J
+    iput-wide v0, p0, Lfixture/Target;->value:J
+    sget-object v0, Lfixture/Target;->names:[Ljava/lang/String;
+    sput-object v0, Lfixture/Target;->names:[Ljava/lang/String;
+    sget v0, Lexternal/Missing;->value:I
+    sput v0, Lexternal/Missing;->value:I
+    return-void
+.end method

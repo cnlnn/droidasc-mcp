@@ -219,6 +219,25 @@ Class mismatches are rejected rather than choosing another owner.
 Java error/warning counts are engine diagnostics, not proof of semantic correctness. Reference
 tools named `find_refs` still use ASC's best-effort name-level text.
 
+`find_field_refs` requires `field_descriptor`, for example `Lcom/example/Config;->enabled:Z`.
+Set `field_access` to `all` (default), `read` or `write`. Rows contain the exact caller and field
+descriptors, `access`, `storage` (`static`/`instance`), opcode, DEX provenance and code-unit offset.
+Filtering occurs before pagination, so totals and page cursors refer to the selected access kind.
+Same-name fields with different types are distinct; an unused or absent field returns zero matches,
+while references to external fields retain `target_dex_entry=null`. Definition lookup is literal:
+inherited field resolution is not performed. Reflection, JNI, method-handle targets and encoded
+initial values are not direct instruction accesses and are not claimed as reads or writes.
+This operation uses the optional JADX/dexlib2 backend and works on one-shot inputs and sessions.
+
+```python
+asc_query_dex_session(
+    session_id="...",
+    operation="find_field_refs",
+    field_descriptor="Lcom/example/Config;->enabled:Z",
+    field_access="write",
+)
+```
+
 `find_method_refs` and `get_method_calls` are separate descriptor-exact operations on DEX inputs
 and sessions, using the optional pinned backend. Each result row carries full `caller`/`callee`
 descriptors, caller `dex_entry`, `opcode`, and `instruction_offset` in **16-bit code units from

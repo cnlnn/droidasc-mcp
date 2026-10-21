@@ -49,8 +49,10 @@ class DroidAscService:
                     "get_method_source",
                     "find_method_refs",
                     "get_method_calls",
+                    "find_field_refs",
                 ],
                 "identity": "full_dex_method_descriptor",
+                "field_identity": "full_dex_field_descriptor",
                 "explicit_smali_backend": "droidasc",
             },
             "dex_sessions": {
@@ -159,6 +161,24 @@ class DroidAscService:
 
 
 def _normalize_dex_query(query):
+    if query.get("operation") == "find_field_refs":
+        descriptor = query.get("field_descriptor")
+        owner_type = r"L[^.;\[\]\s:()]+;"
+        value_type = rf"\[*(?:[ZBCSIJFD]|{owner_type})"
+        if not descriptor or not re.fullmatch(
+            rf"{owner_type}->[^./;\[\]<>:()\s]+:{value_type}", descriptor
+        ):
+            raise ValueError("field_descriptor requires the full DEX class->name:type identity")
+        owner = descriptor.split("->", 1)[0]
+        if query.get("class_name") and _normalize_class_name(query["class_name"]) != owner:
+            raise ValueError("class_name and field_descriptor refer to different classes")
+        if query.get("method_descriptor") or query.get("fuzzy_class"):
+            raise ValueError("find_field_refs requires an exact field, not a method or fuzzy class")
+        query["class_name"] = owner
+    elif query.get("field_descriptor") or query.get("field_access", "all") != "all":
+        raise ValueError("field_descriptor and field_access require find_field_refs")
+    if query.get("field_access", "all") not in {"all", "read", "write"}:
+        raise ValueError("field_access must be all, read, or write")
     if query.get("operation") in {"get_method_source", "find_method_refs", "get_method_calls"}:
         descriptor = query.get("method_descriptor")
         owner_type = r"L[^;\[\]]+;"

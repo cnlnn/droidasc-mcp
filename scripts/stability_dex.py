@@ -19,6 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dex", nargs="+", type=Path)
     parser.add_argument("--method-descriptor", required=True)
+    parser.add_argument("--field-descriptor")
     parser.add_argument("--iterations", type=int, default=6)
     args = parser.parse_args()
     if args.iterations < 2:
@@ -37,7 +38,13 @@ def main():
         identities.append(opened["input_id"])
         try:
             query = {"operation": "info", "offset": 0, "limit": 100}
-            if mode:
+            if mode == 4:
+                query.update(
+                    operation="find_field_refs",
+                    field_descriptor=args.field_descriptor,
+                    field_access="write",
+                )
+            elif mode:
                 query.update(
                     operation="get_method_calls" if mode == 2 else "get_method_source",
                     method_descriptor=args.method_descriptor,
@@ -46,7 +53,11 @@ def main():
             result = service.query_dex_session(key, **query)
             assert result["status"] == "ok", result
             assert result["input_id"] == opened["input_id"]
-            if mode == 2:
+            if mode == 4:
+                assert result["instruction_scan_complete"] is True and result["total"] > 0
+                assert result["field_descriptor"] == args.field_descriptor
+                assert all(row["access"] == "write" for row in result["items"])
+            elif mode == 2:
                 assert result["instruction_scan_complete"] is True
                 assert result["method_descriptor"] == args.method_descriptor
             elif mode:
@@ -60,7 +71,8 @@ def main():
         gc.collect()
         baseline_rss, baseline_handles = owner.memory_info().rss, _resource_count(owner)
         with ThreadPoolExecutor(max_workers=2) as pool:
-            list(pool.map(lambda index: cycle(index % 4), range(args.iterations * 2)))
+            modes = 5 if args.field_descriptor else 4
+            list(pool.map(lambda index: cycle(index % modes), range(args.iterations * 2)))
     finally:
         service.close()
     gc.collect()

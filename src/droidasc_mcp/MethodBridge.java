@@ -22,6 +22,10 @@ public class MethodBridge {
         return result.append(')').append(method.getReturnType()).toString();
     }
 
+    static String descriptor(FieldReference field) {
+        return field.getDefiningClass() + "->" + field.getName() + ":" + field.getType();
+    }
+
     static Map<String, Object> run(String[] args) throws Exception {
         File input = new File(args[0]);
         String entry = args[1], className = args[2], operation = args[3];
@@ -35,8 +39,9 @@ public class MethodBridge {
             result.put("code", "unsupported_backend_version");
             return result;
         }
-        if (operation.equals("find_method_refs") || operation.equals("get_method_calls")) {
-            return references(input, requested, operation, offset, limit, result);
+        if (operation.equals("find_method_refs") || operation.equals("get_method_calls")
+                || operation.equals("find_field_refs")) {
+            return references(input, requested, operation, args[8], offset, limit, result);
         }
         ClassDef owner = null;
         var dex = DexFileFactory.loadDexEntry(input, entry, true, null).getDexFile();
@@ -126,24 +131,33 @@ public class MethodBridge {
         return result;
     }
 
-    static Map<String, Object> references(File input, String requested, String operation,
+    static Map<String, Object> references(File input, String requested, String operation, String access,
             int offset, int limit, Map<String, Object> result) throws Exception {
         // Null selects opcodes from each DEX header, including modern invoke instructions.
         var container = DexFileFactory.loadDexContainer(input, null);
         var entries = new ArrayList<>(container.getDexEntryNames());
         Collections.sort(entries);
+        boolean fields = operation.equals("find_field_refs");
         // Index definitions only. Instructions remain streamed and output is paged while scanning.
         Map<String, String> definitions = new HashMap<>();
         for (String entry : entries) {
             for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses()) {
-                for (Method method : cls.getMethods()) {
-                    if (definitions.put(descriptor(method), entry) != null)
-                        throw new IllegalArgumentException("Duplicate method definition");
+                if (fields) {
+                    for (Field field : cls.getFields()) {
+                        if (definitions.put(descriptor(field), entry) != null)
+                            throw new IllegalArgumentException("Duplicate field definition");
+                    }
+                } else {
+                    for (Method method : cls.getMethods()) {
+                        if (definitions.put(descriptor(method), entry) != null)
+                            throw new IllegalArgumentException("Duplicate method definition");
+                    }
                 }
             }
         }
-        boolean incoming = operation.equals("find_method_refs");
-        result.put("method_descriptor", requested);
+        boolean incoming = !operation.equals("get_method_calls");
+        result.put(fields ? "field_descriptor" : "method_descriptor", requested);
+        if (fields) result.put("field_access", access);
         result.put("status", "ok");
         if (!incoming && !definitions.containsKey(requested)) {
             result.put("status", "error");
@@ -175,15 +189,30 @@ public class MethodBridge {
                         String opcode = instruction.getOpcode().name;
                         if (instruction instanceof ReferenceInstruction referenced) {
                             Reference reference = referenced.getReference();
-                            if (reference instanceof MethodReference method) {
-                                String callee = descriptor(method);
-                                if (!incoming || callee.equals(requested)) {
+                            String callee = null, fieldAccess = null;
+                            if (!fields && reference instanceof MethodReference method) {
+                                callee = descriptor(method);
+                            } else if (fields && reference instanceof FieldReference field) {
+                                callee = descriptor(field);
+                                if (opcode.startsWith("iget") || opcode.startsWith("sget"))
+                                    fieldAccess = "read";
+                                else if (opcode.startsWith("iput") || opcode.startsWith("sput"))
+                                    fieldAccess = "write";
+                                else throw new IllegalArgumentException("Unknown field access opcode");
+                            }
+                            if (callee != null) {
+                                if ((!incoming || callee.equals(requested))
+                                        && (!fields || access.equals("all") || access.equals(fieldAccess))) {
                                     String targetEntry = definitions.get(callee);
                                     if (targetEntry == null) unresolvedMatches++;
                                     if (total >= offset && total - offset < limit) {
                                         Map<String, Object> row = new LinkedHashMap<>();
                                         row.put("caller", caller);
-                                        row.put("callee", callee);
+                                        row.put(fields ? "field_descriptor" : "callee", callee);
+                                        if (fields) {
+                                            row.put("access", fieldAccess);
+                                            row.put("storage", opcode.startsWith("s") ? "static" : "instance");
+                                        }
                                         row.put("dex_entry", entry);
                                         row.put("instruction_offset", address);
                                         row.put("offset_unit", "code_units_from_method_start");
@@ -221,7 +250,7 @@ public class MethodBridge {
         result.put("backend", "dexlib2-instructions");
         result.put("total", total);
         result.put("items", items);
-        result.put("reference_semantics", "declared_method_operand");
+        result.put("reference_semantics", fields ? "declared_field_operand" : "declared_method_operand");
         result.put("scan_scope", incoming ? "supplied_dex_methods" : "selected_method");
         result.put("scanned_methods", scannedMethods);
         result.put("scanned_instructions", scannedInstructions);
@@ -233,7 +262,10 @@ public class MethodBridge {
         result.put("unresolved_sites_truncated", dynamicSites > unresolved.size());
         result.put("instruction_scan_complete", true);
         result.put("runtime_target_resolution", "not_performed");
-        result.put("limitations", List.of("virtual_dispatch", "reflection", "jni", "runtime_loaded_code"));
+        result.put("limitations", fields
+            ? List.of("inherited_field_resolution", "reflection", "jni", "runtime_loaded_code",
+                "encoded_initial_values", "method_handle_targets")
+            : List.of("virtual_dispatch", "reflection", "jni", "runtime_loaded_code"));
         return result;
     }
 

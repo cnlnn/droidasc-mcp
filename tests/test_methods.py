@@ -59,6 +59,74 @@ def test_invalid_source_format():
         _normalize_dex_query({"operation": "list_methods", "source_format": "guess"})
 
 
+@pytest.mark.parametrize(
+    "descriptor",
+    [
+        None,
+        "value",
+        "LClass;->value",
+        "Class->value:I",
+        "LClass;->value:V",
+        "LClass;->value:[V",
+        "LClass;->value:I:Z",
+        "LClass;->value()I",
+        "LClass;->value:LBad",
+        "LClass;->a b:I",
+        "LClass;-><init>:I",
+    ],
+)
+def test_field_requires_full_identity(descriptor):
+    with pytest.raises(ValueError, match="field_descriptor"):
+        _normalize_dex_query({"operation": "find_field_refs", "field_descriptor": descriptor})
+
+
+@pytest.mark.parametrize(
+    "descriptor",
+    [
+        "LClass;->value:J",
+        "LClass;->names:[Ljava/lang/String;",
+        "LClass;->matrix:[[I",
+        "LClass;->\u503c:I",
+    ],
+)
+def test_field_identity_is_preserved(descriptor):
+    query = _normalize_dex_query(
+        {
+            "operation": "find_field_refs",
+            "field_descriptor": descriptor,
+            "class_name": "Class",
+            "field_access": "read",
+        }
+    )
+    assert query["field_descriptor"] == descriptor
+    assert query["class_name"] == "LClass;"
+    assert query["field_access"] == "read"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"class_name": "Other"},
+        {"field_access": "guess"},
+        {"fuzzy_class": True},
+        {"method_descriptor": "LClass;->run()V"},
+    ],
+)
+def test_field_query_rejects_ambiguous_options(extra):
+    with pytest.raises(ValueError):
+        _normalize_dex_query(
+            {"operation": "find_field_refs", "field_descriptor": "LClass;->value:I", **extra}
+        )
+
+
+@pytest.mark.parametrize(
+    "extra", [{"field_descriptor": "LClass;->value:I"}, {"field_access": "read"}]
+)
+def test_field_options_are_not_silently_ignored(extra):
+    with pytest.raises(ValueError, match="require find_field_refs"):
+        _normalize_dex_query({"operation": "info", **extra})
+
+
 @pytest.mark.parametrize("operation,mode", [("info", "smali"), ("get_method_source", "auto")])
 def test_debug_info_requires_native_smali(operation, mode):
     with pytest.raises(ValueError, match="debug_info"):

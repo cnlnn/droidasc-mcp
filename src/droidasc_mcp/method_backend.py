@@ -48,10 +48,16 @@ def query_methods(settings, bundle, entry, query, workspace=None):
         entry,
         query["class_name"],
         query["operation"],
-        query.get("method_descriptor") or "",
+        (
+            query.get("field_descriptor")
+            if query["operation"] == "find_field_refs"
+            else query.get("method_descriptor")
+        )
+        or "",
         query.get("source_format", "auto"),
         str(min(offset, 2**31 - 1)),
         str(min(limit, 2**31 - 1)),
+        query.get("field_access", "all"),
     ]
     # The caller's supervisor owns this descendant, including cancellation and Job limits.
     try:

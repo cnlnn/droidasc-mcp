@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add `find_field_refs` for full `class->name:type` identities, read/write filters, static/instance
+  access labels, exact instruction offsets and cross-DEX provenance. Same-name fields of different
+  types remain distinct. Encoded initializers, reflection, inherited field resolution and handle
+  targets are not represented as direct accesses. Verify both transports and malformed-scan failure.
 - Upgrade the minimum and lock to ASC 0.1.2.post3. Explicit method Smali now uses its public
   `disassemble --method` CLI without a JVM, with optional debug directives and stable not-found errors.
 - Add descriptor-exact incoming/outgoing method operands with DEX provenance, code-unit offsets,

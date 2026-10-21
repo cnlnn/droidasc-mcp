@@ -169,4 +169,5 @@ jobs:
           uv run python scripts/stability_dex.py
           artifacts/stability-dex/classes.dex artifacts/stability-dex/classes2.dex
           --method-descriptor "Lorg/example/droidascfixture/MethodCases;->choose(I)Ljava/lang/String;"
+          --field-descriptor "Lorg/example/droidascfixture/Probe;->visits:I"
         shell: bash
