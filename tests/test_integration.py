@@ -317,7 +317,7 @@ async def test_transport_roundtrip(transport, request, apk_file):
     )
     async with Client(endpoint) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 7
+        assert len(tools.tools) == 10
         result = await client.call_tool("asc_ping", {})
         assert not result.is_error
         result = await client.call_tool("asc_apk_info", {"apk_path": str(apk_file)})
@@ -387,7 +387,7 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
             return result.structured_content
 
         assert (await call("asc_ping", {}))["status"] == "ok"
-        assert len((await client.list_tools()).tools) == 7
+        assert len((await client.list_tools()).tools) == 10
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
 
             async def refs_call(**kwargs):
@@ -452,6 +452,204 @@ async def assert_reference_stability(refs_call, source_call):
         assert after == previous, (kind, previous, after)
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_real_exact_methods(transport, tmp_path, real_dex_files, request, monkeypatch):
+    if not os.getenv("DROIDASC_MCP_JADX_HOME"):
+        pytest.skip("Configure JADX 1.5.5 and JDK 17 for exact method acceptance")
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    owner = "Lorg/example/droidascfixture/MethodCases;"
+    async with Client(endpoint) as client:
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        opened = await call("asc_open_dex_session", dex_paths=[str(p) for p in real_dex_files])
+        key = opened["session_id"]
+
+        async def query(operation="get_method_source", **args):
+            return await call("asc_query_dex_session", session_id=key, operation=operation, **args)
+
+        listed = await query("list_methods", class_name=owner, limit=100)
+        assert listed["status"] == "ok", listed
+        assert listed["backend_version"] == "1.5.5"
+        assert listed["dex_entry"] == "classes2.dex"
+        methods = {item["descriptor"]: item for item in listed["items"]}
+        expected = {
+            "<init>()V",
+            "choose(I)Ljava/lang/String;",
+            "choose(Ljava/lang/String;)Ljava/lang/String;",
+            "value()Ljava/lang/String;",
+            "value()Ljava/lang/Object;",
+            "arrays([[Ljava/lang/String;J)[I",
+            "caf\u00e9()Ljava/lang/String;",
+            "nativeCase()V",
+        }
+        assert set(methods) == {owner + "->" + item for item in expected}
+        assert methods[owner + "->value()Ljava/lang/Object;"]["access_flags"] & 0x1040 == 0x1040
+        assert methods[owner + "->nativeCase()V"]["has_code"] is False
+        paged = await query("list_methods", class_name=owner, offset=1, limit=2)
+        assert paged["items"] == listed["items"][1:3]
+        assert paged["has_more"] is True
+
+        for signature, marker, absent in [
+            ("choose(I)Ljava/lang/String;", "INTEGER_OVERLOAD", "STRING_OVERLOAD"),
+            ("choose(Ljava/lang/String;)Ljava/lang/String;", "STRING_OVERLOAD", "INTEGER_OVERLOAD"),
+        ]:
+            for mode in ("auto", "smali"):
+                result = await query(method_descriptor=owner + "->" + signature, source_format=mode)
+                assert result["status"] == "ok", result
+                assert result["method_descriptor"] == owner + "->" + signature
+                assert marker in result["source"] and absent not in result["source"]
+                assert result["format"] == ("java" if mode == "auto" else "smali")
+                assert result["fell_back"] is False
+                assert result["input_id"] == opened["input_id"]
+        # Empty default constructors are omitted from Java, never replaced by a different method.
+        fallback = await query(method_descriptor=owner + "-><init>()V")
+        assert fallback["format"] == "smali" and fallback["fell_back"] is True, fallback
+        assert fallback["fallback_reason"] == "java_method_not_emitted"
+        assert ".method public constructor <init>()V" in fallback["source"]
+        strict = await query(method_descriptor=owner + "-><init>()V", source_format="java")
+        assert strict["code"] == "java_unavailable"
+        for signature in ("choose()V", "value()I"):
+            missing = await query(method_descriptor=owner + "->" + signature)
+            assert missing["code"] == "method_not_found" and "source" not in missing
+        native = await query(method_descriptor=owner + "->nativeCase()V", source_format="smali")
+        assert "native nativeCase()V" in native["source"]
+        unicode_method = await query(method_descriptor=owner + "->caf\u00e9()Ljava/lang/String;")
+        assert "UNICODE_METHOD" in unicode_method["source"]
+        bridge = await query(
+            method_descriptor=owner + "->value()Ljava/lang/Object;", source_format="smali"
+        )
+        assert "bridge synthetic value()Ljava/lang/Object;" in bridge["source"]
+        once = await call(
+            "asc_analyze_dex",
+            dex_paths=[str(p) for p in real_dex_files],
+            operation="list_methods",
+            class_name=owner,
+            limit=100,
+        )
+        assert {k: v for k, v in listed.items() if k != "session_id"} == once
+        cancel = anyio.CancelScope()
+
+        async def pending_query():
+            with cancel:
+                await query(method_descriptor=owner + "->choose(I)Ljava/lang/String;")
+
+        java_pid = None
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(pending_query)
+            deadline = time.monotonic() + 15
+            while java_pid is None and time.monotonic() < deadline:
+                for child in psutil.Process().children(recursive=True):
+                    with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                        if any(arg.endswith("MethodBridge.java") for arg in child.cmdline()):
+                            java_pid = child.pid
+                            break
+                await anyio.sleep(0.01)
+            assert java_pid is not None, "Method JVM did not start"
+            cancel.cancel()
+        deadline = time.monotonic() + 3
+        while alive(java_pid) and time.monotonic() < deadline:
+            await anyio.sleep(0.01)
+        assert not alive(java_pid), "Cancelled method JVM is still executing"
+        assert (await query("info"))["input_id"] == opened["input_id"]
+        assert (await call("asc_close_dex_session", session_id=key))["cleanup_pending"] is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_real_dex_sessions(transport, tmp_path, real_dex_files, request, monkeypatch):
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        opened = await call("asc_open_dex_session", dex_paths=[str(p) for p in real_dex_files])
+        assert opened["status"] == "ok", opened
+        key = opened["session_id"]
+        assert len(opened["input_id"]) == 64
+        assert opened["reuse"] == "validated_dex_bundle"
+
+        async def query(**args):
+            return await call("asc_query_dex_session", session_id=key, **args)
+
+        classes = await query(operation="list_classes")
+        assert classes["class_count"] == opened["class_count"]
+        assert {item["dex_entry"] for item in classes["items"]} == {"classes.dex", "classes2.dex"}
+        refs = await query(
+            operation="find_refs",
+            kind="method",
+            value="marker",
+            class_name="org.example.droidascfixture.Probe",
+        )
+        assert {item["method"] for item in refs["items"]} == {
+            "Lorg/example/droidascfixture/Probe;->describe"
+        }
+        source = await query(
+            operation="get_class_source", class_name="org.example.droidascfixture.Probe"
+        )
+        assert "ASC_FIXTURE_MARKER_v1" in source["source"]
+        hierarchy = await query(operation="find_refs", kind="extends", value="Login")
+        assert {item["class_name"] for item in hierarchy["items"]} == {"LLoginChild;"}
+        assert (await query(operation="get_manifest"))["code"] == "no_manifest"
+        cold, warm = [], []
+        for _ in range(3):
+            start = time.monotonic()
+            once = await call(
+                "asc_analyze_dex",
+                dex_paths=[str(p) for p in real_dex_files],
+                operation="list_classes",
+            )
+            cold.append(time.monotonic() - start)
+            start = time.monotonic()
+            reused = await query(operation="list_classes")
+            warm.append(time.monotonic() - start)
+            assert {k: v for k, v in reused.items() if k != "session_id"} == once
+        # Replacing the source must not change an already-open evidence identity.
+        real_dex_files[1].write_bytes(real_dex_files[0].read_bytes())
+        other = await call("asc_open_dex_session", dex_paths=[str(real_dex_files[1])])
+        assert other["input_id"] != opened["input_id"]
+        results = {}
+
+        async def read(label, session_id):
+            results[label] = await call(
+                "asc_query_dex_session", session_id=session_id, operation="list_classes"
+            )
+
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(read, "original", key)
+            tasks.start_soon(read, "replacement", other["session_id"])
+        assert results["original"] == classes
+        assert results["replacement"]["class_count"] == opened["sources"][0]["class_count"]
+        real_dex_files[0].unlink()
+        assert (await query())["input_id"] == opened["input_id"]
+        assert (await call("asc_close_dex_session", session_id=key))["cleanup_pending"] is False
+        assert (await query())["code"] == "session_not_found"
+        assert (await call("asc_query_dex_session", session_id=other["session_id"]))[
+            "status"
+        ] == "ok"
+        await call("asc_close_dex_session", session_id=other["session_id"])
+        print(f"dex_session transport={transport} cold_seconds={cold} warm_seconds={warm}")
+
+
 async def assert_fixture_hierarchy(call, apk):
     for kind, value, expected in (
         ("extends", "HierarchyBase", {"LHierarchyChild;"}),
@@ -512,8 +710,14 @@ async def assert_fixture_tools(call, apk):
 
     query = {"apk_path": apk, "prefix": package}
     classes = await call("asc_list_classes", {**query, "limit": 100})
-    assert set(classes["items"]) == {probe, activity, "Lorg/example/droidascfixture/R;"}
-    assert classes["total"] == 3
+    assert set(classes["items"]) == {
+        probe,
+        activity,
+        "Lorg/example/droidascfixture/R;",
+        "Lorg/example/droidascfixture/MethodCases;",
+        "Lorg/example/droidascfixture/GenericValue;",
+    }
+    assert classes["total"] == 5
     paged = []
     for offset in range(classes["total"]):
         page = await call("asc_list_classes", {**query, "limit": 1, "offset": offset})

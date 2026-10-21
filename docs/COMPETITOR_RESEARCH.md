@@ -82,4 +82,22 @@ Its method route accepts a signature parameter, including one embedded in the me
 | Next | Full method descriptor and precise Smali fallback | Supported engine API, overload/constructor/synthetic cases, invalid identity is an error, Java and Smali target same descriptor |
 | Later | Bytecode-level structured xrefs and callers/callees | Stable original identities; explicit unresolved/partial coverage; independent bytecode oracle and call-order regression |
 
-This table is a prioritization, not a completion claim. Hierarchy and reference regressions are implementable within the current public ASC CLI adapter; sessions, exact-method source and bytecode-index parity remain separate work requiring their own runtime evidence.
+This table is the original prioritization, not a blanket parity claim. The candidate now implements
+bounded immutable DEX preparations and an optional exact-method backend; cross-platform evidence
+is recorded separately in validation results. Bytecode-index/xref parity remains future work.
+
+### Second alignment implementation
+
+- Sessions bind ordered source SHA-256 hashes and ASC version, not mtime or a global current APK.
+  They reuse validated containers only; engine processes and query options remain per request.
+  Count/disk reservations, TTL reaping, explicit close, active-query pinning and shutdown cleanup
+  are in [sessions.py](../src/droidasc_mcp/sessions.py).
+- Full method identities come from dexlib2 DEX method definitions, including return types and
+  synthetic methods. The optional backend uses JADX 1.5.5's public exact short-ID lookup and
+  `JavaMethod.getCodeStr`, not `getMethodNode`/`getClassNode` internal APIs and not Java-text slicing.
+  Smali is emitted from the same exact dexlib2 `Method` through baksmali, never all name-matched
+  overloads. See [MethodBridge.java](../src/droidasc_mcp/MethodBridge.java) and the pinned
+  [public method API](https://github.com/skylot/jadx/blob/v1.5.5/jadx-core/src/main/java/jadx/api/JavaMethod.java).
+- JADX is optional, independently installed, version-checked and not redistributed in our package.
+  JVM startup cost is explicit. The bridge runs under the existing supervisor on both platforms;
+  no native GUI/debugger or descriptor-exact reference graph is claimed.

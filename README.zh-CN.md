@@ -19,6 +19,9 @@
 | `asc_get_class_source` | 定位并反编译单个类 |
 | `asc_find_refs` | 跨 DEX 查找字符串、类型、方法、字段引用；直接继承/实现查询（未发布） |
 | `asc_analyze_dex` | 分析裸 DEX 或明确指定的 DEX 集合，保留来源和哈希（未发布） |
+| `asc_open_dex_session` | 创建哈希绑定、容量受限的不可变 DEX 会话（未发布） |
+| `asc_query_dex_session` | 查询指定会话，保留原始哈希和 DEX 来源（未发布） |
+| `asc_close_dex_session` | 关闭会话并释放私有文件（未发布） |
 
 ## 安装
 
@@ -142,6 +145,45 @@ MCP 错误和结构化 `status`。
 本工具用于导出后的静态分析，不自动脱壳、不修复 DEX、不恢复缺失代码或运行时加密的方法体，
 也不重建原始 Manifest 和资源。覆盖范围固定为 `supplied_files_only`，运行时完整性为
 `unknown`。分析不可信 dump 仍需使用隔离环境。
+
+## DEX 会话与精确方法（未发布）
+
+用 `asc_open_dex_session(dex_paths=[...])` 创建会话，再把返回的 `session_id` 传给
+`asc_query_dex_session`。查询参数与 `asc_analyze_dex` 一致，结束时调用 `asc_close_dex_session`。
+`input_id` 绑定按输入顺序排列的 DEX SHA-256、Schema 和 ASC 版本；UUID 会话标识不依赖全局当前样本。
+原文件修改或删除不会改变已有会话，查询参数每次重新执行。复用的是已验证容器，**不是常驻反编译引擎**。
+
+默认最多 4 个打开或准备中的会话，空闲 1800 秒过期，最多每 30 秒清理一次；容量不足时淘汰最久未用的
+空闲会话。正在查询的文件不会被淘汰。关闭会话后禁止新查询，已有查询结束再清理，返回字段
+`cleanup_pending` 标明是否仍等待。MCP 正常退出会清理文件，进程被强杀时仍可能留下系统临时目录。
+未知或过期 ID 返回 `session_not_found`，不会自动重新加载已变化的原文件。
+
+可选精确方法后端需要官方 [JADX 1.5.5](https://github.com/skylot/jadx/releases/tag/v1.5.5) 和 JDK 17 以上版本。
+设置 `DROIDASC_MCP_JADX_HOME` 为包含 `lib/` 的解压目录，`DROIDASC_MCP_JAVA` 为 JDK 的 `java` 路径
+（也可使用 PATH）。仅有 JRE 不够。普通 ASC 功能不依赖 Java，安装 Python 包也不会下载 JADX。
+
+```text
+asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
+asc_query_dex_session(session_id="...", operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z", source_format="smali")
+```
+
+方法清单由 dexlib2 直接读取 DEX 定义，包含构造函数、synthetic/bridge、native/abstract 方法、完整参数和
+返回类型，按完整描述符排序分页。查询必须给出 `L类;->方法(参数)返回类型`，不存在的重载返回
+`method_not_found`，不会按名称猜选或退到其他重载。当前入口是 DEX 文件或会话，不直接接收 APK 路径。
+
+`source_format=auto` 通过 JADX 公开 API 精确查找 Java 方法；Java 未输出该方法（如省略的默认构造函数）
+或引擎报错时，只反汇编同一个 dexlib2 方法对象。返回 `format`、`fell_back`、`fallback_reason`、后端版本、
+原始哈希和 `dex_entry`。`java` 模式不自动回退，`smali` 模式始终返回该方法的反汇编。引擎错误和警告计数
+不是 Java 语义正确性的证明；原引用查询仍是 ASC 的尽力解析结果，本次没有变成描述符精确交叉引用。
+
+未配置后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。每次方法查询启动一个受现有进程树限制的
+JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，因此有启动开销。方法分页包含 `total`、
+`offset`、`limit`、`next_offset`、`truncated` 和 `has_more`，超大结果明确报错而不是静默截断。
+
+会话限制可通过 `DROIDASC_MCP_MAX_DEX_SESSIONS`、`DROIDASC_MCP_DEX_SESSION_TTL_SECONDS`、
+`DROIDASC_MCP_MAX_DEX_SESSION_BYTES` 配置，默认分别为 `4`、`1800`、`4294967296`。
+磁盘预算包含已有文件及并发准备阶段的预留空间；所有会话只属于当前服务进程，不跨重启恢复。
 
 ## 安全边界
 

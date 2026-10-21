@@ -39,6 +39,11 @@ class Settings:
     max_worker_memory_bytes: int = 2 * 1024 * 1024 * 1024
     max_page_size: int = 1000
     max_parallel: int = 2
+    max_dex_sessions: int = 4
+    dex_session_ttl_seconds: int = 1800
+    max_dex_session_bytes: int = 4 * 1024**3
+    jadx_home: Path | None = None
+    java_executable: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -63,6 +68,13 @@ class Settings:
             ),
             max_page_size=_positive_int("DROIDASC_MCP_MAX_PAGE_SIZE", 1000),
             max_parallel=_positive_int("DROIDASC_MCP_MAX_PARALLEL", 2),
+            max_dex_sessions=_positive_int("DROIDASC_MCP_MAX_DEX_SESSIONS", 4),
+            dex_session_ttl_seconds=_positive_int("DROIDASC_MCP_DEX_SESSION_TTL_SECONDS", 1800),
+            max_dex_session_bytes=_positive_int("DROIDASC_MCP_MAX_DEX_SESSION_BYTES", 4 * 1024**3),
+            jadx_home=Path(os.environ["DROIDASC_MCP_JADX_HOME"]).expanduser().resolve()
+            if os.getenv("DROIDASC_MCP_JADX_HOME")
+            else None,
+            java_executable=os.getenv("DROIDASC_MCP_JAVA"),
         )
 
     def validate_apk(self, value: str) -> Path:

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add immutable hash-bound DEX sessions with explicit close, idle TTL, count/disk limits,
+  concurrent preparation reservations, active-query pinning and lifecycle cleanup.
+- Add optional JADX 1.5.5/JDK 17 method queries: raw DEX full descriptors, exact Java lookup,
+  exact-method baksmali fallback and explicit engine/fallback diagnostics. Existing ASC tools
+  remain Java-independent. Reference queries remain best-effort ASC text, not exact bytecode xrefs.
+- Add overload, constructor, synthetic bridge, Unicode, array/native method and real JVM
+  cancellation acceptance over stdio/HTTP; package the Java source bridge in sdist and wheel.
+
 - Add exact `extends` / `impl` queries for APK and DEX, with structured direct-declaration
   records, descriptor normalization and explicit rejection of inapplicable class filters.
 - Require Droid ASC 0.1.2.post2 or newer; the previous minimum 0.1.1.post1 lacks hierarchy

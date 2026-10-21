@@ -114,20 +114,38 @@ class DroidAscRunner:
         return json.loads(data)
 
     def analyze_dex(self, paths: list[Path], query: dict) -> dict:
-        request = {
+        request = self._dex_request(paths, query)
+        # The parent owns temporary storage so cancellation/worker kills also clean it up.
+        with tempfile.TemporaryDirectory(prefix="droidasc-dex-") as root:
+            return self._run_dex_request(request, Path(root))
+
+    def prepare_dex(self, paths: list[Path], root: Path, input_bytes: int) -> dict:
+        request = self._dex_request(paths, {"operation": "info", "offset": 0, "limit": 1})
+        request["max_input_bytes"] = min(input_bytes, self.settings.max_apk_bytes)
+        request["prepare"] = True
+        return self._run_dex_request(request, root)
+
+    def query_dex_session(self, root: Path, query: dict) -> dict:
+        request = self._dex_request([], query)
+        request["prepared_root"] = str(root)
+        with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+            return self._run_dex_request(request, Path(temporary))
+
+    def _dex_request(self, paths: list[Path], query: dict) -> dict:
+        return {
             "paths": [str(path) for path in paths],
             "allowed_roots": [str(path) for path in self.settings.allowed_roots],
             "max_input_bytes": self.settings.max_apk_bytes,
             "max_output_bytes": self.settings.max_output_bytes,
             "max_page_size": self.settings.max_page_size,
+            "jadx_home": str(self.settings.jadx_home) if self.settings.jadx_home else None,
+            "java_executable": self.settings.java_executable,
             "query": query,
         }
-        # The parent owns temporary storage so cancellation/worker kills also clean it up.
-        with (
-            self._acquire(self._slots),
-            tempfile.TemporaryDirectory(prefix="droidasc-dex-") as root,
-        ):
-            request_path = Path(root) / "request.json"
+
+    def _run_dex_request(self, request: dict, root: Path) -> dict:
+        with self._acquire(self._slots):
+            request_path = root / "request.json"
             request_path.write_text(json.dumps(request), encoding="utf-8")
             data = self._execute([str(request_path)], module_name="droidasc_mcp.dex_worker")
         if len(data) > 256 * 1024:

@@ -2,17 +2,29 @@
 
 from __future__ import annotations
 
+import re
 from importlib.metadata import PackageNotFoundError, version
 
 from . import __version__
 from .config import Settings
 from .runner import DroidAscRunner, ReferenceKind
+from .sessions import DexSessions
 
 
 class DroidAscService:
     def __init__(self, settings: Settings, runner: DroidAscRunner | None = None) -> None:
         self.settings = settings
         self.runner = runner or DroidAscRunner(settings)
+        self.sessions = DexSessions(settings, self.runner)
+
+    def close(self):
+        self.sessions.shutdown()
+
+    def open_dex_session(self, dex_paths):
+        return self.sessions.open(self.settings.validate_dex_paths(dex_paths))
+
+    def query_dex_session(self, session_id, **query):
+        return self.sessions.query(session_id, _normalize_dex_query(query))
 
     def ping(self) -> dict[str, object]:
         try:
@@ -28,6 +40,19 @@ class DroidAscService:
             "timeout_seconds": self.settings.timeout_seconds,
             "max_worker_memory_bytes": self.settings.max_worker_memory_bytes,
             "max_page_size": self.settings.max_page_size,
+            "method_backend": {
+                "configured": self.settings.jadx_home is not None,
+                "required_jadx_version": "1.5.5",
+                "required_java": "JDK 17+",
+                "operations": ["list_methods", "get_method_source"],
+                "identity": "full_dex_method_descriptor",
+            },
+            "dex_sessions": {
+                "max_count": self.settings.max_dex_sessions,
+                "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
+                "max_disk_bytes": self.settings.max_dex_session_bytes,
+                "reuse": "validated_dex_bundle",
+            },
         }
 
     def apk_info(self, apk_path: str, *, include_sha256: bool = True) -> dict[str, object]:
@@ -36,13 +61,7 @@ class DroidAscService:
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
         paths = self.settings.validate_dex_paths(dex_paths)
-        if query.get("operation") == "find_refs":
-            query["value"] = _normalize_reference_value(query.get("kind"), query.get("value"))
-        if query.get("class_name") and (
-            query.get("operation") == "get_class_source" or not query.get("fuzzy_class", False)
-        ):
-            query["class_name"] = _normalize_class_name(query["class_name"])
-        return self.runner.analyze_dex(paths, query)
+        return self.runner.analyze_dex(paths, _normalize_dex_query(query))
 
     def get_manifest(self, apk_path: str, *, offset: int, limit: int) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
@@ -131,6 +150,32 @@ class DroidAscService:
         result["apk_path"] = str(apk)
         result["kind"] = kind
         return result
+
+
+def _normalize_dex_query(query):
+    if query.get("operation") == "get_method_source":
+        descriptor = query.get("method_descriptor")
+        owner_type = r"L[^;\[\]]+;"
+        value_type = rf"\[*(?:[ZBCSIJFD]|{owner_type})"
+        pattern = rf"({owner_type})->[^()/;\[\]]+\((?:{value_type})*\)(?:V|{value_type})"
+        if not descriptor or not re.fullmatch(pattern, descriptor):
+            raise ValueError(
+                "method_descriptor requires the full DEX class->name(args)return identity"
+            )
+        owner = descriptor.split("->", 1)[0]
+        if query.get("class_name") and _normalize_class_name(query["class_name"]) != owner:
+            raise ValueError("class_name and method_descriptor refer to different classes")
+        query["class_name"] = owner
+    if query.get("source_format", "auto") not in {"auto", "java", "smali"}:
+        raise ValueError("source_format must be auto, java, or smali")
+    if query.get("operation") == "find_refs":
+        query["value"] = _normalize_reference_value(query.get("kind"), query.get("value"))
+    if query.get("class_name") and (
+        query.get("operation") in {"get_class_source", "list_methods", "get_method_source"}
+        or not query.get("fuzzy_class", False)
+    ):
+        query["class_name"] = _normalize_class_name(query["class_name"])
+    return query
 
 
 def _normalize_reference_value(kind: str | None, value: str | None) -> str | None:

@@ -11,6 +11,7 @@ import sys
 import zipfile
 import zlib
 from contextlib import redirect_stderr, redirect_stdout
+from importlib.metadata import version
 from pathlib import Path
 
 from .config import Settings
@@ -129,10 +130,10 @@ def analyze(request: dict, root: Path) -> dict:
         max_apk_bytes=request["max_input_bytes"],
         max_output_bytes=request["max_output_bytes"],
         max_page_size=request["max_page_size"],
+        jadx_home=Path(request["jadx_home"]) if request.get("jadx_home") else None,
+        java_executable=request.get("java_executable"),
     )
-    paths = settings.validate_dex_paths(request["paths"])
     query = request["query"]
-    operation = query["operation"]
     runner = PublicCliRunner(settings)
     page = {"offset": query["offset"], "limit": query["limit"]}
     common = {
@@ -144,6 +145,16 @@ def analyze(request: dict, root: Path) -> dict:
     }
     try:
         runner._page_bounds(**page)
+        if request.get("prepared_root"):
+            prepared = Path(request["prepared_root"])
+            metadata = json.loads((prepared / "prepared.json").read_text(encoding="utf-8"))
+            common = metadata["common"]
+            if common["engine_version"] != version("droidasc"):
+                raise DexInputError("engine_changed", "Reopen the session with the current engine")
+            return query_prepared(
+                runner, prepared / "analysis.apk", common, metadata["owners"], query
+            )
+        paths = settings.validate_dex_paths(request["paths"])
         bundle = root / "analysis.apk"
         remaining = settings.max_apk_bytes
         with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -202,59 +213,88 @@ def analyze(request: dict, root: Path) -> dict:
                 "duplicates": duplicates,
             }
         common["class_count"] = len(owners)
-        if operation == "info":
+        common["engine_version"] = version("droidasc")
+        identity = {
+            "schema": 1,
+            "engine": common["engine_version"],
+            "dex_sha256": [item["sha256"] for item in common["sources"]],
+        }
+        common["input_id"] = hashlib.sha256(
+            json.dumps(identity, sort_keys=True).encode()
+        ).hexdigest()
+        if request.get("prepare"):
+            metadata = json.dumps({"common": common, "owners": owners})
+            if len(metadata.encode("utf-8")) > settings.max_output_bytes:
+                raise DexInputError("metadata_limit", "Prepared DEX metadata exceeds budget")
+            (root / "prepared.json").write_text(metadata, encoding="utf-8")
             return {**common, "status": "ok"}
-        if operation == "get_manifest":
-            return {
-                **common,
-                "status": "not_applicable",
-                "code": "no_manifest",
-                "message": "DEX files do not contain AndroidManifest.xml",
-            }
-        if operation == "list_classes":
-            result = runner.list_classes(
-                bundle, prefix=query["prefix"], threads=query["threads"], **page
-            ).as_dict()
-            result["items"] = [
-                {"class_name": name, "dex_entry": owners[name]} for name in result["items"]
-            ]
-        elif operation == "get_class_source":
-            name = query["class_name"]
-            if not name:
-                raise DexInputError("invalid_query", "class_name is required")
-            if name not in owners:
-                raise DexInputError(
-                    "class_not_found", "Class is absent from the supplied DEX files"
-                )
-            result = runner.get_class_source(
-                bundle, class_name=name, threads=query["threads"], **page
-            ).as_dict()
-            result.update(
-                {
-                    "class_name": name,
-                    "dex_entry": owners[name],
-                    "source": "\n".join(result.pop("items")),
-                }
-            )
-        elif operation == "find_refs":
-            result = runner.find_refs(
-                bundle,
-                kind=query["kind"],
-                value=query["value"],
-                class_name=query["class_name"],
-                fuzzy_class=query["fuzzy_class"],
-                threads=query["threads"],
-                **page,
-            )
-        else:
-            raise DexInputError("invalid_query", "Unknown DEX operation")
-        return {**common, **result, "status": "ok"}
+        return query_prepared(runner, bundle, common, owners, query)
     except DexInputError as exc:
         return {**common, "status": "error", "code": exc.code, "message": str(exc)}
     except DroidAscError as exc:
         return {**common, "status": "error", "code": "engine_error", "message": str(exc)}
     except ValueError as exc:
         return {**common, "status": "error", "code": "invalid_query", "message": str(exc)}
+
+
+def query_prepared(runner, bundle, common, owners, query):
+    operation = query["operation"]
+    page = {"offset": query["offset"], "limit": query["limit"]}
+    if operation in {"list_methods", "get_method_source"}:
+        from .method_backend import query_methods
+
+        name = query.get("class_name")
+        if not name:
+            raise ValueError("class_name is required")
+        if name not in owners:
+            return {**common, "status": "error", "code": "class_not_found"}
+        result = query_methods(runner.settings, bundle, owners[name], query)
+        return {**common, **result, "class_name": name, "dex_entry": owners[name]}
+    if operation == "info":
+        return {**common, "status": "ok"}
+    if operation == "get_manifest":
+        return {
+            **common,
+            "status": "not_applicable",
+            "code": "no_manifest",
+            "message": "DEX files do not contain AndroidManifest.xml",
+        }
+    if operation == "list_classes":
+        result = runner.list_classes(
+            bundle, prefix=query["prefix"], threads=query["threads"], **page
+        ).as_dict()
+        result["items"] = [
+            {"class_name": name, "dex_entry": owners[name]} for name in result["items"]
+        ]
+    elif operation == "get_class_source":
+        name = query["class_name"]
+        if not name:
+            raise DexInputError("invalid_query", "class_name is required")
+        if name not in owners:
+            raise DexInputError("class_not_found", "Class is absent from the supplied DEX files")
+        result = runner.get_class_source(
+            bundle, class_name=name, threads=query["threads"], **page
+        ).as_dict()
+        result.update(
+            {
+                "class_name": name,
+                "dex_entry": owners[name],
+                "source": "\n".join(result.pop("items")),
+            }
+        )
+    elif operation == "find_refs":
+        result = runner.find_refs(
+            bundle,
+            kind=query["kind"],
+            value=query["value"],
+            class_name=query["class_name"],
+            fuzzy_class=query["fuzzy_class"],
+            threads=query["threads"],
+            **page,
+        )
+    else:
+        raise DexInputError("invalid_query", "Unknown DEX operation")
+    return {**common, **result, "status": "ok"}
 
 
 def main():

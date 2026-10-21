@@ -2,6 +2,20 @@
 
 ## Reproduce
 
+Candidate exact-method acceptance additionally needs the optional pinned backend:
+`uv run python scripts/setup_jadx.py`, JDK 17 on PATH, and
+`DROIDASC_MCP_JADX_HOME=/absolute/path/to/artifacts/jadx-1.5.5`.
+CI verifies the upstream ZIP SHA-256 before extracting it. Use the newly built fixture (including
+`MethodCases.java`), set `ASC_TEST_EXPECT_FIXTURE=1` and `ASC_TEST_APK`, then run the full suite.
+Strict fixture mode fails on skipped optional-backend tests as well as missing APK tests.
+
+New gates cover immutable sessions after source replacement/deletion, concurrent sample isolation,
+warm/cold output equivalence, preparation capacity, TTL/close pinning, cancellation/failure cleanup
+and normal server lifespan teardown. Exact-method transport gates check overload separation,
+constructors, synthetic bridges, array signatures, native declarations, Unicode identifiers,
+Java-to-Smali target preservation and actual descendant JVM cancellation/recovery. These are small
+fixture checks; they do not establish equivalent Java correctness or speed on arbitrary obfuscation.
+
 ```bash
 uv sync --locked --extra dev
 uv run pytest -q -s --junitxml=artifacts/validation/tests.xml -o junit_logging=all

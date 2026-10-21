@@ -43,7 +43,9 @@ def main():
                 "uv.lock",
                 "scripts/verify_dist.py",
                 "scripts/stability_check.py",
+                "scripts/stability_dex.py",
                 "scripts/validate_corpus.py",
+                "src/droidasc_mcp/MethodBridge.java",
             )
             for name in required:
                 assert any(item.endswith("/" + name) for item in members), name

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import asynccontextmanager
 from typing import Literal
 
+import anyio
 from mcp.server import MCPServer
 
 from .config import Settings
@@ -17,7 +19,16 @@ def build_server(
 ) -> MCPServer:
     settings = settings or Settings.from_env()
     service = DroidAscService(settings, runner)
-    mcp = MCPServer("droidasc-mcp")
+
+    @asynccontextmanager
+    async def lifespan(server):
+        try:
+            yield
+        finally:
+            with anyio.CancelScope(shield=True):
+                await anyio.to_thread.run_sync(service.close)
+
+    mcp = MCPServer("droidasc-mcp", lifespan=lifespan)
 
     @mcp.tool()
     def asc_ping() -> dict[str, object]:
@@ -98,10 +109,18 @@ def build_server(
     def asc_analyze_dex(
         dex_paths: list[str],
         operation: Literal[
-            "info", "list_classes", "get_class_source", "find_refs", "get_manifest"
+            "info",
+            "list_classes",
+            "get_class_source",
+            "find_refs",
+            "get_manifest",
+            "list_methods",
+            "get_method_source",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
+        method_descriptor: str | None = None,
+        source_format: Literal["auto", "java", "smali"] = "auto",
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
         value: str | None = None,
         fuzzy_class: bool = False,
@@ -114,12 +133,76 @@ def build_server(
         Returns status=ok, error, or not_applicable. Errors carry a diagnostic code;
         duplicate class definitions are rejected. Manifest is not applicable to DEX.
         Coverage is limited to supplied files; this tool does not unpack applications.
+        list_methods/get_method_source require optional JADX 1.5.5 and JDK 17+.
+        Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
+        source_format=auto returns Java or exact-method Smali with fell_back/reason;
+        java never silently falls back, smali always disassembles that exact method.
         """
         return service.analyze_dex(
             dex_paths,
             operation=operation,
             prefix=prefix,
             class_name=class_name,
+            method_descriptor=method_descriptor,
+            source_format=source_format,
+            kind=kind,
+            value=value,
+            fuzzy_class=fuzzy_class,
+            threads=threads,
+            offset=offset,
+            limit=limit,
+        )
+
+    @mcp.tool()
+    def asc_open_dex_session(dex_paths: list[str]) -> dict[str, object]:
+        """Validate and snapshot DEX inputs once; return an immutable hash-bound session.
+
+        Reuses the validated bundle, not a resident engine. Idle sessions expire and may
+        be evicted at capacity. Source file changes require opening a new session.
+        """
+        return service.open_dex_session(dex_paths)
+
+    @mcp.tool()
+    def asc_close_dex_session(session_id: str) -> dict[str, object]:
+        """Close a DEX session; active queries finish before its stored files are removed."""
+        return service.sessions.close(session_id)
+
+    @mcp.tool()
+    def asc_query_dex_session(
+        session_id: str,
+        operation: Literal[
+            "info",
+            "list_classes",
+            "get_class_source",
+            "find_refs",
+            "get_manifest",
+            "list_methods",
+            "get_method_source",
+        ] = "info",
+        prefix: str | None = None,
+        class_name: str | None = None,
+        method_descriptor: str | None = None,
+        source_format: Literal["auto", "java", "smali"] = "auto",
+        kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
+        value: str | None = None,
+        fuzzy_class: bool = False,
+        threads: int = 8,
+        offset: int = 0,
+        limit: int = 200,
+    ) -> dict[str, object]:
+        """Query an immutable DEX session in a supervised worker, with original provenance.
+
+        list_methods/get_method_source require optional JADX 1.5.5 and JDK 17+.
+        method_descriptor is the full DEX class->name(args)return identity.
+        source_format=auto may return exact-method Smali with an explicit fallback reason.
+        """
+        return service.query_dex_session(
+            session_id,
+            operation=operation,
+            prefix=prefix,
+            class_name=class_name,
+            method_descriptor=method_descriptor,
+            source_format=source_format,
             kind=kind,
             value=value,
             fuzzy_class=fuzzy_class,

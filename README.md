@@ -22,6 +22,9 @@ structured data instead of unbounded terminal output.
 | `asc_get_class_source` | Decompile one class with line pagination |
 | `asc_find_refs` | Find string/type/method/field references; direct hierarchy queries (unreleased) |
 | `asc_analyze_dex` | Analyze a bare DEX or explicit DEX set with source hashes (unreleased) |
+| `asc_open_dex_session` | Snapshot validated DEX inputs into an immutable bounded session (unreleased) |
+| `asc_query_dex_session` | Query that session with the original hashes and DEX provenance (unreleased) |
+| `asc_close_dex_session` | Close the session and release its private files (unreleased) |
 
 ## Install
 
@@ -167,6 +170,59 @@ missing code, decrypt runtime-only method bodies, or reconstruct the original ma
 Every result is limited to supplied files (`coverage="supplied_files_only"`), with runtime
 completeness marked unknown. Untrusted dumps still require an isolated analysis environment.
 
+### Immutable sessions
+
+Open with `asc_open_dex_session(dex_paths=[...])`, retain its `session_id`, then call
+`asc_query_dex_session(session_id="...", operation="list_classes")`. Query parameters match
+`asc_analyze_dex`. Close with `asc_close_dex_session(session_id="...")`.
+
+The `input_id` binds ordered DEX SHA-256 hashes, schema and ASC version. The UUID session ID
+identifies one private snapshot, not a global current sample. Changing/deleting original files
+does not mutate that snapshot. Query options are evaluated afresh, not cached under the input ID.
+Reuse skips reimport, integrity checks and the duplicate-class scan; **it does not retain a
+resident decompiler or promise warm engine latency**. Method results identify the optional backend
+version separately. Sessions are local to this server process, not shared across hosts/restarts.
+
+Idle sessions expire (swept at most every 30 seconds), and least-recently-used idle sessions can
+be evicted at capacity. Active queries pin storage. Closing an active session prevents new queries
+and returns `cleanup_pending=true`; the last active query releases the files. Normal MCP lifespan
+shutdown cleans sessions; abrupt host termination may leave OS temporary files. A lost handle
+returns `session_not_found`, never silently reloads changed evidence. Cancellation or failed opens
+release their reservations. Concurrent preparation has reserved disk/count capacity before starting.
+
+### Exact methods and Smali
+
+Optional, unreleased: install the official [JADX 1.5.5 distribution](https://github.com/skylot/jadx/releases/tag/v1.5.5)
+and a JDK 17 or newer. Set `DROIDASC_MCP_JADX_HOME` to its extracted directory (containing `lib/`).
+Set `DROIDASC_MCP_JAVA` to the JDK's `java` executable, or put it on `PATH`. A JRE alone cannot run
+the source bridge. The Python package does not bundle/download JADX or require Java for ASC tools.
+
+```text
+asc_query_dex_session(session_id="...", operation="list_methods", class_name="com.example.Main")
+asc_query_dex_session(session_id="...", operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_method_source", method_descriptor="Lcom/example/Main;->check(I)Z", source_format="smali")
+```
+
+`list_methods` reads raw DEX definitions through dexlib2, including constructors, synthetic/bridge
+methods, native/abstract declarations, complete parameter types and return types. It sorts full
+descriptors before pagination. No method name, partial prototype, or overload index selects a body.
+`get_method_source` requires the exact full descriptor; an absent overload returns `method_not_found`.
+Class mismatches are rejected rather than choosing another owner.
+
+`source_format=auto` uses JADX's exact short-ID lookup and public method-code API. If Java is absent
+(for example an elided default constructor) or reports a decompilation error, it disassembles the
+**same dexlib2 method object**, not a name-matched slice of class Smali. Results carry `format`,
+`fell_back`, `fallback_reason`, backend version, original hashes and `dex_entry`. `java` returns
+`java_unavailable` instead of falling back; `smali` always returns exact-method disassembly.
+Java error/warning counts are engine diagnostics, not proof of semantic correctness. Reference
+tools still use ASC's best-effort name-level text; this does not introduce descriptor-exact xrefs.
+
+Missing configuration returns `backend_unavailable`; other JADX versions are rejected. Each
+method query starts a JVM (512 MiB maximum heap) inside the existing worker tree, sharing its
+timeout, aggregate memory, output and cancellation limits. This adds startup cost, not a speedup.
+Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
+responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
+
 ## Configuration
 
 | Environment variable | Default | Meaning |
@@ -178,6 +234,11 @@ completeness marked unknown. Untrusted dumps still require an isolated analysis 
 | `DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES` | `2147483648` | Worker-tree budget (Windows Job aggregate; POSIX per-process address-space cap plus aggregate RSS watchdog) |
 | `DROIDASC_MCP_MAX_PAGE_SIZE` | `1000` | Maximum lines returned by one call |
 | `DROIDASC_MCP_MAX_PARALLEL` | `2` | Maximum concurrent ASC subprocesses |
+| `DROIDASC_MCP_MAX_DEX_SESSIONS` | `4` | Maximum open/preparing DEX sessions |
+| `DROIDASC_MCP_DEX_SESSION_TTL_SECONDS` | `1800` | Idle session expiry |
+| `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage plus concurrent preparation reservations |
+| `DROIDASC_MCP_JADX_HOME` | unset | Optional JADX 1.5.5 distribution directory |
+| `DROIDASC_MCP_JAVA` | `java` on PATH | Optional JDK 17+ executable |
 
 ## Design
 
