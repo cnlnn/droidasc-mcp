@@ -22,6 +22,11 @@ Every successful read/list/summary includes the input SHA-256 and size. The work
 one file, checks file identity before/after analysis and rehashes it before returning.
 A detected modification discards the result as `input_changed`. There is no extraction.
 No archive result cache is introduced.
+Path binding is checked by reopening the path and comparing handle-based metadata;
+it does not compare `stat(path)` timestamps directly against `fstat(fd)`. Windows
+can expose creation/change time differently through those APIs, as reflected in
+[CPython's Windows stat implementation](https://github.com/python/cpython/blob/3.12/Modules/posixmodule.c)
+and [handle implementation](https://github.com/python/cpython/blob/3.12/Python/fileutils.c).
 
 The archive worker uses the existing bounded subprocess, process-tree cancellation,
 timeout, memory/output limits and shared concurrency semaphore. Temporary request storage
@@ -73,7 +78,7 @@ input, response/entry bounds and cleanup after worker failure. It also tests the
 `aapt2` output parser against application metadata that must not overwrite a component name.
 Real stdio and HTTP tests exercise all three tools, argument bounds and compiled binary
 Manifest decoding alongside the existing ASC raw manifest operation.
-The focused archive/server selection passed 49 tests locally; full native/package gates
+The focused archive/server selection passed 51 tests locally; full native/package gates
 are separate from this narrow result.
 
 The locally retained Taobao 10.62.0 APK was checked through a real stdio MCP server:

@@ -335,12 +335,15 @@ def analyze(request):
                 result = _query(
                     archive, _entries(archive), request["query"], request["max_page_size"]
                 )
-            if (
-                _identity(before) != _identity(os.fstat(handle.fileno()))
-                or _identity(before) != _identity(apk.stat())
-                or source_hash != _digest(handle)
-            ):
-                raise ArchiveError("input_changed", "APK changed during analysis; retry")
+            # Windows stat(path) and fstat(fd) can expose different ctime semantics.
+            # Reopen the path so both identity checks use the same handle-based API.
+            with apk.open("rb") as current:
+                if (
+                    _identity(before) != _identity(os.fstat(handle.fileno()))
+                    or _identity(before) != _identity(os.fstat(current.fileno()))
+                    or source_hash != _digest(handle)
+                ):
+                    raise ArchiveError("input_changed", "APK changed during analysis; retry")
         return {
             "apk_path": str(apk),
             "apk_sha256": source_hash,

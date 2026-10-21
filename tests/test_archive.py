@@ -209,7 +209,10 @@ def test_unsafe_entries_rejected_before_selection(tmp_path, name):
     path = tmp_path / "unsafe.apk"
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr("readme.txt", b"safe")
-        archive.writestr(name, b"unsafe")
+        info = zipfile.ZipInfo("raw-entry")
+        # ZipInfo construction normalizes native backslashes on Windows.
+        info.filename = info.orig_filename = name
+        archive.writestr(info, b"unsafe")
     result = analyze(path, operation="read_entry", entry_path="readme.txt")
     assert result["code"] == "unsafe_entry" and "content" not in result
 
@@ -243,6 +246,7 @@ def test_duplicates_and_special_files(tmp_path):
         (b"\x03\x00\x08\x00" + struct.pack("<I", 32), "invalid_xml"),
         (b"<manifest>" + b"<a/>" * 20_001 + b"</manifest>", "xml_limit"),
     ],
+    ids=["unclosed", "dtd", "root", "applications", "binary-empty", "binary-length", "nodes"],
 )
 def test_invalid_manifest_is_explicit(tmp_path, xml, code):
     path = tmp_path / "invalid.apk"
@@ -275,6 +279,48 @@ def test_input_change_discards_result(archive_apk, monkeypatch):
         return result
 
     monkeypatch.setattr(worker, "_query", changed)
+    result = analyze(archive_apk, operation="list_entries")
+    assert result["code"] == "input_changed" and "items" not in result
+
+
+def test_path_and_handle_timestamp_semantics_are_not_mixed(archive_apk, monkeypatch):
+    query, path_stat = worker._query, Path.stat
+
+    def changed_stat(path, *args, **kwargs):
+        info = path_stat(path, *args, **kwargs)
+        if path != archive_apk:
+            return info
+        return SimpleNamespace(
+            **{
+                name: getattr(info, name) for name in ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+            },
+            st_ctime_ns=info.st_ctime_ns + 100,
+        )
+
+    def queried(*args):
+        result = query(*args)
+        monkeypatch.setattr(Path, "stat", changed_stat)
+        return result
+
+    monkeypatch.setattr(worker, "_query", queried)
+    result = analyze(archive_apk, operation="list_entries")
+    assert result["status"] == "ok", result
+
+
+def test_reopened_path_must_still_identify_the_original_file(archive_apk, monkeypatch):
+    replacement = archive_apk.with_name("replacement.apk")
+    replacement.write_bytes(archive_apk.read_bytes())
+    query, path_open = worker._query, Path.open
+
+    def replaced_open(path, *args, **kwargs):
+        return path_open(replacement if path == archive_apk else path, *args, **kwargs)
+
+    def queried(*args):
+        result = query(*args)
+        monkeypatch.setattr(Path, "open", replaced_open)
+        return result
+
+    monkeypatch.setattr(worker, "_query", queried)
     result = analyze(archive_apk, operation="list_entries")
     assert result["code"] == "input_changed" and "items" not in result
 
