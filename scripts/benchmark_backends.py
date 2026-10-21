@@ -99,10 +99,19 @@ async def benchmark(args):
                     "definition_count",
                     "coverage",
                     "instruction_scan_complete",
+                    "scanned_methods",
+                    "scanned_instructions",
+                    "methods_without_code",
+                    "scan_errors",
+                    "dynamic_sites",
                     "query_cache",
                 ):
                     if key in result:
                         metric[key] = result[key]
+                if "items" in result:
+                    metric["page_sha256"] = hashlib.sha256(
+                        json.dumps(result["items"], sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest()
                 report["operations"].append(metric)
                 save()
                 print(json.dumps(metric), flush=True)

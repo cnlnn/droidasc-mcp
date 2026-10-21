@@ -14,8 +14,8 @@ import pytest
 from mcp import Client
 
 from droidasc_mcp.config import ApkPathError
-from droidasc_mcp.dex_worker import BoundedText, DexInputError, copy_dex
-from droidasc_mcp.runner import DroidAscError, DroidAscRunner
+from droidasc_mcp.dex_worker import BoundedText, DexInputError, PublicCliRunner, analyze, copy_dex
+from droidasc_mcp.runner import DroidAscError, DroidAscRunner, Snapshot
 from droidasc_mcp.server import build_server
 
 
@@ -39,6 +39,44 @@ def test_copy_preserves_exact_bytes_and_hash(tmp_path):
     with zipfile.ZipFile(tmp_path / "analysis.apk") as archive:
         assert archive.read("classes.dex") == data
         assert archive.namelist() == ["classes.dex"]
+    assert path.read_bytes() == data
+
+
+def test_preparation_stores_exact_dex_without_recompression(settings, tmp_path, monkeypatch):
+    path = tmp_path / "input.dex"
+    data = bytes(empty_dex())
+    path.write_bytes(data)
+    root = tmp_path / "prepared"
+    root.mkdir()
+    inspected = []
+
+    def inspect(self, args):
+        single = Path(args[-1])
+        with zipfile.ZipFile(single) as archive:
+            assert archive.getinfo("classes.dex").compress_type == zipfile.ZIP_STORED
+            assert archive.read("classes.dex") == data
+        inspected.append(single)
+        return Snapshot(0, (), 0)
+
+    monkeypatch.setattr(PublicCliRunner, "_get_snapshot", inspect)
+    result = analyze(
+        {
+            "allowed_roots": [str(tmp_path)],
+            "max_input_bytes": settings.max_apk_bytes,
+            "max_output_bytes": settings.max_output_bytes,
+            "max_page_size": settings.max_page_size,
+            "query": {"offset": 0, "limit": 10},
+            "paths": [str(path)],
+            "prepare": True,
+        },
+        root,
+    )
+    assert result["status"] == "ok", result
+    assert result["sources"][0]["sha256"] == hashlib.sha256(data).hexdigest()
+    with zipfile.ZipFile(root / "analysis.apk") as archive:
+        assert archive.getinfo("classes.dex").compress_type == zipfile.ZIP_STORED
+        assert archive.read("classes.dex") == data
+    assert inspected and all(not p.exists() for p in inspected)
     assert path.read_bytes() == data
 
 

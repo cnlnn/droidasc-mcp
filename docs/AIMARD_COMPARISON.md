@@ -90,6 +90,17 @@ See [local acceptance](VALIDATION.md#interactive-discovery-and-exact-page-reuse)
 The full index is no longer a prerequisite for ordinary discovery. Type-relation
 queries still build/reuse it. A full competitor call-graph build has not been timed here.
 
+The 2026-10-22 follow-up removes temporary DEX recompression and memoizes decoded
+member-ID comparisons without skipping instruction decoding. A fresh stdio rerun on
+the same sample reduced immutable session preparation from **13.2285 to 0.8306 s**,
+method references from **8.1295 to 6.8328 s**, and field references from **6.9239 to
+5.3987 s**. A separate three-trial old/new engine comparison verified every method/field
+row and diagnostic; the saved independent field oracle still matches. See
+[measurement details and storage trade-off](VALIDATION.md#snapshot-and-exact-reference-latency-follow-up-2026-10-22).
+This materially reduces our end-to-end wait, but does not establish faster cold queries
+than the pinned competitor measurements above. Resident-cache repeat latency remains
+another gap; their field-count correctness discrepancy also remains relevant.
+
 An additional opt-in durable index cache now reuses a completed full index across
 server restarts. On the same APK, a fresh server restored the 2.19-GiB index and
 queried all 332 field-reference rows in **3.3324 seconds**, with Java intentionally

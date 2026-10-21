@@ -60,8 +60,12 @@ writes entirely: Windows `_locking` supports byte ranges beyond EOF, as document
 by [Microsoft](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking).
 A regression asserts the lock remains empty across repeated acquisition, alongside
 the existing separate-process publication and killed-writer tests. The corrected
-suite contains 271 tests; its native CI conclusion, not the earlier local run, is
-the release gate.
+suite contains 271 tests. The corrected implementation at `625aa32` passed
+[CI 39624408098](https://github.com/cnlnn/droidasc-mcp/actions/runs/39624408098),
+including all eight Windows/Linux Python 3.10-3.13 suites: downloaded JUnit XML
+records 271 tests and zero failures/errors/skips in each. Both native Rust builds,
+both stability jobs and both clean-distribution jobs also passed. These results
+belong to that commit, not subsequent performance changes.
 
 The same 12-DEX Taobao APK was then tested through two separate real stdio MCP server
 lifetimes. The first server built and retained the complete 2,349,907,968-byte index in
@@ -134,6 +138,55 @@ measurements, not controlled speed rankings. The harness still explicitly sets
 4 GiB / 900 seconds, although these queries do not build an index and the page
 cache itself is capped at 4 MiB. Reproduce using `scripts/benchmark_backends.py
 <apk> --interactive`; raw report: `artifacts/reverse-acceptance/taobao-interactive-benchmark.json`.
+
+### Snapshot and exact-reference latency follow-up, 2026-10-22
+
+The next candidate stores temporary immutable DEX snapshots without ZIP compression.
+Header/table bounds, SHA-1/Adler-32/SHA-256 checks, input-change detection, public-CLI
+class counts and duplicate-class rejection remain in place. This trades disk space for
+preparation time: this sample has 112,915,728 uncompressed DEX bytes versus 43,386,976
+compressed DEX bytes in the original APK. Existing session reservations already budget
+twice the uncompressed input bytes; neither originals nor reservation limits change.
+
+Exact incoming-reference scans now memoize descriptor comparisons by decoded member ID,
+within one DEX and one method/field query. The bounded memo is 64 KiB per currently
+scanned DEX. Repeated IDs avoid constructing reference objects and descriptors. Instruction
+iteration, unknown/optimized-opcode rejection, code-unit offsets, dynamic diagnostics,
+complete counts and paging remain unchanged; this is not a raw-byte pattern scan.
+
+Fresh-server stdio MCP runs on the same Taobao sample, with no full index:
+
+| Operation | Before | Stored snapshots only | Final candidate |
+| --- | --- | --- | --- |
+| Immutable session preparation | 13.2285 s | 0.8335 s | 0.8306 s |
+| Exact `String.equals(Object)` references | 8.1295 s | 7.5193 s | 6.8328 s |
+| Exact `Build.MODEL` references | 6.9239 s | 6.9822 s | 5.3987 s |
+
+All runs returned the same 24,461 method and 332 field instruction rows by count, and
+identical first-100-row SHA-256 values. All exact scans decoded 606,974 methods and
+12,495,817 instructions with zero scan errors. Final identical-page repeats took
+0.2466-0.3981 seconds. Original APK hashes were unchanged and all sessions closed.
+The benchmark now records page hashes and decoder counters in its JSON report.
+These are host-specific measurements, not a universal speed ranking or a CPU/RAM claim.
+
+A separate engine-only comparison alternated fresh JVMs running pre-change `625aa32`
+and candidate sources against the same original APK, three trials each. Method median
+wall time was 8.7104 -> 7.5403 seconds; field median was 6.4034 -> 5.8103 seconds.
+All 24,461 method rows, 332 field rows and every diagnostic matched on every trial.
+The field rows also matched the previously saved independent Androguard decoder oracle,
+bound to the unchanged APK SHA-256; this was reuse of that oracle, not a new oracle run.
+Earlier trial reports, including a slower single candidate field run, are retained.
+
+Regression fixtures deliberately reuse member ID zero for different methods and fields
+in separate DEX files, exercise repeated invoke/static-range/read/write instructions,
+and check exact results through stdio and HTTP. The stored-copy test checks exact bytes
+and hashes in both the immutable bundle and the public-CLI per-DEX temporary archive.
+Complete local/native/package gates must be read for the exact candidate commit, not
+inferred from these narrower comparisons.
+
+Local evidence: `artifacts/reverse-acceptance/taobao-interactive-before-stored.json`,
+`taobao-interactive-after-stored.json`, `taobao-interactive-optimized-final.json` and
+`artifacts/validation/reference-memo-parity.json`. Private APKs and reports remain ignored.
 
 The same real MCP adapter exercised both Python and Rust manifest/class/source/
 string-reference operations on Taobao and Douyin 39.1.0 (53 DEX, 551,538 classes).

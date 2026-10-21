@@ -63,6 +63,8 @@ def main():
                 "tests/fixtures/xrefs/first/Types.smali",
                 "tests/fixtures/xrefs/first/Caller.smali",
                 "tests/fixtures/xrefs/boundary/Boundary.smali",
+                "tests/fixtures/xrefs/memo_first/MemoA.smali",
+                "tests/fixtures/xrefs/memo_second/MemoB.smali",
                 "tests/fixtures/android/complex/src/main/java/org/example/complex/CoroutineCases.kt",
             )
             for name in required:

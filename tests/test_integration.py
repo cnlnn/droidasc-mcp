@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import socket
+import struct
 import subprocess
 import sys
 import threading
@@ -137,6 +138,81 @@ async def test_kotlin_r8_methods(transport, tmp_path, request, monkeypatch):
             assert row in calls["items"]
         closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
         assert closed.structured_content["cleanup_pending"] is False
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_reference_memo_is_scoped_to_dex_and_member_kind(
+    transport, tmp_path, memo_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(p, tmp_path)) for p in memo_dex_files]
+    # Both files reuse operand ID zero for different method and field descriptors.
+    for path in paths:
+        data = Path(path).read_bytes()
+        class_offset = struct.unpack_from("<I", data, 100)[0]
+        class_data = struct.unpack_from("<I", data, class_offset + 24)[0]
+
+        def uleb(offset, data=data):
+            value = shift = 0
+            while True:
+                byte = data[offset]
+                offset += 1
+                value |= (byte & 127) << shift
+                if byte < 128:
+                    return value, offset
+                shift += 7
+
+        cursor = class_data
+        counts = []
+        for _ in range(4):
+            count, cursor = uleb(cursor)
+            counts.append(count)
+        assert counts == [0, 0, 1, 0]
+        for _ in range(3):
+            code_offset, cursor = uleb(cursor)
+        code_start = code_offset + 16
+        assert [
+            struct.unpack_from("<H", data, code_start + offset)[0] for offset in (2, 8, 14, 18)
+        ] == [0, 0, 0, 0]
+
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        assert not opened.is_error, opened
+        key = opened.structured_content["session_id"]
+        for owner, method, field, entry in (
+            ("La/Target;", "hit", "value", "classes.dex"),
+            ("Lb/Target;", "miss", "other", "classes2.dex"),
+        ):
+            for operation, argument, descriptor, offsets in (
+                ("find_method_refs", "method_descriptor", owner + "->" + method + "()V", [0, 3]),
+                ("find_field_refs", "field_descriptor", owner + "->" + field + ":I", [6, 8]),
+            ):
+                reply = await client.call_tool(
+                    "asc_query_dex_session",
+                    {"session_id": key, "operation": operation, argument: descriptor},
+                )
+                assert not reply.is_error, reply
+                result = reply.structured_content
+                assert result["status"] == "ok", result
+                assert result["total"] == 2
+                assert [row["instruction_offset"] for row in result["items"]] == offsets
+                assert {row["dex_entry"] for row in result["items"]} == {entry}
+                assert result["scanned_methods"] == 2
+                assert result["scanned_instructions"] == 10
+                assert result["instruction_scan_complete"] is True
+                assert result["scan_errors"] == 0
+        closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+        assert not closed.is_error, closed
 
 
 @pytest.mark.anyio

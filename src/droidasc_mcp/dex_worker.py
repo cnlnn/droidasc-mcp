@@ -161,7 +161,8 @@ def analyze(request: dict, root: Path) -> dict:
         paths = settings.validate_dex_paths(request["paths"])
         bundle = root / "analysis.apk"
         remaining = settings.max_apk_bytes
-        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        # Temporary copies use the existing uncompressed-byte storage reservation.
+        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
             for index, source in enumerate(paths):
                 entry = "classes.dex" if index == 0 else f"classes{index + 1}.dex"
                 try:
@@ -183,7 +184,7 @@ def analyze(request: dict, root: Path) -> dict:
             for record in common["sources"]:
                 single = root / (record["dex_entry"] + ".apk")
                 with (
-                    zipfile.ZipFile(single, "w", compression=zipfile.ZIP_DEFLATED) as out,
+                    zipfile.ZipFile(single, "w", compression=zipfile.ZIP_STORED) as out,
                     archive.open(record["dex_entry"]) as source,
                     out.open("classes.dex", "w") as target,
                 ):

@@ -3,6 +3,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import com.google.gson.GsonBuilder;
 import com.android.tools.smali.dexlib2.DexFileFactory;
+import com.android.tools.smali.dexlib2.ReferenceType;
+import com.android.tools.smali.dexlib2.dexbacked.instruction.DexBackedInstruction;
 import com.android.tools.smali.dexlib2.iface.*;
 import com.android.tools.smali.dexlib2.iface.instruction.*;
 import com.android.tools.smali.dexlib2.iface.instruction.formats.UnknownInstruction;
@@ -24,6 +26,27 @@ public class MethodBridge {
 
     static String descriptor(FieldReference field) {
         return field.getDefiningClass() + "->" + field.getName() + ":" + field.getType();
+    }
+
+    static boolean matches(Instruction instruction, ReferenceInstruction referenced, String requested, byte[] memo) {
+        int index = -1;
+        if (instruction instanceof DexBackedInstruction backed) {
+            // Decoded standard member operands share a 16-bit ID at code unit one.
+            switch (instruction.getOpcode().format) {
+                case Format21c, Format22c, Format35c, Format3rc, Format45cc, Format4rcc:
+                    index = backed.dexFile.getDataBuffer().readUshort(backed.instructionStart + 2);
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (index >= 0 && memo[index] != 0) return memo[index] == 1;
+        Reference reference = referenced.getReference();
+        String value = reference instanceof MethodReference method
+            ? descriptor(method) : descriptor((FieldReference) reference);
+        boolean matched = value.equals(requested);
+        if (index >= 0) memo[index] = (byte) (matched ? 1 : 2);
+        return matched;
     }
 
     static Map<String, Object> run(String[] args) throws Exception {
@@ -169,6 +192,8 @@ public class MethodBridge {
         List<Map<String, Object>> items = new ArrayList<>();
         List<Map<String, Object>> unresolved = new ArrayList<>();
         for (String entry : entries) {
+            // Member IDs are local to each DEX and to this one method/field query.
+            byte[] memo = incoming ? new byte[65536] : null;
             TreeMap<String, ClassDef> classes = new TreeMap<>();
             for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses())
                 classes.put(cls.getType(), cls);
@@ -188,12 +213,14 @@ public class MethodBridge {
                         scannedInstructions++;
                         String opcode = instruction.getOpcode().name;
                         if (instruction instanceof ReferenceInstruction referenced) {
-                            Reference reference = referenced.getReference();
+                            int referenceType = referenced.getReferenceType();
                             String callee = null, fieldAccess = null;
-                            if (!fields && reference instanceof MethodReference method) {
-                                callee = descriptor(method);
-                            } else if (fields && reference instanceof FieldReference field) {
-                                callee = descriptor(field);
+                            if (!fields && referenceType == ReferenceType.METHOD) {
+                                callee = incoming
+                                    ? (matches(instruction, referenced, requested, memo) ? requested : null)
+                                    : descriptor((MethodReference) referenced.getReference());
+                            } else if (fields && referenceType == ReferenceType.FIELD) {
+                                callee = matches(instruction, referenced, requested, memo) ? requested : null;
                                 if (opcode.startsWith("iget") || opcode.startsWith("sget"))
                                     fieldAccess = "read";
                                 else if (opcode.startsWith("iput") || opcode.startsWith("sput"))
@@ -232,8 +259,8 @@ public class MethodBridge {
                                     total++;
                                 }
                             }
-                            if (reference instanceof CallSiteReference
-                                    || reference instanceof MethodHandleReference
+                            if (referenceType == ReferenceType.CALL_SITE
+                                    || referenceType == ReferenceType.METHOD_HANDLE
                                     || opcode.startsWith("invoke-polymorphic")) {
                                 dynamicSites++;
                                 if (unresolved.size() < 20) unresolved.add(Map.of(

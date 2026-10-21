@@ -110,5 +110,10 @@ def smali_dex_files(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def memo_dex_files(tmp_path_factory):
+    return assemble_smali(tmp_path_factory, ("memo_first", "memo_second"))
+
+
+@pytest.fixture(scope="session")
 def boundary_dex_file(tmp_path_factory):
     return assemble_smali(tmp_path_factory, ("boundary",))[0]
