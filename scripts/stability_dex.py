@@ -38,7 +38,9 @@ def main():
         identities.append(opened["input_id"])
         try:
             query = {"operation": "info", "offset": 0, "limit": 100}
-            if mode == 4:
+            if mode == 5:
+                query.update(operation="build_xref_index")
+            elif mode == 4:
                 query.update(
                     operation="find_field_refs",
                     field_descriptor=args.field_descriptor,
@@ -53,7 +55,12 @@ def main():
             result = service.query_dex_session(key, **query)
             assert result["status"] == "ok", result
             assert result["input_id"] == opened["input_id"]
-            if mode == 4:
+            if mode == 5:
+                assert result["index"]["reused"] is False
+                repeat = service.query_dex_session(key, **query)
+                assert repeat["index"]["reused"] is True
+                assert repeat["edge_counts"] == result["edge_counts"]
+            elif mode == 4:
                 assert result["instruction_scan_complete"] is True and result["total"] > 0
                 assert result["field_descriptor"] == args.field_descriptor
                 assert all(row["access"] == "write" for row in result["items"])
@@ -71,7 +78,7 @@ def main():
         gc.collect()
         baseline_rss, baseline_handles = owner.memory_info().rss, _resource_count(owner)
         with ThreadPoolExecutor(max_workers=2) as pool:
-            modes = 5 if args.field_descriptor else 4
+            modes = 6 if args.field_descriptor else 4
             list(pool.map(lambda index: cycle(index % modes), range(args.iterations * 2)))
     finally:
         service.close()

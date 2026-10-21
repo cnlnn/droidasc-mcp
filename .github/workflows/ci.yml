@@ -8,6 +8,29 @@ permissions:
   contents: read
 
 jobs:
+  rust:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: rustup toolchain install stable --profile minimal
+      - run: rustup default stable
+      - run: uv run python scripts/setup_rust.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-asc-${{ matrix.os }}
+          path: |
+            artifacts/rust_ASC/target/release/rust_ASC
+            artifacts/rust_ASC/target/release/rust_ASC.exe
+          if-no-files-found: error
+
   fixture:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -41,7 +64,7 @@ jobs:
           if-no-files-found: error
 
   test:
-    needs: fixture
+    needs: [fixture, rust]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -68,6 +91,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: uv run python scripts/setup_jadx.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-asc-${{ matrix.os }}
+          path: artifacts/rust-bin
+      - run: uv run python scripts/setup_rust.py --existing artifacts/rust-bin
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest --cov --cov-report=term-missing --junitxml=test-results.xml
@@ -99,7 +127,7 @@ jobs:
           if-no-files-found: error
 
   distribution:
-    needs: [fixture, package]
+    needs: [fixture, package, rust]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -129,6 +157,11 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: uv run python scripts/setup_jadx.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-asc-${{ matrix.os }}
+          path: artifacts/rust-bin
+      - run: uv run python scripts/setup_rust.py --existing artifacts/rust-bin
       - run: >-
           uv run python scripts/verify_dist.py dist/*.tar.gz dist/*.whl
           --fixture-apk "artifacts/fixture apk/app-debug.apk"

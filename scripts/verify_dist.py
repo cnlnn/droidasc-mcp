@@ -54,6 +54,10 @@ def main():
                 "scripts/stability_dex.py",
                 "scripts/validate_corpus.py",
                 "src/droidasc_mcp/MethodBridge.java",
+                "src/droidasc_mcp/IndexBridge.java",
+                "src/droidasc_mcp/native_worker.py",
+                "scripts/setup_rust.py",
+                "tests/fixtures/xrefs/first/Types.smali",
                 "tests/fixtures/xrefs/first/Caller.smali",
                 "tests/fixtures/android/complex/src/main/java/org/example/complex/CoroutineCases.kt",
             )

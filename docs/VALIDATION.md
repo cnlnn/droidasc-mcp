@@ -1,5 +1,51 @@
 # Local acceptance checks
 
+## Index/Rust candidate, 2026-10-21
+
+Local Linux/Python 3.13 regression: **248 passed, zero skips**, 345.29 seconds,
+with Python ASC 0.1.2.post3, JADX 1.5.5/JDK 17 and the pinned native Rust binary.
+An additional real stdio/HTTP index/guidance rerun passed both transport cases.
+Thirteen concurrent session lifecycle cycles, including index construction/reuse,
+ended with zero live children, zero remaining storage/sessions, no reaper thread,
+zero handle growth and 1,310,720 bytes host RSS growth.
+These numbers do not substitute for the current candidate's Windows or clean-package gates.
+
+### Large-sample index and backend evidence
+
+Real stdio MCP, all 12 top-level DEX files from local Taobao 10.62.0, 99,712 classes:
+schema 3 published **2,349,907,968 bytes** (2.19 GiB) under the unchanged 4 GiB test quota.
+It indexed 1,409,112 field, 2,914,002 method and 13,879,251 type relationships, with
+1,085,761 definitions. Build time was 460.0459 seconds and sampled descendant RSS
+peaked at 664,887,296 bytes. The first two storage designs exceeded 4 GiB and failed
+without publishing partial indexes; their local reports are retained rather than hidden.
+
+| Exact query | Streamed seconds | Indexed seconds, three repeats | Matching rows |
+| --- | --- | --- | --- |
+| `String.equals(Object)` | 9.8224 | 0.6328 / 0.5660 / 0.6814 | 24,461 |
+| `Build.MODEL` | 7.3267 | 0.4092 / 0.4040 / 0.3976 | 332 |
+| `Activity` type relationships | not measured | 0.8618 / 0.7445 / 0.5558 | 24,910 |
+
+For the method/field pair, complete counts, diagnostics and the first 100 rows
+matched the independent streamed implementation on every repeat. This is not
+exhaustive equality of all rows or all queries. The APK hash was unchanged and
+the session was closed. The default 256 MiB index quota and 180-second timeout
+are insufficient for this sample; the benchmark explicitly uses 4 GiB and 900
+seconds, with a 6 GiB session budget. Index cost is substantial: do not auto-build
+for a single exact-reference lookup. Current member discovery does build first;
+a declaration-only fast path remains an important improvement for large artifacts.
+
+The same real MCP adapter exercised both Python and Rust manifest/class/source/
+string-reference operations on Taobao and Douyin 39.1.0 (53 DEX, 551,538 classes).
+Class counts matched and original hashes were preserved. Rust reference coverage
+remains explicitly unverified despite matching aggregate hit counts. These are
+single-host exploratory timings, with other acceptance processes running; no
+isolated competitor benchmark, universal speedup or full-source equivalence is claimed.
+
+Local raw reports: `artifacts/reverse-acceptance/taobao-index-benchmark.json`,
+`taobao-index-uncompacted-failure.json`, `taobao-index-schema2-failure.json` and
+`aweme-rust-benchmark.json` in that directory. Private APKs and these local artifacts
+are excluded from packages and Git. Reproduce with `scripts/benchmark_backends.py`.
+
 ## Reproduce
 
 Candidate exact-method acceptance additionally needs the optional pinned backend:
@@ -9,6 +55,18 @@ CI verifies the upstream ZIP SHA-256 before extracting it. Use the newly built f
 `MethodCases.java`) and the `complex` release fixture; set `ASC_TEST_EXPECT_FIXTURE=1`,
 `ASC_TEST_APK`, `ASC_TEST_COMPLEX_APK` and `ASC_TEST_COMPLEX_MAPPING`, then run the full suite.
 Strict fixture mode fails on skipped optional-backend tests as well as missing APK tests.
+The optional Rust integration gates also need `uv run python scripts/setup_rust.py` and
+`DROIDASC_MCP_RUST_ASC` pointing to its binary. CI builds the pinned native binary on
+Linux and Windows and supplies it to the Python matrix and clean-distribution jobs.
+
+Index gates cover full streaming-result equivalence, type declarations/instructions/nested
+annotations, exact array identities, concurrent first-build serialization, stale backend
+identity rejection, disk-quota failure without publication, and actual index-JVM cancellation
+over stdio and HTTP with temporary-directory cleanup and successful recovery. Literal member
+discovery checks overloads, same-name/different-type fields, arrays, case sensitivity, literal
+wildcard characters, pagination and feeding discovered identities back into exact references.
+The index persists only for the session lifetime. Large-corpus acceptance is a separate gate;
+small fixtures do not establish large-input resource suitability.
 
 New gates cover immutable sessions after source replacement/deletion, concurrent sample isolation,
 warm/cold output equivalence, preparation capacity, TTL/close pinning, cancellation/failure cleanup

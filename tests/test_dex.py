@@ -204,6 +204,8 @@ async def test_real_dex_duplicate_and_error_recovery(settings, real_dex_files, t
     [
         ("get_method_calls", {"method_descriptor": "Lfixture/Caller;->run()V"}),
         ("find_field_refs", {"field_descriptor": "Lfixture/Target;->value:I"}),
+        ("build_xref_index", {}),
+        ("find_type_refs", {"type_descriptor": "Lfixture/Target;"}),
     ],
 )
 async def test_unknown_instruction_never_reports_complete_scan(

@@ -44,6 +44,8 @@ class Settings:
     max_dex_session_bytes: int = 4 * 1024**3
     jadx_home: Path | None = None
     java_executable: str | None = None
+    rust_asc_executable: Path | None = None
+    max_xref_index_bytes: int = 256 * 1024**2
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -75,6 +77,10 @@ class Settings:
             if os.getenv("DROIDASC_MCP_JADX_HOME")
             else None,
             java_executable=os.getenv("DROIDASC_MCP_JAVA"),
+            rust_asc_executable=Path(os.environ["DROIDASC_MCP_RUST_ASC"]).expanduser().resolve()
+            if os.getenv("DROIDASC_MCP_RUST_ASC")
+            else None,
+            max_xref_index_bytes=_positive_int("DROIDASC_MCP_MAX_XREF_INDEX_BYTES", 256 * 1024**2),
         )
 
     def validate_apk(self, value: str) -> Path:

@@ -8,6 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 from . import __version__
 from .config import Settings
 from .runner import DroidAscRunner, ReferenceKind
+from .rust_backend import LIMITATION, TESTED_COMMIT, RustAscRunner
 from .sessions import DexSessions
 
 
@@ -15,10 +16,21 @@ class DroidAscService:
     def __init__(self, settings: Settings, runner: DroidAscRunner | None = None) -> None:
         self.settings = settings
         self.runner = runner or DroidAscRunner(settings)
+        self.rust_runner = RustAscRunner(settings)
+        self.rust_runner._slots = self.runner._slots
         self.sessions = DexSessions(settings, self.runner)
 
     def close(self):
         self.sessions.shutdown()
+
+    def _backend(self, backend):
+        if backend == "droidasc":
+            return self.runner
+        if backend == "rust_asc":
+            if not self.settings.rust_asc_executable:
+                raise ValueError("rust_ASC is not configured; set DROIDASC_MCP_RUST_ASC")
+            return self.rust_runner
+        raise ValueError("backend must be droidasc or rust_asc")
 
     def open_dex_session(self, dex_paths):
         return self.sessions.open(self.settings.validate_dex_paths(dex_paths))
@@ -40,6 +52,14 @@ class DroidAscService:
             "timeout_seconds": self.settings.timeout_seconds,
             "max_worker_memory_bytes": self.settings.max_worker_memory_bytes,
             "max_page_size": self.settings.max_page_size,
+            "rust_backend": {
+                "configured": self.settings.rust_asc_executable is not None,
+                "tested_commit": TESTED_COMMIT,
+                "operations": ["get_manifest", "list_classes", "get_class_source", "find_refs"],
+                "reference_kinds": ["string", "type", "method", "field"],
+                "default": False,
+                "limitation": LIMITATION,
+            },
             "method_backend": {
                 "configured": self.settings.jadx_home is not None,
                 "required_jadx_version": "1.5.5",
@@ -50,6 +70,9 @@ class DroidAscService:
                     "find_method_refs",
                     "get_method_calls",
                     "find_field_refs",
+                    "find_type_refs",
+                    "build_xref_index",
+                    "search_members",
                 ],
                 "identity": "full_dex_method_descriptor",
                 "field_identity": "full_dex_field_descriptor",
@@ -60,6 +83,9 @@ class DroidAscService:
                 "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 "max_disk_bytes": self.settings.max_dex_session_bytes,
                 "reuse": "validated_dex_bundle",
+                "optional_index": "explicit_build_or_first_type_or_member_search",
+                "index_persistence": "session_lifetime",
+                "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
             },
         }
 
@@ -71,12 +97,15 @@ class DroidAscService:
         paths = self.settings.validate_dex_paths(dex_paths)
         return self.runner.analyze_dex(paths, _normalize_dex_query(query))
 
-    def get_manifest(self, apk_path: str, *, offset: int, limit: int) -> dict[str, object]:
+    def get_manifest(
+        self, apk_path: str, *, offset: int, limit: int, backend: str = "droidasc"
+    ) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
-        page = self.runner.get_manifest(apk, offset=offset, limit=limit)
+        page = self._backend(backend).get_manifest(apk, offset=offset, limit=limit)
         result = page.as_dict()
         result.update({"apk_path": str(apk), "xml": "\n".join(page.items)})
         result.pop("items")
+        result["backend"] = backend
         return result
 
     def list_classes(
@@ -87,9 +116,10 @@ class DroidAscService:
         threads: int,
         offset: int,
         limit: int,
+        backend: str = "droidasc",
     ) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
-        page = self.runner.list_classes(
+        page = self._backend(backend).list_classes(
             apk,
             prefix=prefix,
             threads=threads,
@@ -98,6 +128,7 @@ class DroidAscService:
         )
         result = page.as_dict()
         result["apk_path"] = str(apk)
+        result["backend"] = backend
         return result
 
     def get_class_source(
@@ -108,10 +139,11 @@ class DroidAscService:
         threads: int,
         offset: int,
         limit: int,
+        backend: str = "droidasc",
     ) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
         descriptor = _normalize_class_name(class_name)
-        page = self.runner.get_class_source(
+        page = self._backend(backend).get_class_source(
             apk,
             class_name=descriptor,
             threads=threads,
@@ -127,6 +159,7 @@ class DroidAscService:
             }
         )
         result.pop("items")
+        result["backend"] = backend
         return result
 
     def find_refs(
@@ -140,12 +173,13 @@ class DroidAscService:
         threads: int,
         offset: int,
         limit: int,
+        backend: str = "droidasc",
     ) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
         if kind in {"method", "field"} and class_name is not None and not fuzzy_class:
             class_name = _normalize_class_name(class_name)
         value = _normalize_reference_value(kind, value)
-        result = self.runner.find_refs(
+        result = self._backend(backend).find_refs(
             apk,
             kind=kind,
             value=value,
@@ -157,10 +191,26 @@ class DroidAscService:
         )
         result["apk_path"] = str(apk)
         result["kind"] = kind
+        result["backend"] = backend
         return result
 
 
 def _normalize_dex_query(query):
+    if query.get("operation") == "search_members":
+        if query.get("kind") not in {"method", "field"}:
+            raise ValueError("search_members requires kind=method or field")
+        if query.get("method_descriptor") or query.get("fuzzy_class"):
+            raise ValueError("search_members uses literal value and optional exact class_name")
+    if query.get("operation") == "find_type_refs":
+        descriptor = query.get("type_descriptor")
+        if not descriptor or not re.fullmatch(r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)", descriptor):
+            raise ValueError("type_descriptor requires an exact DEX type, not a fuzzy name")
+        if query.get("method_descriptor") or query.get("class_name") or query.get("fuzzy_class"):
+            raise ValueError("find_type_refs uses type_descriptor only")
+    elif query.get("type_descriptor") or query.get("type_relation", "all") != "all":
+        raise ValueError("type_descriptor and type_relation require find_type_refs")
+    if query.get("type_relation", "all") not in {"all", "instruction", "declaration", "annotation"}:
+        raise ValueError("type_relation must be all, instruction, declaration, or annotation")
     if query.get("operation") == "find_field_refs":
         descriptor = query.get("field_descriptor")
         owner_type = r"L[^.;\[\]\s:()]+;"

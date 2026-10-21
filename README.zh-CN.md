@@ -210,13 +210,49 @@ asc_query_dex_session(session_id="...", operation="get_method_calls", method_des
 动态位置最多返回 20 条诊断。`instruction_scan_complete` 仅指指定范围的指令解码完成，不代表完整运行时
 调用图。虚调用分派、反射、JNI 和动态加载仍未解析；未知指令或解码失败直接报错，不返回伪完整结果。
 
-未配置可选后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。每次可选后端查询启动一个受现有进程树限制的
+未配置可选后端返回 `backend_unavailable`，非 1.5.5 版本会明确拒绝。源码查询和未索引查询启动一个受现有进程树限制的
 JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，因此有启动开销。方法分页包含 `total`、
 `offset`、`limit`、`next_offset`、`truncated` 和 `has_more`，超大结果明确报错而不是静默截断。
 
 会话限制可通过 `DROIDASC_MCP_MAX_DEX_SESSIONS`、`DROIDASC_MCP_DEX_SESSION_TTL_SECONDS`、
 `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` 配置，默认分别为 `4`、`1800`、`4294967296`。
 磁盘预算包含已有文件及并发准备阶段的预留空间；所有会话只属于当前服务进程，不跨重启恢复。
+
+### 索引与目标发现（未发布）
+
+`build_xref_index` 完整扫描所提供 DEX，成功后原子发布 SQLite 索引。之后精确方法/字段引用查询
+无需再次启动 JVM。`find_type_refs` 自动建库或复用，`type_relation` 可选 `instruction`、
+`declaration`、`annotation`、`all`，覆盖声明和嵌套注解类型值；数组按完整描述符匹配，不展开元素类型。
+
+```python
+asc_query_dex_session(session_id="...", operation="search_members", kind="method", value="->check(")
+asc_query_dex_session(
+    session_id="...",
+    operation="find_type_refs",
+    type_descriptor="Lcom/example/Main;",
+    type_relation="annotation",
+)
+```
+
+`search_members` 发现方法或字段声明，`kind` 必须为 `method` 或 `field`。`value` 是完整描述符的
+区分大小写字面子串，不是正则；`class_name` 可限定精确所属类。返回的描述符可直接用于精确引用和
+Smali 查询，不必猜重载。它不是 DEX 字符串池搜索，也不是运行时使用证明。
+
+建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 256 MiB，从会话磁盘总额预留；
+大应用可能需要显式调整索引配额、会话总额和超时。取消、配额耗尽和解码失败不会发布部分索引。
+索引绑定输入哈希、Schema 和后端文件，会话关闭/过期或服务退出即删除，不跨重启恢复；单次查询索引是临时的。
+
+服务增加初始化指引、`droidasc://analysis-guide` 资源以及 `triage_apk` / `trace_exact_method` prompts。
+样本字符串和反编译结果始终是非可信数据。与竞品的实测差距见[源码对比](docs/AIMARD_COMPARISON.md)。
+
+### 可选 Rust ASC（未发布）
+
+安装 Rust 后执行 `uv run python scripts/setup_rust.py`，将 `DROIDASC_MCP_RUST_ASC` 设置为构建出的
+`artifacts/rust_ASC/target/release/rust_ASC`，Windows 为 `rust_ASC.exe`。脚本固定源码与 radguard 提交。
+Manifest、类列表、类源码和 APK 引用查询可显式选择 `backend="rust_asc"`；默认仍为 Python ASC，不静默切换。
+Rust 路径不提供我们的精确 DEX 索引/Smali 查询或 `extends`/`impl`。上游引用扫描可能丢弃单个 DEX 的错误，
+因此明确标记覆盖范围未核验，空结果不能证明没有引用。两种后端共享路径、并发和进程树预算。
+详见[后端说明](docs/RUST_BACKEND.md)。
 
 ## 安全边界
 

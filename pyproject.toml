@@ -51,7 +51,7 @@ Source = "https://github.com/cnlnn/droidasc-mcp"
 where = ["src"]
 
 [tool.setuptools.package-data]
-droidasc_mcp = ["MethodBridge.java"]
+droidasc_mcp = ["MethodBridge.java", "IndexBridge.java"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"

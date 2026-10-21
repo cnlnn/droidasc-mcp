@@ -132,6 +132,7 @@ def analyze(request: dict, root: Path) -> dict:
         max_page_size=request["max_page_size"],
         jadx_home=Path(request["jadx_home"]) if request.get("jadx_home") else None,
         java_executable=request.get("java_executable"),
+        max_xref_index_bytes=request.get("max_xref_index_bytes", 256 * 1024**2),
     )
     query = request["query"]
     runner = PublicCliRunner(settings)
@@ -238,8 +239,14 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, owners, query, workspace):
+    from .xref_index import INDEX_OPERATIONS, REFERENCE_OPERATIONS, query_index
+
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    if operation in INDEX_OPERATIONS or (
+        operation in REFERENCE_OPERATIONS and (bundle.parent / "xrefs.sqlite").is_file()
+    ):
+        return {**common, **query_index(runner.settings, bundle, common, query, workspace)}
     if operation in {"find_method_refs", "get_method_calls", "find_field_refs"}:
         from .method_backend import query_methods
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from .runner import DroidAscError
 
 
-def query_methods(settings, bundle, entry, query, workspace=None):
+def java_command(settings, workspace, source="MethodBridge.java"):
     home = settings.jadx_home
     java = settings.java_executable or shutil.which("java")
     if not home or not java:
@@ -25,11 +25,9 @@ def query_methods(settings, bundle, entry, query, workspace=None):
             "code": "backend_unavailable",
             "message": "JADX home must contain its distribution lib/*.jar",
         }
-    offset, limit = query["offset"], min(query["limit"], settings.max_page_size)
-    workspace = workspace or bundle.parent
     temporary = workspace / "jvm"
     temporary.mkdir()
-    command = [
+    return [
         str(java),
         "-Xmx512m",
         "-Xss512k",
@@ -43,7 +41,17 @@ def query_methods(settings, bundle, entry, query, workspace=None):
         "-Dfile.encoding=UTF-8",
         "--class-path",
         os.pathsep.join(map(str, jars)),
-        str(Path(__file__).with_name("MethodBridge.java")),
+        str(Path(__file__).with_name(source)),
+    ]
+
+
+def query_methods(settings, bundle, entry, query, workspace=None):
+    workspace = workspace or bundle.parent
+    command = java_command(settings, workspace)
+    if isinstance(command, dict):
+        return command
+    offset, limit = query["offset"], min(query["limit"], settings.max_page_size)
+    command += [
         str(bundle),
         entry,
         query["class_name"],

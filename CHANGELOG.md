@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add bounded atomic session-lifetime SQLite xref indexes, exact type relationships across
+  instructions/declarations/annotations, and literal method/field declaration discovery.
+  Preserve streaming-query semantics, source identities and fail-closed incomplete scans.
+- Add opt-in pinned Rust ASC APK backend with supervised native workers and explicit unverified
+  coverage; keep Python ASC as the default and reject unsupported Rust hierarchy queries.
+- Add MCP initialization guidance, an analysis-guide resource, two investigation prompts and
+  explicit tool annotations. Record a source-backed competitor comparison and remaining gaps.
 - Add `find_field_refs` for full `class->name:type` identities, read/write filters, static/instance
   access labels, exact instruction offsets and cross-DEX provenance. Same-name fields of different
   types remain distinct. Encoded initializers, reflection, inherited field resolution and handle

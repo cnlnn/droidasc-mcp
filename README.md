@@ -258,11 +258,54 @@ calls preserve their call-site prototype; dynamic sites include at most 20 diagn
 is complete. Virtual dispatch, reflection, JNI and runtime-loaded code remain unresolved. Unknown
 instructions or decoding failures return an error rather than partial results marked complete.
 
-Missing configuration returns `backend_unavailable`; other JADX versions are rejected. Each
-optional-backend query starts a JVM (512 MiB maximum heap) inside the existing worker tree, sharing its
+Missing configuration returns `backend_unavailable`; other JADX versions are rejected. Source and
+unindexed optional-backend queries start a JVM (512 MiB maximum heap) inside the worker tree, sharing its
 timeout, aggregate memory, output and cancellation limits. This adds startup cost, not a speedup.
 Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
 responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
+
+### Indexed investigation (unreleased)
+
+`build_xref_index` scans all supplied DEX files once and atomically publishes a bounded SQLite
+index. Subsequent exact method/field references need no JVM. `find_type_refs` builds/reuses it
+and separates `type_relation=instruction|declaration|annotation|all`, including nested annotation
+type values. Types and arrays match exactly, not by assignability or array component expansion.
+`search_members` discovers full method/field declarations without knowing their class first:
+
+```python
+asc_query_dex_session(session_id="...", operation="search_members", kind="method", value="->check(")
+asc_query_dex_session(
+    session_id="...",
+    operation="find_type_refs",
+    type_descriptor="Lcom/example/Main;",
+    type_relation="annotation",
+)
+```
+
+Search uses a case-sensitive literal substring of the full descriptor, not a regex. An optional
+`class_name` restricts its exact owner. Feed returned descriptors unchanged into exact references
+or Smali queries. Searching declarations is not searching DEX string pools or runtime usages.
+
+Index construction costs time/disk upfront. Default per-session index quota is 256 MiB, reserved
+from the session storage budget; large applications may need an explicitly larger index quota,
+session budget and timeout. Cancellation, malformed input or quota failures do not publish a
+partial index. Identity includes input hashes, schema and backend files. Close/expiry/server
+shutdown deletes it; this is **not** persistence across server restarts. One-shot indexes are temporary.
+
+The server also exposes initialization instructions, `droidasc://analysis-guide`, and
+`triage_apk` / `trace_exact_method` prompts. Artifact contents remain untrusted query data.
+See the [source-backed competitor comparison](docs/AIMARD_COMPARISON.md) for remaining gaps.
+
+### Optional Rust ASC (unreleased)
+
+Run `uv run python scripts/setup_rust.py` with Rust installed, then set
+`DROIDASC_MCP_RUST_ASC` to the resulting `artifacts/rust_ASC/target/release/rust_ASC`
+(`rust_ASC.exe` on Windows). The setup script pins source and radguard revisions.
+Select `backend="rust_asc"` on the manifest, class-list, class-source or APK-reference tool.
+Python ASC remains the default; no silent fallback occurs. Rust does not provide our exact DEX
+index/Smali queries or `extends`/`impl` path. Its upstream reference scanner can discard per-DEX
+failures, so results explicitly report unverified coverage: zero hits are not absence proof.
+Both engines share scope/concurrency/process-tree budgets. See [backend details](docs/RUST_BACKEND.md).
 
 ## Configuration
 
@@ -280,6 +323,8 @@ responses fail explicitly. The API currently takes DEX inputs/sessions, not an A
 | `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage plus concurrent preparation reservations |
 | `DROIDASC_MCP_JADX_HOME` | unset | Optional JADX 1.5.5 distribution directory |
 | `DROIDASC_MCP_JAVA` | `java` on PATH | Optional JDK 17+ executable |
+| `DROIDASC_MCP_MAX_XREF_INDEX_BYTES` | `268435456` | Per-session index disk quota/reservation |
+| `DROIDASC_MCP_RUST_ASC` | unset | Optional Rust ASC executable path |
 
 ## Design
 

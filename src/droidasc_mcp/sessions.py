@@ -8,7 +8,7 @@ import tempfile
 import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .runner import _check_cancelled
@@ -27,6 +27,7 @@ class Entry:
     order: int
     users: int = 0
     closing: bool = False
+    index_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 class DexSessions:
@@ -64,7 +65,8 @@ class DexSessions:
     def open(self, paths):
         # Reserve for the ZIP bundle, a temporary single-DEX ZIP, and bounded metadata.
         input_bytes = sum(path.stat().st_size for path in paths)
-        reservation = input_bytes * 2 + self.settings.max_output_bytes * 2 + 1024**2
+        index_budget = self.settings.max_xref_index_bytes
+        reservation = input_bytes * 2 + self.settings.max_output_bytes * 2 + 1024**2 + index_budget
         with self.lock:
             if self.closed:
                 return error("session_store_closed", "Session store is closed")
@@ -106,7 +108,11 @@ class DexSessions:
                     return error("session_store_closed", "Session store closed during preparation")
                 key = uuid.uuid4().hex
                 self.entries[key] = Entry(
-                    storage, copy.deepcopy(info), size, time.monotonic(), next(self.order)
+                    storage,
+                    copy.deepcopy(info),
+                    size + index_budget,
+                    time.monotonic(),
+                    next(self.order),
                 )
                 committed = True
                 return {
@@ -114,6 +120,7 @@ class DexSessions:
                     "session_id": key,
                     "reuse": "validated_dex_bundle",
                     "stored_bytes": size,
+                    "reserved_index_bytes": index_budget,
                     "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 }
         finally:
@@ -131,7 +138,14 @@ class DexSessions:
                 return error("session_not_found", "Session is unknown, expired, or closed")
             entry.users += 1
         try:
-            result = self.runner.query_dex_session(Path(entry.storage.name), query)
+            from .xref_index import INDEX_OPERATIONS, REFERENCE_OPERATIONS
+
+            if query.get("operation") in INDEX_OPERATIONS | REFERENCE_OPERATIONS:
+                # Atomic publication and one builder per session; waiting remains cancellable.
+                with self.runner._acquire(entry.index_lock):
+                    result = self.runner.query_dex_session(Path(entry.storage.name), query)
+            else:
+                result = self.runner.query_dex_session(Path(entry.storage.name), query)
             return {**result, "session_id": key}
         finally:
             with self.lock:

@@ -8,10 +8,15 @@ from typing import Literal
 
 import anyio
 from mcp.server import MCPServer
+from mcp.types import ToolAnnotations
 
 from .config import Settings
 from .runner import DroidAscRunner
 from .service import DroidAscService
+from .workflows import INSTRUCTIONS, register_workflows
+
+READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
+SESSION_STATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 
 
 def build_server(
@@ -28,58 +33,68 @@ def build_server(
             with anyio.CancelScope(shield=True):
                 await anyio.to_thread.run_sync(service.close)
 
-    mcp = MCPServer("droidasc-mcp", lifespan=lifespan)
+    mcp = MCPServer("droidasc-mcp", lifespan=lifespan, instructions=INSTRUCTIONS)
+    register_workflows(mcp)
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_ping() -> dict[str, object]:
         """Report server, engine, path-scope, and pagination configuration."""
         return service.ping()
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_apk_info(apk_path: str, include_sha256: bool = True) -> dict[str, object]:
         """Inspect APK size, SHA-256, manifest presence, and top-level DEX entries."""
         return service.apk_info(apk_path, include_sha256=include_sha256)
 
-    @mcp.tool()
-    def asc_get_manifest(apk_path: str, offset: int = 0, limit: int = 500) -> dict[str, object]:
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_get_manifest(
+        apk_path: str,
+        offset: int = 0,
+        limit: int = 500,
+        backend: Literal["droidasc", "rust_asc"] = "droidasc",
+    ) -> dict[str, object]:
         """Decode AndroidManifest.xml and return a bounded page of XML lines."""
-        return service.get_manifest(apk_path, offset=offset, limit=limit)
+        return service.get_manifest(apk_path, offset=offset, limit=limit, backend=backend)
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_list_classes(
         apk_path: str,
         prefix: str | None = None,
         threads: int = 8,
         offset: int = 0,
         limit: int = 200,
+        backend: Literal["droidasc", "rust_asc"] = "droidasc",
     ) -> dict[str, object]:
         """List class descriptors, optionally filtered by package or class prefix."""
         return service.list_classes(
             apk_path,
             prefix=prefix,
+            backend=backend,
             threads=threads,
             offset=offset,
             limit=limit,
         )
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_get_class_source(
         apk_path: str,
         class_name: str,
         threads: int = 8,
         offset: int = 0,
         limit: int = 500,
+        backend: Literal["droidasc", "rust_asc"] = "droidasc",
     ) -> dict[str, object]:
         """Locate and decompile one class, returning a bounded page of source lines."""
         return service.get_class_source(
             apk_path,
             class_name=class_name,
+            backend=backend,
             threads=threads,
             offset=offset,
             limit=limit,
         )
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_find_refs(
         apk_path: str,
         kind: Literal["string", "type", "method", "field", "extends", "impl"],
@@ -89,14 +104,17 @@ def build_server(
         threads: int = 8,
         offset: int = 0,
         limit: int = 200,
+        backend: Literal["droidasc", "rust_asc"] = "droidasc",
     ) -> dict[str, object]:
         """Find cross-DEX references or direct subclasses/interface implementors.
 
         extends/impl use an exact class in value and return direct declarations only.
+        Optional rust_asc supports string/type/method/field only and has unverified coverage.
         """
         return service.find_refs(
             apk_path,
             kind=kind,
+            backend=backend,
             value=value,
             class_name=class_name,
             fuzzy_class=fuzzy_class,
@@ -105,7 +123,7 @@ def build_server(
             limit=limit,
         )
 
-    @mcp.tool()
+    @mcp.tool(annotations=READ_ONLY)
     def asc_analyze_dex(
         dex_paths: list[str],
         operation: Literal[
@@ -119,12 +137,17 @@ def build_server(
             "find_method_refs",
             "get_method_calls",
             "find_field_refs",
+            "find_type_refs",
+            "build_xref_index",
+            "search_members",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
         field_descriptor: str | None = None,
         field_access: Literal["all", "read", "write"] = "all",
+        type_descriptor: str | None = None,
+        type_relation: Literal["all", "instruction", "declaration", "annotation"] = "all",
         source_format: Literal["auto", "java", "smali"] = "auto",
         debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
@@ -145,6 +168,10 @@ def build_server(
         Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
+        find_type_refs reports exact type operands, declarations and annotation types/values.
+        build_xref_index builds a bounded complete static index; one-shot indexes are temporary.
+        search_members builds/reuses the index; kind=method/field, value is a case-sensitive
+        literal substring of the full descriptor (not regex); class_name restricts exact owner.
         source_format=auto returns Java or exact-method Smali with fell_back/reason;
         java never silently falls back, smali always disassembles that exact method.
         """
@@ -156,6 +183,8 @@ def build_server(
             method_descriptor=method_descriptor,
             field_descriptor=field_descriptor,
             field_access=field_access,
+            type_descriptor=type_descriptor,
+            type_relation=type_relation,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,
@@ -166,7 +195,7 @@ def build_server(
             limit=limit,
         )
 
-    @mcp.tool()
+    @mcp.tool(annotations=SESSION_STATE)
     def asc_open_dex_session(dex_paths: list[str]) -> dict[str, object]:
         """Validate and snapshot DEX inputs once; return an immutable hash-bound session.
 
@@ -175,12 +204,12 @@ def build_server(
         """
         return service.open_dex_session(dex_paths)
 
-    @mcp.tool()
+    @mcp.tool(annotations=SESSION_STATE)
     def asc_close_dex_session(session_id: str) -> dict[str, object]:
         """Close a DEX session; active queries finish before its stored files are removed."""
         return service.sessions.close(session_id)
 
-    @mcp.tool()
+    @mcp.tool(annotations=SESSION_STATE)
     def asc_query_dex_session(
         session_id: str,
         operation: Literal[
@@ -194,12 +223,17 @@ def build_server(
             "find_method_refs",
             "get_method_calls",
             "find_field_refs",
+            "find_type_refs",
+            "build_xref_index",
+            "search_members",
         ] = "info",
         prefix: str | None = None,
         class_name: str | None = None,
         method_descriptor: str | None = None,
         field_descriptor: str | None = None,
         field_access: Literal["all", "read", "write"] = "all",
+        type_descriptor: str | None = None,
+        type_relation: Literal["all", "instruction", "declaration", "annotation"] = "all",
         source_format: Literal["auto", "java", "smali"] = "auto",
         debug_info: bool = False,
         kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
@@ -217,6 +251,11 @@ def build_server(
         method_descriptor is the full DEX class->name(args)return identity.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
+        build_xref_index persists an atomic static index for this session's lifetime.
+        find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.
+        type_descriptor is exact (including arrays); type_relation filters before pagination.
+        search_members builds/reuses the index; kind=method/field, value is a case-sensitive
+        literal substring of the full descriptor (not regex); class_name restricts exact owner.
         source_format=auto may return exact-method Smali with an explicit fallback reason.
         """
         return service.query_dex_session(
@@ -227,6 +266,8 @@ def build_server(
             method_descriptor=method_descriptor,
             field_descriptor=field_descriptor,
             field_access=field_access,
+            type_descriptor=type_descriptor,
+            type_relation=type_relation,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,

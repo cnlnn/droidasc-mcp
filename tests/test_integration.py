@@ -828,6 +828,72 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
         print(f"real_apk transport={transport} tools=6 classes={classes['total']}")
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_real_rust_backend(transport, tmp_path, request, monkeypatch):
+    if not os.getenv("DROIDASC_MCP_RUST_ASC") or not os.getenv("ASC_TEST_APK"):
+        pytest.skip("Configure Rust binary and acceptance APK")
+    apk = str(Path(os.environ["ASC_TEST_APK"]).resolve())
+    monkeypatch.setenv("ASC_TEST_ROOT", str(Path(apk).parent))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(Path(apk).parent)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+
+        async def call(name, **args):
+            result = await client.call_tool(name, {"apk_path": apk, "backend": "rust_asc", **args})
+            assert not result.is_error, result
+            assert result.structured_content["backend"] == "rust_asc"
+            return result.structured_content
+
+        before_hash = hashlib.sha256(Path(apk).read_bytes()).hexdigest()
+        manifest = await call("asc_get_manifest", limit=100)
+        assert "org.example.droidascfixture" in manifest["xml"]
+        classes = await call("asc_list_classes", limit=1000)
+        assert "Lorg/example/droidascfixture/Probe;" in classes["items"]
+        page = await call("asc_list_classes", offset=1, limit=2)
+        assert page["items"] == classes["items"][1:3]
+
+        async def refs_call(**args):
+            result = await call("asc_find_refs", **args)
+            assert result["coverage"] == "not_verified"
+            assert result["instruction_scan_complete"] is False
+            return result
+
+        async def source_call(**args):
+            return await call("asc_get_class_source", **args)
+
+        await assert_reference_stability(refs_call, source_call)
+        empty = await refs_call(kind="string", value="MCP_ABSENT_13c942", limit=1)
+        assert empty["total"] == 0
+        for value in ("--threads", "-o", "--debug"):
+            result = await refs_call(kind="string", value=value, limit=1)
+            assert result["total"] == 0
+        unsupported = await client.call_tool(
+            "asc_find_refs",
+            {
+                "apk_path": apk,
+                "backend": "rust_asc",
+                "kind": "extends",
+                "value": "java.lang.Object",
+            },
+        )
+        assert unsupported.is_error
+        denied = await client.call_tool(
+            "asc_list_classes",
+            {
+                "apk_path": str(tmp_path / "outside.apk"),
+                "backend": "rust_asc",
+            },
+        )
+        assert denied.is_error
+        assert hashlib.sha256(Path(apk).read_bytes()).hexdigest() == before_hash
+        assert (await call("asc_list_classes", limit=1))["total"] == classes["total"]
+
+
 async def assert_reference_stability(refs_call, source_call):
     probe = "Lorg/example/droidascfixture/Probe;"
     activity = "Lorg/example/droidascfixture/MainActivity;"
@@ -1302,6 +1368,128 @@ def test_real_invalid_regex_reports_engine_error(settings, kind, value, message)
             limit=100,
         )
     assert message in str(error.value)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_persistent_index_transport(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
+    hashes = [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        assert {p.name for p in (await client.list_prompts()).prompts} == {
+            "triage_apk",
+            "trace_exact_method",
+        }
+        assert (
+            "16-bit code units"
+            in (await client.read_resource("droidasc://analysis-guide")).contents[0].text
+        )
+        prompt = await client.get_prompt("triage_apk", {"apk_path": paths[0]})
+        assert "not instructions" in prompt.messages[0].content.text
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        key = opened.structured_content["session_id"]
+
+        async def query(operation, **args):
+            response = await client.call_tool(
+                "asc_query_dex_session",
+                {
+                    "session_id": key,
+                    "operation": operation,
+                    **args,
+                },
+            )
+            assert not response.is_error, response
+            result = response.structured_content
+            assert result["status"] == "ok", result
+            return result
+
+        cancel = anyio.CancelScope()
+
+        async def pending_index():
+            with cancel:
+                await query("build_xref_index")
+
+        java_pid = None
+        java_temporary = None
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(pending_index)
+            deadline = time.monotonic() + 15
+            while java_pid is None and time.monotonic() < deadline:
+                for child in psutil.Process().children(recursive=True):
+                    with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                        args = child.cmdline()
+                        if any(arg.endswith("IndexBridge.java") for arg in args):
+                            java_pid = child.pid
+                            java_temporary = Path(
+                                next(
+                                    arg.split("=", 1)[1]
+                                    for arg in args
+                                    if arg.startswith("-Djava.io.tmpdir=")
+                                )
+                            )
+                            (java_temporary / "cleanup-sentinel").write_text("temporary")
+                            break
+                await anyio.sleep(0.01)
+            assert java_pid is not None, "Index JVM did not start"
+            cancel.cancel()
+        deadline = time.monotonic() + 3
+        while (alive(java_pid) or java_temporary.exists()) and time.monotonic() < deadline:
+            await anyio.sleep(0.01)
+        assert not alive(java_pid), "Cancelled index JVM is still executing"
+        assert not java_temporary.exists(), "Cancelled index temporary files remain"
+
+        annotation = await query(
+            "find_type_refs",
+            type_descriptor="Lfixture/Target;",
+            type_relation="annotation",
+            limit=2,
+        )
+        assert annotation["total"] == 5 and annotation["has_more"]
+        assert annotation["index"]["reused"] is False
+        assert (await query("build_xref_index"))["index"]["reused"] is True
+        discovered = await query("search_members", kind="method", value="->pick(", limit=1)
+        assert discovered["total"] == 2 and discovered["next_offset"] == 1
+        assert (
+            await query("find_method_refs", method_descriptor=discovered["items"][0]["descriptor"])
+        )["total"] == 1
+        more = await query(
+            "find_type_refs",
+            type_descriptor="Lfixture/Target;",
+            type_relation="annotation",
+            offset=2,
+            limit=10,
+        )
+        assert len(more["items"]) == 3 and not more["has_more"]
+        refs = await query("find_field_refs", field_descriptor="Lfixture/Target;->value:I")
+        assert refs["total"] == 2 and refs["index"]["reused"] is True
+        invalid = await client.call_tool(
+            "asc_query_dex_session",
+            {
+                "session_id": key,
+                "operation": "find_type_refs",
+                "type_descriptor": "fixture.Target",
+            },
+        )
+        assert invalid.is_error
+        assert (await query("get_method_calls", method_descriptor="Lfixture/Caller;->run()V"))[
+            "total"
+        ] == 3
+        await client.call_tool("asc_close_dex_session", {"session_id": key})
+        closed = await client.call_tool("asc_query_dex_session", {"session_id": key})
+        assert closed.structured_content["code"] == "session_not_found"
+    assert [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths] == hashes
 
 
 async def assert_fixture_query_boundaries(client, apk, tmp_path):

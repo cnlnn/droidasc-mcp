@@ -139,6 +139,7 @@ class DroidAscRunner:
             "max_input_bytes": self.settings.max_apk_bytes,
             "max_output_bytes": self.settings.max_output_bytes,
             "max_page_size": self.settings.max_page_size,
+            "max_xref_index_bytes": self.settings.max_xref_index_bytes,
             "jadx_home": str(self.settings.jadx_home) if self.settings.jadx_home else None,
             "java_executable": self.settings.java_executable,
             "query": query,
@@ -361,8 +362,11 @@ class DroidAscRunner:
             raise ValueError("limit must be greater than zero")
         return offset, min(limit, self.settings.max_page_size)
 
+    def _command(self, args: list[str], module_name: str | None) -> list[str]:
+        return [self.python_executable, "-m", module_name or self.module_name, *args]
+
     def _execute(self, args: list[str], *, module_name: str | None = None) -> bytes:
-        command = [self.python_executable, "-m", module_name or self.module_name, *args]
+        command = self._command(args, module_name)
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
         try:
