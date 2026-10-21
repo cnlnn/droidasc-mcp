@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Add `asc_analyze_dex` for explicit single/multi-DEX inputs through the public ASC entry point.
+  Preserve original bytes and SHA-256 provenance; validate standard DEX headers, table bounds
+  and integrity fields before creating private, temporary analysis containers.
+- Reject duplicate class definitions, distinguish absent classes/empty searches/engine errors,
+  and return an explicit not-applicable result for DEX manifest requests.
+- Apply the existing allowed-root, concurrency, worker memory/time/output limits to DEX analysis.
+  Parent-owned temporary directories are cleaned even after worker termination or cancellation.
+- Add source-built DEX regression coverage, stdio/HTTP operations and bilingual usage boundaries.
+
 ## 0.2.2
 
 - Bind CLI option values explicitly and terminate option parsing before reference query values.

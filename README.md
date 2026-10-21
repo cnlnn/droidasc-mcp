@@ -3,8 +3,8 @@
 A small, defensive MCP server for [Droid ASC](https://github.com/MG1937/ASC), the fast
 on-demand Android APK decompiler.
 
-`droidasc-mcp` exposes ASC's public CLI as six typed, read-only MCP tools. Every analysis runs in an
-isolated subprocess group, accepts only APK paths under configured roots, and returns paginated
+`droidasc-mcp` exposes ASC's public CLI as typed, read-only MCP tools. Every analysis runs in an
+isolated subprocess group, accepts only input paths under configured roots, and returns paginated
 structured data instead of unbounded terminal output.
 
 > Community project. Not affiliated with or endorsed by the Droid ASC maintainers.
@@ -21,6 +21,7 @@ structured data instead of unbounded terminal output.
 | `asc_list_classes` | List class descriptors with prefix filtering and pagination |
 | `asc_get_class_source` | Decompile one class with line pagination |
 | `asc_find_refs` | Find string, type, method, or field references across DEX files |
+| `asc_analyze_dex` | Analyze a bare DEX or explicit DEX set with source hashes (unreleased) |
 
 ## Install
 
@@ -116,13 +117,52 @@ a global computation lock. Snapshots are
 keyed by query and file identity/size/timestamps. Cache misses rerun ASC; this is not an immutable
 content-addressed evidence store. Do not modify APK files between pages.
 
+## Bare DEX analysis (unreleased)
+
+This tool is available from a source checkout, not the v0.2.2 release linked above.
+It accepts 1-64 explicit `.dex` paths under the allowed roots, with a combined size bounded by
+`DROIDASC_MCP_MAX_APK_BYTES`. Directories, APKs, CompactDex and DEX 041 containers are not accepted.
+
+```text
+asc_analyze_dex(dex_paths=["/samples/classes.dex", "/samples/classes2.dex"])
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="list_classes", prefix="com.example")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_class_source", class_name="com.example.Main")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="find_refs", kind="string", value="Authorization")
+```
+
+`operation` defaults to `info`. Successful responses have `status="ok"` and a `sources` array
+mapping internal `dex_entry` names to original paths, SHA-256 hashes, sizes and class counts.
+Class/source results retain `dex_entry`; reference results retain ASC's best-effort `dex` field.
+Input order determines entry names. Keep both the order and file bytes stable between pages and
+compare the returned hashes. Each call imports and analyzes afresh; APK cross-request caching
+does not apply to this tool.
+
+Standard little-endian DEX headers (035/037/038/039/040), fixed ID-table bounds, file size, SHA-1
+signature and Adler-32 checksum are checked before analysis. Checksum validation does not prove
+method bodies or runtime coverage are complete. The tool preserves input bytes, creates private
+temporary analysis containers, and invokes ASC's public module entry point in the supervised worker.
+Containers are not installable APKs and are removed after success, failure, timeout or cancellation.
+Temporary disk usage can approach twice the combined input size, plus ZIP overhead.
+
+Duplicate class definitions are rejected with `status="error", code="duplicate_class"` rather
+than selecting one silently (up to 20 conflicts are returned). `get_manifest` returns
+`status="not_applicable", code="no_manifest"`. Invalid input/query and engine failures return
+diagnostic codes; a successful empty reference search is `status="ok", total=0`.
+Path policy, worker startup, timeout, memory and stream-limit failures remain MCP tool errors.
+Clients must inspect both MCP errors and the structured `status`.
+
+This is post-export static analysis, not automatic unpacking or DEX repair. It does not recover
+missing code, decrypt runtime-only method bodies, or reconstruct the original manifest/resources.
+Every result is limited to supplied files (`coverage="supplied_files_only"`), with runtime
+completeness marked unknown. Untrusted dumps still require an isolated analysis environment.
+
 ## Configuration
 
 | Environment variable | Default | Meaning |
 | --- | --- | --- |
 | `DROIDASC_MCP_ALLOWED_ROOTS` | current directory | Allowed roots, separated by `os.pathsep` (`:` on Unix, `;` on Windows) |
 | `DROIDASC_MCP_TIMEOUT_SECONDS` | `180` | Per-operation timeout |
-| `DROIDASC_MCP_MAX_APK_BYTES` | `2147483648` | Maximum accepted APK size |
+| `DROIDASC_MCP_MAX_APK_BYTES` | `2147483648` | Maximum APK size or combined DEX input size |
 | `DROIDASC_MCP_MAX_OUTPUT_BYTES` | `67108864` | Captured stdout limit and aggregate decoded snapshot budget |
 | `DROIDASC_MCP_MAX_WORKER_MEMORY_BYTES` | `2147483648` | Worker-tree budget (Windows Job aggregate; POSIX per-process address-space cap plus aggregate RSS watchdog) |
 | `DROIDASC_MCP_MAX_PAGE_SIZE` | `1000` | Maximum lines returned by one call |

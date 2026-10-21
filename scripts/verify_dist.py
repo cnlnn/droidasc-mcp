@@ -48,7 +48,8 @@ def main():
             for name in required:
                 assert any(item.endswith("/" + name) for item in members), name
             assert not any(
-                "/artifacts/" in item or item.endswith((".apk", ".xapk")) for item in members
+                "/artifacts/" in item or item.endswith((".apk", ".xapk", ".dex"))
+                for item in members
             )
             archive.extractall(root, filter="data")
         (project,) = root.iterdir()

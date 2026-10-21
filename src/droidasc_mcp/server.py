@@ -91,6 +91,40 @@ def build_server(
             limit=limit,
         )
 
+    @mcp.tool()
+    def asc_analyze_dex(
+        dex_paths: list[str],
+        operation: Literal[
+            "info", "list_classes", "get_class_source", "find_refs", "get_manifest"
+        ] = "info",
+        prefix: str | None = None,
+        class_name: str | None = None,
+        kind: Literal["string", "type", "method", "field"] = "string",
+        value: str | None = None,
+        fuzzy_class: bool = False,
+        threads: int = 8,
+        offset: int = 0,
+        limit: int = 200,
+    ) -> dict[str, object]:
+        """Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.
+
+        Returns status=ok, error, or not_applicable. Errors carry a diagnostic code;
+        duplicate class definitions are rejected. Manifest is not applicable to DEX.
+        Coverage is limited to supplied files; this tool does not unpack applications.
+        """
+        return service.analyze_dex(
+            dex_paths,
+            operation=operation,
+            prefix=prefix,
+            class_name=class_name,
+            kind=kind,
+            value=value,
+            fuzzy_class=fuzzy_class,
+            threads=threads,
+            offset=offset,
+            limit=limit,
+        )
+
     return mcp
 
 

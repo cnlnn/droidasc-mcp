@@ -49,3 +49,19 @@ def settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
+
+
+@pytest.fixture
+def real_dex_files(tmp_path):
+    apk = os.getenv("ASC_TEST_APK")
+    if not apk or os.getenv("ASC_TEST_EXPECT_FIXTURE") != "1":
+        pytest.skip("Set ASC_TEST_APK and ASC_TEST_EXPECT_FIXTURE=1 for public DEX acceptance")
+    root = tmp_path / "DEX input with spaces"
+    root.mkdir()
+    paths = []
+    with zipfile.ZipFile(apk) as archive:
+        for name in ("classes.dex", "classes2.dex"):
+            path = root / name
+            path.write_bytes(archive.read(name))
+            paths.append(path)
+    return paths

@@ -79,6 +79,27 @@ class Settings:
             raise ApkPathError(f"APK exceeds configured size limit: {size} bytes")
         return path
 
+    def validate_dex_paths(self, values: list[str]) -> list[Path]:
+        if not 1 <= len(values) <= 64:
+            raise ApkPathError("Provide between 1 and 64 DEX paths")
+        paths = []
+        total = 0
+        for value in values:
+            path = Path(value).expanduser().resolve()
+            if path.suffix.lower() != ".dex":
+                raise ApkPathError("Only .dex files are accepted for DEX analysis")
+            if not path.is_file():
+                raise ApkPathError(f"DEX file does not exist: {path}")
+            if not any(_is_relative_to(path, root) for root in self.allowed_roots):
+                raise ApkPathError(f"DEX path is outside allowed roots: {path}")
+            if path in paths:
+                raise ApkPathError(f"Repeated DEX path: {path}")
+            total += path.stat().st_size
+            if total > self.max_apk_bytes:
+                raise ApkPathError("Combined DEX size exceeds configured size limit")
+            paths.append(path)
+        return paths
+
 
 def _is_relative_to(path: Path, root: Path) -> bool:
     try:

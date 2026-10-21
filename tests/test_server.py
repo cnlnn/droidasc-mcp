@@ -19,6 +19,7 @@ async def test_server_advertises_expected_tools(settings: Settings):
         "asc_list_classes",
         "asc_get_class_source",
         "asc_find_refs",
+        "asc_analyze_dex",
     }
 
 

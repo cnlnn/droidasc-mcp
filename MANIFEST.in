@@ -7,4 +7,4 @@ prune tests/fixtures/android/app/build
 exclude tests/fixtures/android/local.properties
 recursive-include scripts *.py
 prune artifacts
-global-exclude *.apk *.xapk *.pyc
+global-exclude *.apk *.xapk *.dex *.pyc

@@ -301,7 +301,7 @@ async def test_transport_roundtrip(transport, request, apk_file):
     )
     async with Client(endpoint) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 6
+        assert len(tools.tools) == 7
         result = await client.call_tool("asc_ping", {})
         assert not result.is_error
         result = await client.call_tool("asc_apk_info", {"apk_path": str(apk_file)})
@@ -371,7 +371,7 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
             return result.structured_content
 
         assert (await call("asc_ping", {}))["status"] == "ok"
-        assert len((await client.list_tools()).tools) == 6
+        assert len((await client.list_tools()).tools) == 7
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
             await assert_fixture_tools(call, apk)
             await assert_fixture_query_boundaries(client, apk, tmp_path)
@@ -450,6 +450,101 @@ async def assert_fixture_tools(call, apk):
         ), (kind, refs)
         if kind == "string":
             assert any(marker in item.get("matched", "") for item in refs["items"])
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_real_dex_operations(transport, tmp_path, real_dex_files, request):
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    paths = [str(path) for path in real_dex_files]
+    hashes = [hashlib.sha256(path.read_bytes()).hexdigest() for path in real_dex_files]
+    probe = "Lorg/example/droidascfixture/Probe;"
+    marker = "ASC_FIXTURE_MARKER_v1"
+    async with Client(endpoint) as client:
+
+        async def call(operation="info", **kwargs):
+            reply = await client.call_tool(
+                "asc_analyze_dex", {"dex_paths": paths, "operation": operation, **kwargs}
+            )
+            assert not reply.is_error, reply
+            return reply.structured_content
+
+        info = await call()
+        assert info["status"] == "ok"
+        assert info["coverage"] == "supplied_files_only"
+        assert info["runtime_completeness"] == "unknown"
+        assert [s["sha256"] for s in info["sources"]] == hashes
+        assert [s["path"] for s in info["sources"]] == paths
+        assert (await call("get_manifest"))["status"] == "not_applicable"
+        classes = await call("list_classes")
+        assert classes["status"] == "ok"
+        assert classes["total"] == info["class_count"]
+        assert any(
+            item == {"class_name": probe, "dex_entry": "classes2.dex"} for item in classes["items"]
+        )
+        combined = []
+        for offset in range(classes["total"]):
+            page = await call("list_classes", offset=offset, limit=1)
+            combined.extend(page["items"])
+            assert page["next_offset"] == (offset + 1 if offset + 1 < classes["total"] else None)
+        assert combined == classes["items"]
+        source = await call(
+            "get_class_source", class_name="org.example.droidascfixture.Probe", limit=1000
+        )
+        assert source["status"] == "ok"
+        assert source["dex_entry"] == "classes2.dex"
+        assert marker in source["source"]
+        assert (await call("get_class_source", class_name="missing.Class"))[
+            "code"
+        ] == "class_not_found"
+        for kind, value in (
+            ("string", marker),
+            ("type", "org.example.droidascfixture.Probe"),
+            ("method", "marker"),
+            ("field", "visits"),
+        ):
+            result = await call("find_refs", kind=kind, value=value)
+            assert result["status"] == "ok", result
+            assert result["total"] > 0
+            assert all(
+                item.get("dex") in {"classes.dex", "classes2.dex"} for item in result["items"]
+            )
+            baseline = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "droidasc",
+                    "findrefs",
+                    os.environ["ASC_TEST_APK"],
+                    kind,
+                    "--",
+                    value,
+                ],
+                capture_output=True,
+                check=True,
+                text=True,
+                encoding="utf-8",
+                timeout=60,
+            )
+            assert [item["raw"] for item in result["items"]] == sorted(baseline.stdout.splitlines())
+        empty = await call("find_refs", value="NONEXISTENT_SENTINEL_8394582")
+        assert empty["status"] == "ok" and empty["total"] == 0
+        invalid = await call("find_refs", value="[")
+        assert invalid["status"] == "error" and invalid["code"] == "engine_error"
+        assert (await call("find_refs", value="--gui"))["code"] == "invalid_query"
+        sentinel = tmp_path / "sentinel.txt"
+        sentinel.write_text("preserve", encoding="utf-8")
+        flagged = await call("find_refs", value="--output=" + sentinel.as_posix())
+        assert flagged["status"] == "ok"
+        assert sentinel.read_text(encoding="utf-8") == "preserve"
+        assert (await call("list_classes", offset=-1))["code"] == "invalid_query"
+        assert (await call())["status"] == "ok"
+    assert [hashlib.sha256(path.read_bytes()).hexdigest() for path in real_dex_files] == hashes
 
 
 @pytest.mark.parametrize("kind", ["string", "type"])

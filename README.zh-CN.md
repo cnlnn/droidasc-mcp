@@ -1,9 +1,9 @@
 # droidasc-mcp
 
 面向 [Droid ASC](https://github.com/MG1937/ASC) 的防御性 MCP 服务。它把 ASC 官方 CLI
-封装为六个有明确参数、只读且结果受限的 MCP 工具。
+封装为有明确参数、只读且结果受限的 MCP 工具。
 
-每次分析都在独立子进程组中执行；只能读取配置目录内的 APK；类列表、源码、Manifest
+每次分析都在独立子进程组中执行；只能读取配置目录内的输入文件；类列表、源码、Manifest
 和引用结果均支持分页，避免一次把大型 APK 的全部结果塞进模型上下文。
 
 > 这是社区项目，与 Droid ASC 官方维护者无隶属或背书关系。
@@ -18,6 +18,7 @@
 | `asc_list_classes` | 按包名前缀分页列出类 |
 | `asc_get_class_source` | 定位并反编译单个类 |
 | `asc_find_refs` | 跨 DEX 查找字符串、类型、方法或字段引用 |
+| `asc_analyze_dex` | 分析裸 DEX 或明确指定的 DEX 集合，保留来源和哈希（未发布） |
 
 ## 安装
 
@@ -98,6 +99,39 @@ asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainAc
 后的字符串和元组指针内存计费；同一查询合并执行，不同查询和缓存命中不再等待全局计算锁。
 缓存以查询、
 文件身份、大小和时间戳标识，不是内容寻址证据库。翻页期间不要修改 APK。
+
+## 裸 DEX 分析（未发布）
+
+此功能需从源码运行，上方 v0.2.2 发布包尚不包含。输入为允许目录内的 1-64 个 `.dex`
+文件路径，总大小受 `DROIDASC_MCP_MAX_APK_BYTES` 限制。不接收目录、APK、CompactDex
+或 DEX 041 容器。
+
+```text
+asc_analyze_dex(dex_paths=["/samples/classes.dex", "/samples/classes2.dex"])
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="list_classes", prefix="com.example")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="get_class_source", class_name="com.example.Main")
+asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="find_refs", kind="string", value="Authorization")
+```
+
+默认操作为 `info`。成功结果包含 `status="ok"` 和 `sources` 来源表，记录原路径、SHA-256、
+文件大小、类数量及内部 `dex_entry`。类列表和源码返回 `dex_entry`，引用沿用尽力解析的
+`dex` 字段。内部条目名称按输入顺序分配；翻页时保持顺序和原文件不变，并核对返回哈希。
+每次调用重新导入与分析，不复用 APK 工具的跨请求缓存。
+
+导入时校验标准小端 DEX 头（035/037/038/039/040）、固定 ID 表边界、文件大小、SHA-1
+签名和 Adler-32 校验和。校验通过不代表方法体或运行时代码完整。原文件保持不变，仅在
+私有临时目录中生成分析容器，在受监管进程内调用 ASC 公共模块入口；容器不是可安装 APK。
+成功、失败、超时和取消后均清理临时文件。临时磁盘占用可能接近输入总大小的两倍，加 ZIP 开销。
+
+重复类返回 `status="error", code="duplicate_class"`，最多展示 20 项冲突，不静默择一。
+`get_manifest` 返回 `status="not_applicable", code="no_manifest"`。
+输入、查询及引擎错误提供诊断码；成功但无引用为 `status="ok", total=0`。
+路径策略、进程启动、超时、内存和外层输出限额失败仍为 MCP 工具错误。调用方需同时检查
+MCP 错误和结构化 `status`。
+
+本工具用于导出后的静态分析，不自动脱壳、不修复 DEX、不恢复缺失代码或运行时加密的方法体，
+也不重建原始 Manifest 和资源。覆盖范围固定为 `supplied_files_only`，运行时完整性为
+`unknown`。分析不可信 dump 仍需使用隔离环境。
 
 ## 安全边界
 

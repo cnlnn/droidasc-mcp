@@ -34,6 +34,14 @@ class DroidAscService:
         apk = self.settings.validate_apk(apk_path)
         return self.runner.apk_info(apk, include_sha256)
 
+    def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
+        paths = self.settings.validate_dex_paths(dex_paths)
+        if query.get("class_name") and (
+            query.get("operation") == "get_class_source" or not query.get("fuzzy_class", False)
+        ):
+            query["class_name"] = _normalize_class_name(query["class_name"])
+        return self.runner.analyze_dex(paths, query)
+
     def get_manifest(self, apk_path: str, *, offset: int, limit: int) -> dict[str, object]:
         apk = self.settings.validate_apk(apk_path)
         page = self.runner.get_manifest(apk, offset=offset, limit=limit)

@@ -8,6 +8,7 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections import OrderedDict
@@ -109,6 +110,27 @@ class DroidAscRunner:
             )
         if len(data) > 256 * 1024:
             raise DroidAscError("APK metadata exceeds response budget")
+        return json.loads(data)
+
+    def analyze_dex(self, paths: list[Path], query: dict) -> dict:
+        request = {
+            "paths": [str(path) for path in paths],
+            "allowed_roots": [str(path) for path in self.settings.allowed_roots],
+            "max_input_bytes": self.settings.max_apk_bytes,
+            "max_output_bytes": self.settings.max_output_bytes,
+            "max_page_size": self.settings.max_page_size,
+            "query": query,
+        }
+        # The parent owns temporary storage so cancellation/worker kills also clean it up.
+        with (
+            self._acquire(self._slots),
+            tempfile.TemporaryDirectory(prefix="droidasc-dex-") as root,
+        ):
+            request_path = Path(root) / "request.json"
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            data = self._execute([str(request_path)], module_name="droidasc_mcp.dex_worker")
+        if len(data) > 256 * 1024:
+            raise DroidAscError("DEX result exceeds response budget; narrow the query")
         return json.loads(data)
 
     @contextmanager
