@@ -53,7 +53,15 @@ with all public fixtures and both optional backends. Local JUnit evidence is
 `artifacts/validation/persistence-tests.xml`. The native Windows/Linux and clean-package
 gate for implementation commit `9712467` is
 [CI 39622441029](https://github.com/cnlnn/droidasc-mcp/actions/runs/39622441029);
-its actual conclusion is authoritative rather than inferred from local tests.
+it exposed a Windows/Python 3.11 concurrent-lock initialization failure. Two
+first-time writers could observe an empty lock file, then one attempted a buffered
+initialization write after another had locked that byte. The fix removes lock-file
+writes entirely: Windows `_locking` supports byte ranges beyond EOF, as documented
+by [Microsoft](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/locking).
+A regression asserts the lock remains empty across repeated acquisition, alongside
+the existing separate-process publication and killed-writer tests. The corrected
+suite contains 271 tests; its native CI conclusion, not the earlier local run, is
+the release gate.
 
 The same 12-DEX Taobao APK was then tested through two separate real stdio MCP server
 lifetimes. The first server built and retained the complete 2,349,907,968-byte index in

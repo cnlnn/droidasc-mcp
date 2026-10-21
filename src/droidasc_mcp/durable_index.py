@@ -50,9 +50,7 @@ class DurableIndexes:
         if lock.is_symlink():
             raise DroidAscError("Persistent index cache lock cannot be a symlink")
         with lock.open("a+b") as handle:
-            if not lock.stat().st_size:
-                handle.write(b"0")
-                handle.flush()
+            # Windows byte-range locks support EOF; initialization writes race with holders.
             while True:
                 try:
                     handle.seek(0)

@@ -90,6 +90,12 @@ def test_restore_clears_page_reservation(cache, tmp_path):
     assert not list(pages.iterdir())
 
 
+def test_lock_never_writes_before_acquisition(cache):
+    for _ in range(2):
+        with cache._locked():
+            assert (cache.root / "cache.lock").stat().st_size == 0
+
+
 def _hold_lock(root, ready):
     cache = DurableIndexes(Settings(allowed_roots=(root.parent,), xref_cache_dir=root))
     with cache._locked():
