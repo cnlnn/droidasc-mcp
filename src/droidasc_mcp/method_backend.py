@@ -9,7 +9,7 @@ from pathlib import Path
 from .runner import DroidAscError
 
 
-def query_methods(settings, bundle, entry, query):
+def query_methods(settings, bundle, entry, query, workspace=None):
     home = settings.jadx_home
     java = settings.java_executable or shutil.which("java")
     if not home or not java:
@@ -26,6 +26,9 @@ def query_methods(settings, bundle, entry, query):
             "message": "JADX home must contain its distribution lib/*.jar",
         }
     offset, limit = query["offset"], min(query["limit"], settings.max_page_size)
+    workspace = workspace or bundle.parent
+    temporary = workspace / "jvm"
+    temporary.mkdir()
     command = [
         str(java),
         "-Xmx512m",
@@ -33,6 +36,10 @@ def query_methods(settings, bundle, entry, query):
         "-XX:+UseSerialGC",
         "-XX:CompressedClassSpaceSize=64m",
         "-XX:ReservedCodeCacheSize=64m",
+        "-XX:-CreateCoredumpOnCrash",
+        f"-XX:ErrorFile={os.devnull}",
+        f"-Djava.io.tmpdir={temporary}",
+        f"-Duser.home={temporary}",
         "-Dfile.encoding=UTF-8",
         "--class-path",
         os.pathsep.join(map(str, jars)),
@@ -48,7 +55,9 @@ def query_methods(settings, bundle, entry, query):
     ]
     # The caller's supervisor owns this descendant, including cancellation and Job limits.
     try:
-        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)
+        process = subprocess.Popen(
+            command, cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE
+        )
     except OSError as exc:
         raise DroidAscError("Could not start configured Java executable") from exc
     with process:

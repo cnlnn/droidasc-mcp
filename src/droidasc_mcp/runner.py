@@ -18,6 +18,7 @@ from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Literal
 
@@ -369,12 +370,19 @@ class DroidAscRunner:
         except Exception as exc:
             raise DroidAscError("Could not start supervised Droid ASC worker") from exc
         exceeded = threading.Event()
+        stopped = threading.Event()
         read_errors = []
         buffers = [bytearray(), bytearray()]
 
         def drain(stream, buffer, cap):
             try:
-                while chunk := stream.read(8192):
+                if os.name == "nt":
+                    from .windows_job import read_pipe
+
+                    read = partial(read_pipe, stream, stopped)
+                else:
+                    read = partial(stream.read, 8192)
+                while chunk := read():
                     remaining = cap - len(buffer)
                     buffer.extend(chunk[:remaining])
                     if len(chunk) > remaining:
@@ -445,6 +453,7 @@ class DroidAscRunner:
             try:
                 _terminate_process_tree(process, job)
             finally:
+                stopped.set()
                 for reader in started:
                     reader.join(timeout=1)
                 with suppress(subprocess.TimeoutExpired):

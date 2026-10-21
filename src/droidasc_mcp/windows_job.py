@@ -5,6 +5,26 @@ from contextlib import suppress
 from pathlib import Path
 
 
+def read_pipe(stream, stopped):
+    import msvcrt
+
+    import win32pipe
+
+    handle = msvcrt.get_osfhandle(stream.fileno())
+    while not stopped.is_set():
+        try:
+            available = win32pipe.PeekNamedPipe(handle, 1)[1]
+        except win32pipe.error as exc:
+            if exc.winerror == 109:  # ERROR_BROKEN_PIPE is normal EOF.
+                return b""
+            raise
+        if available:
+            # read1 cannot wait to fill an 8192-byte buffered read after a short write.
+            return stream.read1(min(8192, available))
+        stopped.wait(0.01)
+    return b""
+
+
 class WindowsJob:
     def __init__(self, memory_limit_bytes=None):
         import win32api

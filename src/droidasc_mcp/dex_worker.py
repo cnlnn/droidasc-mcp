@@ -152,7 +152,7 @@ def analyze(request: dict, root: Path) -> dict:
             if common["engine_version"] != version("droidasc"):
                 raise DexInputError("engine_changed", "Reopen the session with the current engine")
             return query_prepared(
-                runner, prepared / "analysis.apk", common, metadata["owners"], query
+                runner, prepared / "analysis.apk", common, metadata["owners"], query, root
             )
         paths = settings.validate_dex_paths(request["paths"])
         bundle = root / "analysis.apk"
@@ -228,7 +228,7 @@ def analyze(request: dict, root: Path) -> dict:
                 raise DexInputError("metadata_limit", "Prepared DEX metadata exceeds budget")
             (root / "prepared.json").write_text(metadata, encoding="utf-8")
             return {**common, "status": "ok"}
-        return query_prepared(runner, bundle, common, owners, query)
+        return query_prepared(runner, bundle, common, owners, query, root)
     except DexInputError as exc:
         return {**common, "status": "error", "code": exc.code, "message": str(exc)}
     except DroidAscError as exc:
@@ -237,7 +237,7 @@ def analyze(request: dict, root: Path) -> dict:
         return {**common, "status": "error", "code": "invalid_query", "message": str(exc)}
 
 
-def query_prepared(runner, bundle, common, owners, query):
+def query_prepared(runner, bundle, common, owners, query, workspace):
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
     if operation in {"list_methods", "get_method_source"}:
@@ -248,7 +248,7 @@ def query_prepared(runner, bundle, common, owners, query):
             raise ValueError("class_name is required")
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
-        result = query_methods(runner.settings, bundle, owners[name], query)
+        result = query_methods(runner.settings, bundle, owners[name], query, workspace)
         return {**common, **result, "class_name": name, "dex_entry": owners[name]}
     if operation == "info":
         return {**common, "status": "ok"}

@@ -545,22 +545,33 @@ async def test_real_exact_methods(transport, tmp_path, real_dex_files, request, 
                 await query(method_descriptor=owner + "->choose(I)Ljava/lang/String;")
 
         java_pid = None
+        java_temporary = None
         async with anyio.create_task_group() as tasks:
             tasks.start_soon(pending_query)
             deadline = time.monotonic() + 15
             while java_pid is None and time.monotonic() < deadline:
                 for child in psutil.Process().children(recursive=True):
                     with suppress(psutil.NoSuchProcess, psutil.AccessDenied):
-                        if any(arg.endswith("MethodBridge.java") for arg in child.cmdline()):
+                        java_args = child.cmdline()
+                        if any(arg.endswith("MethodBridge.java") for arg in java_args):
                             java_pid = child.pid
+                            java_temporary = Path(
+                                next(
+                                    arg.split("=", 1)[1]
+                                    for arg in java_args
+                                    if arg.startswith("-Djava.io.tmpdir=")
+                                )
+                            )
+                            (java_temporary / "cleanup-sentinel").write_text("temporary")
                             break
                 await anyio.sleep(0.01)
             assert java_pid is not None, "Method JVM did not start"
             cancel.cancel()
         deadline = time.monotonic() + 3
-        while alive(java_pid) and time.monotonic() < deadline:
+        while (alive(java_pid) or java_temporary.exists()) and time.monotonic() < deadline:
             await anyio.sleep(0.01)
         assert not alive(java_pid), "Cancelled method JVM is still executing"
+        assert not java_temporary.exists(), "Cancelled method temporary files remain"
         assert (await query("info"))["input_id"] == opened["input_id"]
         assert (await call("asc_close_dex_session", session_id=key))["cleanup_pending"] is False
 

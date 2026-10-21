@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +11,55 @@ from types import SimpleNamespace
 import pytest
 
 from droidasc_mcp import windows_job, worker_bootstrap
+
+
+def test_pipe_reader_short_data_eof_and_cancellation(monkeypatch):
+    if os.name == "nt":
+        # Native read must be interruptible even while a writer still owns its handle.
+        read_fd, write_fd = os.pipe()
+        stop = threading.Event()
+        with os.fdopen(read_fd, "rb") as pipe, os.fdopen(write_fd, "wb") as writer:
+            writer.write(b"abc")
+            writer.flush()
+            assert windows_job.read_pipe(pipe, stop) == b"abc"
+            results = []
+            reader = threading.Thread(
+                target=lambda: results.append(windows_job.read_pipe(pipe, stop))
+            )
+            reader.start()
+            stop.set()
+            reader.join(timeout=1)
+            assert not reader.is_alive()
+            assert results == [b""]
+
+    stopped = threading.Event()
+    state = [3]
+
+    class PipeError(Exception):
+        winerror = 109
+
+    def peek(handle, size):
+        assert handle == 42
+        if state[0] == -1:
+            raise PipeError("broken pipe")
+        return b"", state[0], 0
+
+    monkeypatch.setitem(sys.modules, "msvcrt", SimpleNamespace(get_osfhandle=lambda fd: fd))
+    monkeypatch.setitem(
+        sys.modules, "win32pipe", SimpleNamespace(PeekNamedPipe=peek, error=PipeError)
+    )
+    stream = SimpleNamespace(fileno=lambda: 42, read1=lambda size: b"abc"[:size])
+    assert windows_job.read_pipe(stream, stopped) == b"abc"
+    state[0] = -1
+    assert windows_job.read_pipe(stream, stopped) == b""
+    state[0] = 0
+    results = []
+    reader = threading.Thread(target=lambda: results.append(windows_job.read_pipe(stream, stopped)))
+    reader.start()
+    stopped.set()
+    reader.join(timeout=1)
+    assert not reader.is_alive()
+    assert results == [b""]
 
 
 @pytest.fixture

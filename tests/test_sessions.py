@@ -51,6 +51,20 @@ def test_capacity_evicts_idle_and_shutdown_cleans(store, paths):
     assert store.open(paths)["code"] == "session_store_closed"
 
 
+@pytest.mark.parametrize("refresh_first", [False, True])
+def test_lru_is_ordered_even_when_clock_readings_tie(store, paths, monkeypatch, refresh_first):
+    monkeypatch.setattr("droidasc_mcp.sessions.time.monotonic", lambda: 100.0)
+    first = store.open(paths)["session_id"]
+    second = store.open(paths)["session_id"]
+    # Force UUID order opposite to insertion order without depending on random UUIDs.
+    store.entries["z"] = store.entries.pop(first)
+    store.entries["a"] = store.entries.pop(second)
+    if refresh_first:
+        store.query("z", {})
+    third = store.open(paths)["session_id"]
+    assert set(store.entries) == ({"z", third} if refresh_first else {"a", third})
+
+
 def test_capacity_reservations_include_imports(store, paths):
     store.settings = replace(store.settings, max_dex_session_bytes=1)
     assert store.open(paths)["code"] == "session_capacity"

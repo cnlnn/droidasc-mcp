@@ -16,6 +16,13 @@ constructors, synthetic bridges, array signatures, native declarations, Unicode 
 Java-to-Smali target preservation and actual descendant JVM cancellation/recovery. These are small
 fixture checks; they do not establish equivalent Java correctness or speed on arbitrary obfuscation.
 
+Method JVM scratch files and user-home state are confined to the parent-owned query directory;
+cancellation tests plant a sentinel there and require both the JVM and directory to disappear.
+Session eviction uses a monotonic access sequence, independently of the TTL clock resolution.
+Windows pipe readers poll available bytes and observe a shutdown event rather than waiting for a
+full buffered read or every inherited writer handle to close. Native tests retain an open writer
+while stopping its reader, in addition to checking real Job Object process-tree cleanup.
+
 ```bash
 uv sync --locked --extra dev
 uv run pytest -q -s --junitxml=artifacts/validation/tests.xml -o junit_logging=all
@@ -178,7 +185,7 @@ The original orphan-cleanup implementation was not run because its unbounded pip
 - A killed Linux child may remain a zombie until its reaper runs; the test checks that it cannot
   execute, not that the PID instantly disappears.
 - The order test uses controlled output; it does not demonstrate a real ASC scheduling race.
-- Immutable content-addressed pagination and lossless parsing of embedded newlines in ASC text
-  remain unsupported or unverified.
+- APK-path pagination is not an immutable content-addressed input session. DEX sessions bind an
+  immutable validated bundle, but lossless parsing of embedded newlines in ASC text is unsupported.
 - HTTP is loopback-only in these tests; there is no authenticated remote-deployment acceptance.
 - Local measurements do not imply remote CI success; inspect the commit's GitHub Actions checks.

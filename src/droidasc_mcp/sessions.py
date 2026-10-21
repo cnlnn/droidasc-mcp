@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import itertools
 import tempfile
 import threading
 import time
@@ -23,6 +24,7 @@ class Entry:
     info: dict
     size: int
     touched: float
+    order: int
     users: int = 0
     closing: bool = False
 
@@ -33,6 +35,7 @@ class DexSessions:
         self.runner = runner
         self.lock = threading.RLock()
         self.entries: dict[str, Entry] = {}
+        self.order = itertools.count()
         self.reserved = 0
         self.opening = 0
         self.closed = False
@@ -73,7 +76,7 @@ class DexSessions:
                 or sum(e.size for e in self.entries.values()) + self.reserved + reservation
                 > self.settings.max_dex_session_bytes
             ):
-                candidates = [(e.touched, key) for key, e in self.entries.items() if not e.users]
+                candidates = [(e.order, key) for key, e in self.entries.items() if not e.users]
                 if not candidates:
                     return error(
                         "session_capacity", "Session capacity is occupied by active analyses"
@@ -102,7 +105,9 @@ class DexSessions:
                 if self.closed:
                     return error("session_store_closed", "Session store closed during preparation")
                 key = uuid.uuid4().hex
-                self.entries[key] = Entry(storage, copy.deepcopy(info), size, time.monotonic())
+                self.entries[key] = Entry(
+                    storage, copy.deepcopy(info), size, time.monotonic(), next(self.order)
+                )
                 committed = True
                 return {
                     **info,
@@ -132,6 +137,7 @@ class DexSessions:
             with self.lock:
                 entry.users -= 1
                 entry.touched = time.monotonic()
+                entry.order = next(self.order)
                 if entry.closing and not entry.users:
                     self._drop(key)
 
