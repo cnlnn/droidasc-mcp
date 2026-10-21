@@ -11,6 +11,9 @@ from pathlib import Path
 def main():
     mode, directory = sys.argv[1:3]
     root = Path(directory)
+    if mode == "tree-delayed":
+        time.sleep(0.4)
+        mode = "tree"
     if mode == "getmanifest":
         (root.parent / "worker.pid").write_text(str(os.getpid()))
         time.sleep(15)

@@ -140,18 +140,34 @@ def test_worker_memory_limit_and_recovery(settings, tmp_path, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_anyio_cancellation_terminates_worker(process_runner, tmp_path):
-    started = time.monotonic()
-    with anyio.move_on_after(0.25) as scope:
-        await anyio.to_thread.run_sync(process_runner._execute, ["tree", str(tmp_path)])
-    assert scope.cancel_called
-    pids = [int((tmp_path / name).read_text()) for name in ("parent.pid", "child.pid")]
+@pytest.mark.parametrize("mode", ["tree", "tree-delayed"])
+async def test_anyio_cancellation_terminates_worker(process_runner, tmp_path, mode):
+    subject = DroidAscRunner(
+        replace(process_runner.settings, timeout_seconds=10), module_name="process_fixture"
+    )
+    async with anyio.create_task_group() as group:
+        group.start_soon(anyio.to_thread.run_sync, subject._execute, [mode, str(tmp_path)])
+        # File existence alone can observe an empty PID file during startup on Windows.
+        with anyio.fail_after(5):
+            while True:
+                try:
+                    pids = [
+                        int((tmp_path / name).read_text()) for name in ("parent.pid", "child.pid")
+                    ]
+                except (FileNotFoundError, ValueError):
+                    await anyio.sleep(0.01)
+                    continue
+                assert all(alive(pid) for pid in pids)
+                break
+        started = time.monotonic()
+        group.cancel_scope.cancel()
+    assert group.cancel_scope.cancel_called
     deadline = time.monotonic() + 2
     while any(alive(pid) for pid in pids) and time.monotonic() < deadline:
         await anyio.sleep(0.01)
     assert not any(alive(pid) for pid in pids)
     assert time.monotonic() - started < 3
-    assert process_runner._execute(["info", str(tmp_path)])
+    assert subject._execute(["info", str(tmp_path)])
 
 
 def test_operation_cleanup_does_not_kill_another_tree(tmp_path):
