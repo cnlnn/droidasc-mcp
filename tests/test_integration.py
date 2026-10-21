@@ -452,13 +452,42 @@ async def assert_fixture_tools(call, apk):
             assert any(marker in item.get("matched", "") for item in refs["items"])
 
 
+@pytest.mark.parametrize("kind", ["string", "type"])
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ("[", "unterminated character set"),
+        (r"--output=C:\Users\runner\sentinel.txt", r"bad escape \U"),
+    ],
+)
+def test_real_invalid_regex_reports_engine_error(settings, kind, value, message):
+    apk = os.getenv("ASC_TEST_APK")
+    if not apk:
+        pytest.skip("Set ASC_TEST_APK for real APK acceptance")
+    runner = DroidAscRunner(settings)
+    with pytest.raises(DroidAscError) as error:
+        runner.find_refs(
+            Path(apk),
+            kind=kind,
+            value=value,
+            class_name=None,
+            fuzzy_class=False,
+            threads=8,
+            offset=0,
+            limit=100,
+        )
+    assert message in str(error.value)
+
+
 async def assert_fixture_query_boundaries(client, apk, tmp_path):
     sentinel = tmp_path / "outside-root-sentinel.txt"
     original = "READ_ONLY_SENTINEL\n"
     sentinel.write_text(original, encoding="utf-8")
     assert not sentinel.resolve().is_relative_to(Path(apk).parent)
+    # Forward slashes remain a valid Windows output path without regex escapes.
+    output_path = sentinel.as_posix()
     for kind in ("string", "type", "method", "field"):
-        for value in ("--help", "--output=" + str(sentinel), "-o" + str(sentinel), "--"):
+        for value in ("--help", "--output=" + output_path, "-o" + output_path, "--"):
             args = {"apk_path": apk, "kind": kind, "value": value}
             if kind in {"method", "field"}:
                 args["class_name"] = "org.example.droidascfixture.Probe"
@@ -466,12 +495,20 @@ async def assert_fixture_query_boundaries(client, apk, tmp_path):
             assert sentinel.read_text(encoding="utf-8") == original
             assert not result.is_error, result
             assert result.structured_content["total"] == 0, result
+        if kind in {"string", "type"}:
+            for value in ("[", r"--output=C:\Users\runner\sentinel.txt"):
+                invalid = await client.call_tool(
+                    "asc_find_refs", {"apk_path": apk, "kind": kind, "value": value}
+                )
+                assert invalid.is_error, invalid
+                assert sentinel.read_text(encoding="utf-8") == original
+                assert not (await client.call_tool("asc_ping", {})).is_error
         reserved = await client.call_tool(
             "asc_find_refs", {"apk_path": apk, "kind": kind, "value": "--gui"}
         )
         assert reserved.is_error
 
-    for prefix in ("--help", "--gui", "--output=" + str(sentinel)):
+    for prefix in ("--help", "--gui", "--output=" + output_path):
         result = await client.call_tool("asc_list_classes", {"apk_path": apk, "prefix": prefix})
         assert not result.is_error, result
         assert result.structured_content["items"] == []

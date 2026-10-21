@@ -104,8 +104,10 @@ that exceeds the budget produces an explicit error rather than silent truncation
 
 Reference fields are best-effort parsing of ASC CLI text. Embedded newlines can split records;
 `total` counts output lines, not semantic references. Reference lines are sorted before pagination.
-Values such as `--help` are literal reference queries. The exact value `--gui` returns an explicit
-error because ASC reserves it before parsing CLI arguments. Exact method/field class names accept
+Values such as `--help` are query data, not CLI options. ASC's matching semantics still apply:
+string/type queries accept regular expressions, and invalid patterns return errors. The exact
+value `--gui` returns an explicit error because ASC reserves it before parsing CLI arguments.
+Exact method/field class names accept
 Java names or Dalvik descriptors; fuzzy class patterns retain their original meaning.
 Snapshots are decoded and sorted once, then cached for 60 seconds (up to 8 entries). The cache
 budget accounts for Python strings and tuple pointers, not just original output bytes. Identical

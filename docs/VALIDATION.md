@@ -60,6 +60,8 @@ below are retained as historical observations; timings and RSS deltas are worklo
   successfully calls `asc_ping` on the same session. A separate real-process test covers the tree.
 - Query-boundary acceptance sends option-shaped reference values over both transports and checks
   that an outside-root sentinel is unchanged. The upstream-reserved `--gui` query fails explicitly.
+  Output-path probes use forward slashes, valid on both OSes; separate malformed string/type
+  regex probes require explicit errors and a usable session, without changing engine semantics.
   Exact method/field lookups compare the default-package `Login` name with `LLogin;`, while fuzzy
   class queries retain their substring semantics. These checks also run after sdist/wheel install.
 - Memory-limit acceptance deliberately exceeds a 96 MiB worker cap, checks the explicit failure,
