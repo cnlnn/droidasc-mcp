@@ -9,6 +9,39 @@ opt-in cross-restart index persistence in `9712467`.
 This report is not a claim of complete parity, a performance victory, or a release gate.
 No competitor implementation was copied into our package.
 
+## Decision snapshot: 2026-10-22
+
+The live GitHub commits API still resolves the competitor's latest commit to the
+pinned `848c711f1d80a1c2577283f1fa5f475ff734aa40`. Feature implementation does not
+establish universal superiority. The current decision is **partial, evidence-backed
+advantages; implemented workflow parity awaiting final acceptance**:
+
+| Dimension | Current evidence / remaining gap |
+| --- | --- |
+| Exact field-reference correctness | Our complete hit set matches the independent decoder for the measured operand; the pinned competitor has 97 extra instruction hits. This is a specific correctness advantage, not an oracle for all methods or operands. |
+| Static relationships and bounded graph | Our type relationships cover additional declaration/annotation categories, and graph node/edge/byte budgets are explicit. Large-APK graph cold/warm execution and independent call-site checks remain outstanding. |
+| Query latency | Historical method/field cold measurements were 6.8328 / 5.3987 seconds versus the pinned competitor's 4.5192 / 3.5706 seconds. A resident exact-page cache now avoids repeated worker startup, and full-index secondary indexes are bulk-built. Cold queries and initial full-index cost still require measurement, not a universal speed claim. |
+| Container scope | Generic ZIP, arbitrary directly embedded DEX paths, exact AAB modules and combined outer/AAR classes.jar DEX are implemented, including case-insensitive `.dex` suffixes. JVM and nested APK entries remain inventory-only; neither product's format list implies nested split reconstruction. |
+| MCP output contracts | All 18 public tools now expose typed nested output schemas, strict wire-type validation and preserved optional diagnostics/extension fields. Public input descriptions and state-aware annotations are present. |
+| Signing/revision/candidate strings | Candidate implementations exist; signing metadata is not cryptographic verification, revision comparison covers identities rather than behavior, and secret patterns produce redacted candidates rather than validated credentials. |
+| Batch acceptance | The first combined run had 372 passes and two legacy offset-contract failures. After fixing the runtime contract, the six affected integration/server checks passed. Independent apksigner acceptance then exposed a real v2 parsing defect; the optional empty AOSP signed-data field is now handled, with 13 signing tests and seven independent signed/unsigned/tampered variants passing. A fresh complete fixed-candidate run, clean-package checks and the new Windows batch are still pending. |
+
+Independent signing evidence is retained locally in
+`artifacts/validation/batch-signing-oracle.json`; the original APK hash was unchanged.
+The v1-only validity oracle is scoped to API 24-27. Metadata remains explicitly
+unverified even when the external oracle accepts the APK. The v2 compatibility
+fix follows the empty fourth signed-data field emitted by
+[AOSP apksig](https://android.googlesource.com/platform/tools/apksig/+/refs/heads/main/src/main/java/com/android/apksig/internal/apk/v2/V2SchemeSigner.java).
+
+The extended development gate passed 98 checks. The next Taobao interactive run
+preserved all four discovery/reference page hashes and complete instruction counters;
+exact-page repeats hit the new resident cache. Its reported 65-86 ms included a
+50-ms RSS-sampler join, now excluded from subsequent latency measurements. Under
+the loaded host, cold method/field scans took 11.2826 / 9.7120 seconds; these must
+not be represented as a speed improvement or compared as a controlled competitor trial.
+Receipt: `artifacts/validation/gap-interactive.json`. Final Linux/Windows and clean
+distribution gates apply to the v0.3.0 candidate, not the older receipts below.
+
 ## What the stars do and do not establish
 
 The GitHub repository API returned **19 stars / 2 forks** for aimardcr/asc-mcp and
@@ -170,15 +203,15 @@ multi-DEX Smali call-site fixtures and real stdio/HTTP transport tests.
 
 | Area | What the pinned implementation actually does | Our status / next action |
 | --- | --- | --- |
-| Agent routing | Server instructions distinguish declarations, string-pool matches, const-string use sites and type operands; each parameter has a description; read-only tools have MCP annotations. | Candidate now has initialization instructions, an analysis-guide resource, two prompts and annotations distinguishing read-only queries from session state. Per-parameter guidance and typed output contracts still need alignment. |
+| Agent routing | Server instructions distinguish declarations, string-pool matches, const-string use sites and type operands; each parameter has a description; read-only tools have MCP annotations. | Candidate has initialization instructions, an analysis-guide resource, two prompts, per-parameter descriptions, typed nested output schemas and annotations distinguishing read-only queries from session state. |
 | Target discovery | `search_members` searches method/field declarations and returns full descriptors; `search_strings` searches the DEX pool with DEX name and string index. | Candidate now has declaration-only method/field discovery and DEX string-pool search, with explicit case-sensitive literal semantics and provenance. Neither scans instructions or builds the full index. |
-| Query reuse | Resident workers cache parsed DEX and complete reference result sets by path/size/mtime; the reference cache has an eight-key LRU. | Candidate reuses exact query pages by immutable input/backend identity, capped at 32 pages / 4 MiB and charged to the existing index reservation. Different pages may rescan; isolation and byte bounds are retained, but warm queries remain slower than its resident cache. |
+| Query reuse | Resident workers cache parsed DEX and complete reference result sets by path/size/mtime; the reference cache has an eight-key LRU. | Candidate has a disk exact-page cache charged to the index reservation and a separate bounded resident serialized-page cache (32 pages / 4 MiB per session). Different pages may rescan; no resident workers or parsed APK objects. Warm speed requires fresh controlled comparison. |
 | APK contents | Sorted entry inventory, asset/resource reads, binary XML decoding and native-library ABI inventory. | Candidate adds bounded inventory/entry reads, native ABI paths, binary XML decoding, SHA-256 and distinct decoding/truncation/CRC status. Real stdio/HTTP and independent large-APK ZIP/aapt2 checks are documented in ARCHIVE_WORKFLOW.md. Resource-table resolution and ELF analysis remain outside this slice. |
 | Manifest analysis | Package/SDK/component structure, inherited application permission, and separate effective provider read/write permissions. | Candidate adds structured declarations, filters, metadata, provider read/write/path/URI-grant rules and permission provenance. Unlike the pinned implementation's general application fallback, an alias with no permission reports no requirement. Absent exported/resource-dependent values remain unresolved. Large-APK component kind/name order matches aapt2; this is not runtime exposure validation. |
 | Calls and hierarchy | Source implements full method prototype selection, overload rejection, cached adjacency and depth 1-3 exploration, but real call-graph execution failed as documented above. Direct interfaces/subclasses and superclass chain are also implemented. | Candidate `get_call_graph` reuses our index: incoming/outgoing/both, depth 1-5, independent node/edge/byte caps, individual call-site provenance, external roots and dynamic diagnostics. First use still pays full-index cost; no general speed claim. |
-| Signing | Androguard signing-scheme presence and certificate metadata/fingerprints. | Useful missing triage metadata. Scheme presence must not be advertised as cryptographic verification. |
-| Formats | APK/raw DEX; directly embedded DEX in JAR/AAB/APKS/XAPK/ZIP; JVM `.class` inventory, including embedded JARs such as AAR `classes.jar`. | Our raw DEX and APK paths should evolve toward capability-based containers without falsely promising split-APK reconstruction or JVM decompilation. |
-| Version comparison | Class inventory added/removed sets and common count. | Useful, but not a code/behavior diff. A bounded inventory comparison can precede later method-body or manifest comparisons. |
+| Signing | Androguard signing-scheme presence and certificate metadata/fingerprints. | Candidate inventories v1/v2/v3 certificate metadata and v3.1 presence. Seven independently signed/unsigned/tampered variants now pass; v3.1 extraction, rotation and cryptographic verification remain unsupported. |
+| Formats | APK/raw DEX; directly embedded DEX in JAR/AAB/APKS/XAPK/ZIP; JVM `.class` inventory, including embedded JARs such as AAR `classes.jar`. | Candidate supports arbitrary direct DEX paths in APK/JAR/ZIP/AAR/APKS/XAPK, exact AAB modules and AAR classes.jar under one expansion budget. JVM and nested APK entries are inventory-only. |
+| Version comparison | Class inventory added/removed sets and common count. | Candidate compares hash-bound class/method/field identities with pre-pagination filters. This is broader identity coverage, not a method-body, manifest or behavior diff. |
 
 Primary implementation references for the table:
 [routing/schema](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/server.py#L42-L148),
@@ -253,6 +286,9 @@ fixtures in [test_call_graph.py](../tests/test_call_graph.py), including cycles,
 self-recursion, overloads, external roots, invoke-custom/polymorphic diagnostics,
 exact-budget completion and bounded responses. Cross-platform/package gates remain
 the acceptance authority for each commit, not the presence of an implementation.
+The remaining signing, capability-container, revision-inventory and redacted-candidate
+slices now have candidate implementations in [REVERSE_WORKFLOW.md](REVERSE_WORKFLOW.md).
+All slices are being accepted together; no new row is implicitly marked passed here.
 
 | Priority | Slice | Acceptance that establishes a useful improvement |
 | --- | --- | --- |

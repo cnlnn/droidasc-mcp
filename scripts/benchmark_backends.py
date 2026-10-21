@@ -83,12 +83,13 @@ async def benchmark(args):
                     result = reply.structured_content
                     assert not reply.is_error and result, reply
                     assert result.get("status", "ok") == "ok", result
+                    elapsed = time.monotonic() - start
                 finally:
                     running = False
                     await monitor
                 metric = {
                     "label": label,
-                    "seconds": round(time.monotonic() - start, 4),
+                    "seconds": round(elapsed, 4),
                     "peak_descendant_rss_bytes": peak,
                 }
                 for key in (

@@ -14,6 +14,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from .archive_errors import ArchiveError
 from .config import Settings
 
 MAX_ENTRIES = 100_000
@@ -21,12 +22,6 @@ MAX_READ_BYTES = 128 * 1024
 MAX_XML_BYTES = 4 * 1024 * 1024
 MAX_RESPONSE_BYTES = 256 * 1024
 KINDS = {"manifest", "resource", "asset", "native", "dex", "metadata", "other"}
-
-
-class ArchiveError(ValueError):
-    def __init__(self, code, message):
-        super().__init__(message)
-        self.code = code
 
 
 class _DecoderWarnings(logging.Handler):
@@ -269,14 +264,28 @@ def _content(archive, info, query):
 
 def _query(archive, entries, query, max_page_size):
     operation = query["operation"]
-    if operation not in {"list_entries", "read_entry", "manifest_summary"}:
+    if operation not in {
+        "list_entries",
+        "read_entry",
+        "manifest_summary",
+        "signing_inventory",
+        "artifact_inventory",
+    }:
         raise ArchiveError("invalid_query", "Unknown archive operation")
-    if operation in {"list_entries", "manifest_summary"}:
+    if operation == "signing_inventory":
+        from .signing import inventory
+
+        return inventory(archive.fp, archive, entries)
+    if operation in {"list_entries", "manifest_summary", "artifact_inventory"}:
         offset, limit = query.get("offset", 0), query.get("limit", 100)
         if type(offset) is not int or offset < 0 or type(limit) is not int:
             raise ArchiveError("invalid_query", "offset and limit must be integers")
         if not 1 <= limit <= max_page_size:
             raise ArchiveError("invalid_query", "limit exceeds the configured page budget")
+    if operation == "artifact_inventory":
+        from .containers import inspect
+
+        return inspect(archive, entries, query["artifact_kind"], query)
     if operation == "list_entries":
         kind, prefix = query.get("kind"), query.get("prefix")
         if kind is not None and kind not in KINDS:
@@ -325,7 +334,12 @@ def analyze(request):
             allowed_roots=tuple(Path(p) for p in request["allowed_roots"]),
             max_apk_bytes=request["max_input_bytes"],
         )
-        apk = settings.validate_apk(request["apk_path"])
+        artifact = request["query"].get("operation") == "artifact_inventory"
+        apk = (settings.validate_artifact if artifact else settings.validate_apk)(
+            request["apk_path"]
+        )
+        if artifact:
+            request["query"]["artifact_kind"] = apk.suffix.lower()[1:]
         with apk.open("rb") as handle:
             before = os.fstat(handle.fileno())
             if not stat.S_ISREG(before.st_mode) or before.st_size > request["max_input_bytes"]:
@@ -345,9 +359,9 @@ def analyze(request):
                 ):
                     raise ArchiveError("input_changed", "APK changed during analysis; retry")
         return {
-            "apk_path": str(apk),
-            "apk_sha256": source_hash,
-            "apk_size_bytes": before.st_size,
+            ("artifact_path" if artifact else "apk_path"): str(apk),
+            ("artifact_sha256" if artifact else "apk_sha256"): source_hash,
+            ("artifact_size_bytes" if artifact else "apk_size_bytes"): before.st_size,
             **result,
         }
     except ArchiveError as exc:

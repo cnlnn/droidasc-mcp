@@ -17,19 +17,28 @@ structured data instead of unbounded terminal output.
 | --- | --- |
 | `asc_ping` | Show adapter/engine versions and effective runtime limits |
 | `asc_apk_info` | Return size, SHA-256, manifest presence, and DEX entries |
-| `asc_list_apk_entries` | Page APK contents, resources, assets and native ABIs (unreleased) |
-| `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML (unreleased) |
-| `asc_manifest_summary` | Page structured components, filters and permission provenance (unreleased) |
+| `asc_list_apk_entries` | Page APK contents, resources, assets and native ABIs |
+| `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML |
+| `asc_manifest_summary` | Page structured components, filters and permission provenance |
+| `asc_signing_inventory` | Inspect signature-container presence and certificate fingerprints, without signature verification |
+| `asc_inspect_artifact` | Page DEX/JVM/split capabilities in APK/JAR/ZIP/AAR/AAB/APKS/XAPK |
+| `asc_open_artifact_session` | Snapshot selected container DEX into the existing session workflow |
+| `asc_diff_dex_sessions` | Compare sorted class/member identities between hash-bound revisions |
+| `asc_secret_candidates` | Search fixed DEX string patterns with redacted source locations |
 | `asc_get_manifest` | Decode `AndroidManifest.xml` with line pagination |
 | `asc_list_classes` | List class descriptors with prefix filtering and pagination |
 | `asc_get_class_source` | Decompile one class with line pagination |
-| `asc_find_refs` | Find string/type/method/field references; direct hierarchy queries (unreleased) |
-| `asc_analyze_dex` | Analyze a bare DEX or explicit DEX set with source hashes (unreleased) |
-| `asc_open_dex_session` | Snapshot validated DEX inputs into an immutable bounded session (unreleased) |
-| `asc_query_dex_session` | Query that session with the original hashes and DEX provenance (unreleased) |
-| `asc_close_dex_session` | Close the session and release its private files (unreleased) |
+| `asc_find_refs` | Find string/type/method/field references; direct hierarchy queries |
+| `asc_analyze_dex` | Analyze a bare DEX or explicit DEX set with source hashes |
+| `asc_open_dex_session` | Snapshot validated DEX inputs into an immutable bounded session |
+| `asc_query_dex_session` | Query that session with the original hashes and DEX provenance |
+| `asc_close_dex_session` | Close the session and release its private files |
 
 ## Install
+
+Candidate container, signing and review workflows are described in
+[REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md). These are implementation candidates until
+the combined cross-platform, transport and clean-package gates have passed.
 
 Python 3.10 or newer is required. CI checks Linux and native Windows runners on Python 3.10-3.13, including
 the released tools and candidate additions over stdio/HTTP against a source-built
@@ -40,14 +49,14 @@ Install the version-pinned GitHub release on Linux:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
@@ -111,7 +120,7 @@ asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnabl
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
 
-### APK contents and manifest triage (unreleased)
+### APK contents and manifest triage
 
 The three archive tools bind every successful result to `apk_sha256`. Match hashes before
 correlating resources, components and code. Inventory supports a category and a literal,
@@ -144,7 +153,7 @@ value `--gui` returns an explicit error because ASC reserves it before parsing C
 Exact method/field class names accept
 Java names or Dalvik descriptors; fuzzy class patterns retain their original meaning.
 
-The unreleased `extends` and `impl` kinds query **direct** superclass/interface declarations,
+The `extends` and `impl` kinds query **direct** superclass/interface declarations,
 including interface-to-interface declarations. They require Droid ASC 0.1.2.post2 or newer
 (installed by the updated dependency requirement). Supply a Java name or Dalvik descriptor in
 `value`; class filters are rejected for these kinds. Records contain `dex`, `class_name`,
@@ -159,9 +168,9 @@ a global computation lock. Snapshots are
 keyed by query and file identity/size/timestamps. Cache misses rerun ASC; this is not an immutable
 content-addressed evidence store. Do not modify APK files between pages.
 
-## Bare DEX analysis (unreleased)
+## Bare DEX analysis
 
-This tool is available from a source checkout, not the v0.2.2 release linked above.
+Available in v0.3.0 and newer.
 It accepts 1-64 explicit `.dex` paths under the allowed roots, with a combined size bounded by
 `DROIDASC_MCP_MAX_APK_BYTES`. Directories, APKs, CompactDex and DEX 041 containers are not accepted.
 
@@ -206,7 +215,8 @@ Open with `asc_open_dex_session(dex_paths=[...])`, retain its `session_id`, then
 
 The `input_id` binds ordered DEX SHA-256 hashes, schema and ASC version. The UUID session ID
 identifies one private snapshot, not a global current sample. Changing/deleting original files
-does not mutate that snapshot. Query options are evaluated afresh, not cached under the input ID.
+does not mutate that snapshot. Cache keys include complete query options and backend identity,
+not merely the input ID; distinct queries cannot share a cached page.
 Reuse skips reimport, integrity checks and the duplicate-class scan; **it does not retain a
 resident decompiler or promise warm engine latency**. Method results identify the optional backend
 version separately. Sessions are local to this server process, not shared across hosts/restarts.
@@ -220,7 +230,7 @@ release their reservations. Concurrent preparation has reserved disk/count capac
 
 ### Exact methods and Smali
 
-Optional, unreleased: install the official [JADX 1.5.5 distribution](https://github.com/skylot/jadx/releases/tag/v1.5.5)
+Optional: install the official [JADX 1.5.5 distribution](https://github.com/skylot/jadx/releases/tag/v1.5.5)
 and a JDK 17 or newer. Set `DROIDASC_MCP_JADX_HOME` to its extracted directory (containing `lib/`).
 Set `DROIDASC_MCP_JAVA` to the JDK's `java` executable, or put it on `PATH`. A JRE alone cannot run
 the source bridge. The Python package does not bundle/download JADX or require Java for ASC tools.
@@ -292,7 +302,7 @@ timeout, aggregate memory, output and cancellation limits. This adds startup cos
 Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
 responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
 
-### Indexed investigation (unreleased)
+### Indexed investigation
 
 `operation="get_call_graph"` explores an exact `method_descriptor` with
 `direction="incoming"|"outgoing"|"both"` (default both), `depth=1..5` (default 2),
@@ -342,6 +352,11 @@ Cache identity includes immutable input and backend hashes; different pages may 
 `query_cache.hit` reports reuse. This keeps worker isolation rather than retaining parsed APKs
 in a long-lived process.
 
+A separate resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
+page). It avoids worker startup for repeated exact pages, and invalidates on implementation,
+engine or index-file identity changes. It never retains parsed DEX or worker processes.
+All 18 tools expose typed MCP output schemas, including nested result rows and diagnostics.
+
 Index construction costs time/disk upfront. Default per-session index quota is 256 MiB, reserved
 from the session storage budget; large applications may need an explicitly larger index quota,
 session budget and timeout. Cancellation, malformed input or quota failures do not publish a
@@ -369,7 +384,7 @@ The server also exposes initialization instructions, `droidasc://analysis-guide`
 `triage_apk` / `trace_exact_method` prompts. Artifact contents remain untrusted query data.
 See the [source-backed competitor comparison](docs/AIMARD_COMPARISON.md) for remaining gaps.
 
-### Optional Rust ASC (unreleased)
+### Optional Rust ASC
 
 Run `uv run python scripts/setup_rust.py` with Rust installed, then set
 `DROIDASC_MCP_RUST_ASC` to the resulting `artifacts/rust_ASC/target/release/rust_ASC`
@@ -439,7 +454,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.2.tar.gz dist/droidasc_mcp-0.2.2-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 ## License

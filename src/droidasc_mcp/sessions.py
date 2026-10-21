@@ -11,6 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .memory_cache import PageCache
 from .runner import _check_cancelled
 
 
@@ -28,6 +29,7 @@ class Entry:
     users: int = 0
     closing: bool = False
     index_lock: threading.Lock = field(default_factory=threading.Lock)
+    pages: PageCache = field(default_factory=PageCache)
 
 
 class DexSessions:
@@ -62,11 +64,16 @@ class DexSessions:
             with self.lock:
                 self._expire()
 
-    def open(self, paths):
+    def open(self, paths, *, artifact=None, budget=None, module=None):
         # Reserve for the ZIP bundle, a temporary single-DEX ZIP, and bounded metadata.
-        input_bytes = sum(path.stat().st_size for path in paths)
+        input_bytes = sum(path.stat().st_size for path in paths) if artifact is None else budget
         index_budget = self.settings.max_xref_index_bytes
-        reservation = input_bytes * 2 + self.settings.max_output_bytes * 2 + 1024**2 + index_budget
+        reservation = (
+            input_bytes * (2 if artifact is None else 3)
+            + self.settings.max_output_bytes * 2
+            + 1024**2
+            + index_budget
+        )
         with self.lock:
             if self.closed:
                 return error("session_store_closed", "Session store is closed")
@@ -96,7 +103,11 @@ class DexSessions:
         try:
             storage = tempfile.TemporaryDirectory(prefix="droidasc-session-")
             root = Path(storage.name)
-            info = self.runner.prepare_dex(paths, root, input_bytes)
+            info = (
+                self.runner.prepare_dex(paths, root, input_bytes)
+                if artifact is None
+                else self.runner.prepare_artifact(artifact, root, budget, module)
+            )
             _check_cancelled()
             if info.get("status") != "ok":
                 return info
@@ -146,7 +157,17 @@ class DexSessions:
             ):
                 # Atomic publication and one builder per session; waiting remains cancellable.
                 with self.runner._acquire(entry.index_lock):
-                    result = self.runner.query_dex_session(Path(entry.storage.name), query)
+                    _check_cancelled()
+                    root = Path(entry.storage.name)
+
+                    def execute():
+                        return self.runner.query_dex_session(root, query)
+
+                    result = (
+                        execute()
+                        if query.get("operation") == "build_xref_index"
+                        else entry.pages.execute(self.settings, root, query, execute)
+                    )
             else:
                 result = self.runner.query_dex_session(Path(entry.storage.name), query)
             return {**result, "session_id": key}
@@ -169,6 +190,33 @@ class DexSessions:
             if not pending:
                 self._drop(key)
             return {"status": "ok", "session_id": key, "cleanup_pending": pending}
+
+    def compare(self, old_key, new_key, query):
+        with self.lock:
+            self._expire()
+            entries = {key: self.entries.get(key) for key in (old_key, new_key)}
+            if self.closed or any(entry is None or entry.closing for entry in entries.values()):
+                return error("session_not_found", "Both revision sessions must be open")
+            for entry in entries.values():
+                entry.users += 1
+        try:
+            result = self.runner.query_dex_session(
+                Path(entries[old_key].storage.name),
+                {
+                    **query,
+                    "operation": "revision_diff",
+                    "other_prepared_root": entries[new_key].storage.name,
+                },
+            )
+            return {**result, "old_session_id": old_key, "new_session_id": new_key}
+        finally:
+            with self.lock:
+                for key, entry in entries.items():
+                    entry.users -= 1
+                    entry.touched = time.monotonic()
+                    entry.order = next(self.order)
+                    if entry.closing and not entry.users:
+                        self._drop(key)
 
     def shutdown(self):
         self.stop.set()

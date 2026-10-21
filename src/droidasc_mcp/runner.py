@@ -115,7 +115,7 @@ class DroidAscRunner:
         return json.loads(data)
 
     def query_archive(self, apk: Path, query: dict) -> dict:
-        if query.get("operation") in {"list_entries", "manifest_summary"}:
+        if query.get("operation") in {"list_entries", "manifest_summary", "artifact_inventory"}:
             offset, limit = self._page_bounds(query.get("offset", 0), query.get("limit", 100))
             query = {**query, "offset": offset, "limit": limit}
         request = {
@@ -145,6 +145,13 @@ class DroidAscRunner:
         request = self._dex_request(paths, {"operation": "info", "offset": 0, "limit": 1})
         request["max_input_bytes"] = min(input_bytes, self.settings.max_apk_bytes)
         request["prepare"] = True
+        return self._run_dex_request(request, root)
+
+    def prepare_artifact(self, path: Path, root: Path, budget: int, module: str | None) -> dict:
+        request = self._dex_request([], {"operation": "info", "offset": 0, "limit": 1})
+        request.update(
+            artifact_path=str(path), max_uncompressed_bytes=budget, module=module, prepare=True
+        )
         return self._run_dex_request(request, root)
 
     def query_dex_session(self, root: Path, query: dict) -> dict:

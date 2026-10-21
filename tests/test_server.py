@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 from mcp import Client
+from pydantic import TypeAdapter, ValidationError
 
 from droidasc_mcp.config import Settings
+from droidasc_mcp.contracts import DexResult, SecretResult
 from droidasc_mcp.server import build_server
 
 
@@ -15,9 +17,16 @@ async def test_server_advertises_expected_tools(settings: Settings):
     for tool in result.tools:
         assert tool.annotations.destructive_hint is False
         assert tool.annotations.open_world_hint is False
-        assert tool.annotations.read_only_hint is ("session" not in tool.name)
+        assert tool.annotations.read_only_hint is (
+            "session" not in tool.name and tool.name != "asc_secret_candidates"
+        )
     assert names == {
         "asc_ping",
+        "asc_signing_inventory",
+        "asc_inspect_artifact",
+        "asc_open_artifact_session",
+        "asc_diff_dex_sessions",
+        "asc_secret_candidates",
         "asc_apk_info",
         "asc_list_apk_entries",
         "asc_read_apk_entry",
@@ -31,6 +40,48 @@ async def test_server_advertises_expected_tools(settings: Settings):
         "asc_query_dex_session",
         "asc_close_dex_session",
     }
+
+
+@pytest.mark.anyio
+async def test_all_public_arguments_describe_scope(settings):
+    async with Client(build_server(settings)) as client:
+        tools = await client.list_tools()
+    for tool in tools.tools:
+        for name, definition in tool.input_schema.get("properties", {}).items():
+            assert definition.get("description"), (tool.name, name)
+
+
+@pytest.mark.anyio
+async def test_every_tool_advertises_typed_wire_contract(settings):
+    async with Client(build_server(settings)) as client:
+        tools = await client.list_tools()
+    for tool in tools.tools:
+        schema = tool.output_schema
+        assert schema and schema["type"] == "object", tool.name
+        properties = schema["properties"]
+        assert len(properties) >= 5, tool.name
+        if tool.name.startswith(("asc_query_dex", "asc_analyze_dex")):
+            assert properties["items"]["items"]["$ref"].endswith("/DexRow")
+            assert schema["$defs"]["DexRow"]["properties"]["instruction_offset"]["anyOf"]
+            assert properties["status"]["enum"] == ["ok", "partial", "error", "not_applicable"]
+
+
+def test_output_contract_checks_nested_types_and_preserves_wire_shape():
+    adapter = TypeAdapter(DexResult)
+    original = {
+        "status": "ok",
+        "items": [{"caller": "LC;->f()V", "instruction_offset": 12}],
+        "future_diagnostic": {"value": 1},
+    }
+    assert adapter.dump_python(adapter.validate_python(original)) == original
+    with pytest.raises(ValidationError):
+        adapter.validate_python({"status": "ok", "items": [{"instruction_offset": "twelve"}]})
+    with pytest.raises(ValidationError):
+        adapter.validate_python({"status": "success"})
+    with pytest.raises(ValidationError):
+        TypeAdapter(SecretResult).validate_python(
+            {"status": "ok", "items": [{"pattern": "test", "string_index": 1}]}
+        )
 
 
 @pytest.mark.anyio

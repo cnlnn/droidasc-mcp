@@ -105,6 +105,8 @@ uv run python scripts/verify_archive_workflow.py /path/to/app.apk \
   --output artifacts/validation/archive-workflow.json
 ```
 
-Bounded multi-hop call exploration, signing metadata, additional container formats and
-version comparison remain separate open workflow gaps. Native decoding, signing verification,
-dynamic instrumentation and resource-table resolution are not claimed by these tools.
+Bounded multi-hop call exploration is implemented by `get_call_graph`. Signing metadata,
+additional container formats and revision inventories are implemented in the same unreleased
+batch, with coverage described in [REVERSE_WORKFLOW.md](REVERSE_WORKFLOW.md). Their combined
+acceptance is recorded separately. Native decoding, signing verification, dynamic
+instrumentation and resource-table resolution are not claimed by these tools.

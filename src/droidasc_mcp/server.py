@@ -12,12 +12,89 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from .config import Settings
+from .contracts import (
+    ApkInfoResult,
+    ArchiveResult,
+    ArtifactResult,
+    DexResult,
+    DiffResult,
+    LegacyResult,
+    ManifestResult,
+    PingResult,
+    SecretResult,
+    SigningResult,
+)
 from .runner import DroidAscRunner
 from .service import DroidAscService
 from .workflows import INSTRUCTIONS, register_workflows
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 SESSION_STATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
+
+ApkPath = Annotated[str, Field(description="APK file path within configured allowed roots")]
+DexPaths = Annotated[
+    list[str],
+    Field(
+        min_length=1,
+        max_length=64,
+        description="Ordered standard DEX file paths; combined bytes are server-bounded",
+    ),
+]
+SessionId = Annotated[
+    str, Field(description="Immutable open DEX session ID returned by an open tool")
+]
+ClassName = Annotated[str, Field(description="Exact class descriptor or Java dotted class name")]
+OptionalClass = Annotated[
+    str | None,
+    Field(description="Exact owner class; for legacy fuzzy references, a literal owner substring"),
+]
+Prefix = Annotated[str | None, Field(description="Literal class/package prefix, case-sensitive")]
+MethodId = Annotated[
+    str | None,
+    Field(description="Full method identity: Lpkg/C;->name(args)return; preserves overloads"),
+]
+FieldId = Annotated[str | None, Field(description="Full field identity: Lpkg/C;->name:type")]
+TypeId = Annotated[
+    str | None, Field(description="Exact DEX type including array dimensions, for find_type_refs")
+]
+Value = Annotated[
+    str | None, Field(description="Literal search value; exact parent descriptor for extends/impl")
+]
+FuzzyClass = Annotated[
+    bool, Field(description="Legacy owner substring matching; exact member tools require false")
+]
+Threads = Annotated[
+    int, Field(description="Positive ASC worker count; requested values above 32 are capped")
+]
+Offset = Annotated[
+    int, Field(description="Zero-based result offset; graph traversal requires zero")
+]
+Limit = Annotated[
+    int, Field(description="Positive result page size in rows or source lines, server-capped")
+]
+Backend = Annotated[
+    Literal["droidasc", "rust_asc"],
+    Field(description="Engine; rust_asc is opt-in and reports unverified coverage"),
+]
+FieldAccess = Annotated[
+    Literal["all", "read", "write"],
+    Field(description="Instruction field-access filter, for find_field_refs"),
+]
+TypeRelation = Annotated[
+    Literal["all", "instruction", "declaration", "annotation"],
+    Field(description="Static type relation filter applied before pagination"),
+]
+SourceFormat = Annotated[
+    Literal["auto", "java", "smali"],
+    Field(description="Exact method source; auto has explicit fallback diagnostics"),
+]
+DebugInfo = Annotated[
+    bool, Field(description="Include debug line/local metadata for explicit method Smali only")
+]
+ReferenceKind = Annotated[
+    Literal["string", "type", "method", "field", "extends", "impl"],
+    Field(description="Reference category; search_members accepts method or field only"),
+]
 
 
 def build_server(
@@ -38,12 +115,164 @@ def build_server(
     register_workflows(mcp)
 
     @mcp.tool(annotations=READ_ONLY)
-    def asc_ping() -> dict[str, object]:
+    def asc_ping() -> PingResult:
         """Report server, engine, path-scope, and pagination configuration."""
         return service.ping()
 
     @mcp.tool(annotations=READ_ONLY)
-    def asc_apk_info(apk_path: str, include_sha256: bool = True) -> dict[str, object]:
+    def asc_signing_inventory(
+        apk_path: Annotated[str, Field(description="APK path within configured allowed roots")],
+    ) -> SigningResult:
+        """Inventory v1/v2/v3 containers and certificate fingerprints; detect v3.1 block presence.
+
+        Container presence is independent of cryptographic validity. APK digests, signatures,
+        trust, rotation lineage and v4 sidecars remain unverified. Malformed containers produce
+        explicit diagnostics. v1 certificates are a PKCS7 bag, not resolved signer identities.
+        """
+        return service.query_archive(apk_path, operation="signing_inventory")
+
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_inspect_artifact(
+        artifact_path: Annotated[
+            str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP path within allowed roots")
+        ],
+        module: Annotated[
+            str | None,
+            Field(description="Exact AAB module; omitted selects base, other formats omit"),
+        ] = None,
+        max_uncompressed_bytes: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=2147483648,
+                description="Nested classes.jar byte budget; server input limit also applies",
+            ),
+        ] = 134217728,
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based offset in sorted capability entries")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Entry page size, server-capped")
+        ] = 100,
+    ) -> ArtifactResult:
+        """Inspect container capabilities before selecting a DEX analysis workflow.
+
+        JVM classes and nested APK splits are inventory-only. AAR inspects classes.jar;
+        AAB selects one module's direct DEX. Other nested libraries are outside coverage.
+        """
+        return service.inspect_artifact(
+            artifact_path,
+            module=module,
+            max_uncompressed_bytes=max_uncompressed_bytes,
+            offset=offset,
+            limit=limit,
+        )
+
+    @mcp.tool(annotations=SESSION_STATE)
+    def asc_open_artifact_session(
+        artifact_path: Annotated[
+            str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP input within allowed roots")
+        ],
+        module: Annotated[
+            str | None, Field(description="Exact AAB module; omitted selects base")
+        ] = None,
+        max_uncompressed_bytes: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=2147483648,
+                description="Expanded JAR/DEX bytes; disk reservation scales with this budget",
+            ),
+        ] = 134217728,
+    ) -> DexResult:
+        """Snapshot selected direct DEX into an immutable reusable session with container hashes.
+
+        Direct DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module
+        are supported. Pure JVM
+        classes and nested split APKs stay inventory-only. Duplicate classes are rejected.
+        Query and close the resulting ID with the existing DEX session tools.
+        """
+        return service.open_artifact_session(
+            artifact_path, module=module, max_uncompressed_bytes=max_uncompressed_bytes
+        )
+
+    @mcp.tool(annotations=SESSION_STATE)
+    def asc_diff_dex_sessions(
+        old_session_id: Annotated[str, Field(description="Open immutable baseline session ID")],
+        new_session_id: Annotated[
+            str, Field(description="Open immutable candidate revision session ID")
+        ],
+        kind: Annotated[
+            Literal["all", "class", "method", "field"],
+            Field(description="Declaration identity kind to compare"),
+        ] = "all",
+        change: Annotated[
+            Literal["all", "added", "removed"],
+            Field(description="Change filter applied before paging"),
+        ] = "all",
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based offset in sorted changed descriptors")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Changed declaration page size, server-capped")
+        ] = 100,
+    ) -> DiffResult:
+        """Compare class/member identities with full descriptors and old/new source hashes.
+
+        Uses optional JADX 1.5.5/JDK 17+ without building an instruction index. Unchanged
+        identities say nothing about changed behavior, access flags, annotations or bodies.
+        Inventory is bounded to 1M identities and 64 MiB of cumulative declaration records.
+        """
+        return service.diff_dex_sessions(
+            old_session_id, new_session_id, kind=kind, change=change, offset=offset, limit=limit
+        )
+
+    @mcp.tool(annotations=SESSION_STATE)
+    def asc_secret_candidates(
+        session_id: Annotated[str, Field(description="Open immutable DEX or artifact session ID")],
+        pattern: Annotated[
+            Literal[
+                "all",
+                "aws_access_key_id",
+                "github_classic_token",
+                "google_api_key",
+                "private_key_marker",
+                "credential_assignment",
+                "jwt_like",
+            ],
+            Field(description="Fixed candidate pattern family, not arbitrary regex"),
+        ] = "all",
+        max_scan_bytes: Annotated[
+            int,
+            Field(
+                ge=1, le=268435456, description="Cumulative decoded UTF-8 string-pool byte budget"
+            ),
+        ] = 67108864,
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based candidate offset in DEX/string/pattern order")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Redacted candidate page size, server-capped")
+        ] = 100,
+    ) -> SecretResult:
+        """Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.
+
+        Uses optional JADX 1.5.5/JDK 17+. Results contain no token value or surrounding text.
+        Candidate validity and instruction use sites remain untested. Strings over 64K UTF-16
+        units are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.
+        Assets, native code, runtime values and arbitrary encodings are outside this scan.
+        """
+        return service.secret_candidates(
+            session_id, pattern=pattern, max_scan_bytes=max_scan_bytes, offset=offset, limit=limit
+        )
+
+    @mcp.tool(annotations=READ_ONLY)
+    def asc_apk_info(
+        apk_path: ApkPath,
+        include_sha256: Annotated[
+            bool, Field(description="Compute a full input SHA-256 when true")
+        ] = True,
+    ) -> ApkInfoResult:
         """Inspect APK size, SHA-256, manifest presence, and top-level DEX entries."""
         return service.apk_info(apk_path, include_sha256=include_sha256)
 
@@ -63,7 +292,7 @@ def build_server(
         limit: Annotated[
             int, Field(ge=1, le=1000, description="Page size, capped by server limits")
         ] = 100,
-    ) -> dict[str, object]:
+    ) -> ArchiveResult:
         """List APK contents, sizes, CRC metadata and native ABIs without extracting files.
 
         SHA-256 binds this page to the APK. CRC values here are declarations, not verification.
@@ -87,7 +316,7 @@ def build_server(
             bool,
             Field(description="Decode complete XML entries up to 4 MiB; false reads raw bytes"),
         ] = True,
-    ) -> dict[str, object]:
+    ) -> ArchiveResult:
         """Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.
 
         Binary XML decoding and returned-content truncation are separate statuses. Partial raw
@@ -110,7 +339,7 @@ def build_server(
         limit: Annotated[
             int, Field(ge=1, le=1000, description="Component page size, server-capped")
         ] = 100,
-    ) -> dict[str, object]:
+    ) -> ManifestResult:
         """Read structured Manifest components, filters, metadata and permission inheritance.
 
         Raw declarations are preserved separately. Unspecified exported defaults and resource
@@ -123,23 +352,23 @@ def build_server(
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_get_manifest(
-        apk_path: str,
-        offset: int = 0,
-        limit: int = 500,
-        backend: Literal["droidasc", "rust_asc"] = "droidasc",
-    ) -> dict[str, object]:
+        apk_path: ApkPath,
+        offset: Offset = 0,
+        limit: Limit = 500,
+        backend: Backend = "droidasc",
+    ) -> LegacyResult:
         """Decode AndroidManifest.xml and return a bounded page of XML lines."""
         return service.get_manifest(apk_path, offset=offset, limit=limit, backend=backend)
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_list_classes(
-        apk_path: str,
-        prefix: str | None = None,
-        threads: int = 8,
-        offset: int = 0,
-        limit: int = 200,
-        backend: Literal["droidasc", "rust_asc"] = "droidasc",
-    ) -> dict[str, object]:
+        apk_path: ApkPath,
+        prefix: Prefix = None,
+        threads: Threads = 8,
+        offset: Offset = 0,
+        limit: Limit = 200,
+        backend: Backend = "droidasc",
+    ) -> LegacyResult:
         """List class descriptors, optionally filtered by package or class prefix."""
         return service.list_classes(
             apk_path,
@@ -152,13 +381,13 @@ def build_server(
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_get_class_source(
-        apk_path: str,
-        class_name: str,
-        threads: int = 8,
-        offset: int = 0,
-        limit: int = 500,
-        backend: Literal["droidasc", "rust_asc"] = "droidasc",
-    ) -> dict[str, object]:
+        apk_path: ApkPath,
+        class_name: ClassName,
+        threads: Threads = 8,
+        offset: Offset = 0,
+        limit: Limit = 500,
+        backend: Backend = "droidasc",
+    ) -> LegacyResult:
         """Locate and decompile one class, returning a bounded page of source lines."""
         return service.get_class_source(
             apk_path,
@@ -171,16 +400,16 @@ def build_server(
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_find_refs(
-        apk_path: str,
-        kind: Literal["string", "type", "method", "field", "extends", "impl"],
-        value: str | None = None,
-        class_name: str | None = None,
-        fuzzy_class: bool = False,
-        threads: int = 8,
-        offset: int = 0,
-        limit: int = 200,
-        backend: Literal["droidasc", "rust_asc"] = "droidasc",
-    ) -> dict[str, object]:
+        apk_path: ApkPath,
+        kind: ReferenceKind,
+        value: Value = None,
+        class_name: OptionalClass = None,
+        fuzzy_class: FuzzyClass = False,
+        threads: Threads = 8,
+        offset: Offset = 0,
+        limit: Limit = 200,
+        backend: Backend = "droidasc",
+    ) -> LegacyResult:
         """Find cross-DEX references or direct subclasses/interface implementors.
 
         extends/impl use an exact class in value and return direct declarations only.
@@ -200,39 +429,44 @@ def build_server(
 
     @mcp.tool(annotations=READ_ONLY)
     def asc_analyze_dex(
-        dex_paths: list[str],
-        operation: Literal[
-            "info",
-            "list_classes",
-            "get_class_source",
-            "find_refs",
-            "get_manifest",
-            "list_methods",
-            "get_method_source",
-            "find_method_refs",
-            "get_method_calls",
-            "get_call_graph",
-            "find_field_refs",
-            "find_type_refs",
-            "build_xref_index",
-            "search_members",
-            "search_strings",
+        dex_paths: DexPaths,
+        operation: Annotated[
+            Literal[
+                "info",
+                "list_classes",
+                "get_class_source",
+                "find_refs",
+                "get_manifest",
+                "list_methods",
+                "get_method_source",
+                "find_method_refs",
+                "get_method_calls",
+                "get_call_graph",
+                "find_field_refs",
+                "find_type_refs",
+                "build_xref_index",
+                "search_members",
+                "search_strings",
+            ],
+            Field(
+                description="Static DEX operation; exact member/graph tools need full descriptors"
+            ),
         ] = "info",
-        prefix: str | None = None,
-        class_name: str | None = None,
-        method_descriptor: str | None = None,
-        field_descriptor: str | None = None,
-        field_access: Literal["all", "read", "write"] = "all",
-        type_descriptor: str | None = None,
-        type_relation: Literal["all", "instruction", "declaration", "annotation"] = "all",
-        source_format: Literal["auto", "java", "smali"] = "auto",
-        debug_info: bool = False,
-        kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
-        value: str | None = None,
-        fuzzy_class: bool = False,
-        threads: int = 8,
-        offset: int = 0,
-        limit: int = 200,
+        prefix: Prefix = None,
+        class_name: OptionalClass = None,
+        method_descriptor: MethodId = None,
+        field_descriptor: FieldId = None,
+        field_access: FieldAccess = "all",
+        type_descriptor: TypeId = None,
+        type_relation: TypeRelation = "all",
+        source_format: SourceFormat = "auto",
+        debug_info: DebugInfo = False,
+        kind: ReferenceKind = "string",
+        value: Value = None,
+        fuzzy_class: FuzzyClass = False,
+        threads: Threads = 8,
+        offset: Offset = 0,
+        limit: Limit = 200,
         direction: Annotated[
             Literal["incoming", "outgoing", "both"],
             Field(description="Graph direction; edges retain caller-to-callee orientation."),
@@ -256,7 +490,7 @@ def build_server(
                 description="Graph call-site budget; repeated calls remain separate edges.",
             ),
         ] = 500,
-    ) -> dict[str, object]:
+    ) -> DexResult:
         """Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.
 
         Returns status=ok, error, or not_applicable. Errors carry a diagnostic code;
@@ -304,7 +538,7 @@ def build_server(
         )
 
     @mcp.tool(annotations=SESSION_STATE)
-    def asc_open_dex_session(dex_paths: list[str]) -> dict[str, object]:
+    def asc_open_dex_session(dex_paths: DexPaths) -> DexResult:
         """Validate and snapshot DEX inputs once; return an immutable hash-bound session.
 
         Reuses the validated bundle, not a resident engine. Idle sessions expire and may
@@ -313,45 +547,48 @@ def build_server(
         return service.open_dex_session(dex_paths)
 
     @mcp.tool(annotations=SESSION_STATE)
-    def asc_close_dex_session(session_id: str) -> dict[str, object]:
+    def asc_close_dex_session(session_id: SessionId) -> DexResult:
         """Close a DEX session; active queries finish before its stored files are removed."""
         return service.sessions.close(session_id)
 
     @mcp.tool(annotations=SESSION_STATE)
     def asc_query_dex_session(
-        session_id: str,
-        operation: Literal[
-            "info",
-            "list_classes",
-            "get_class_source",
-            "find_refs",
-            "get_manifest",
-            "list_methods",
-            "get_method_source",
-            "find_method_refs",
-            "get_method_calls",
-            "get_call_graph",
-            "find_field_refs",
-            "find_type_refs",
-            "build_xref_index",
-            "search_members",
-            "search_strings",
+        session_id: SessionId,
+        operation: Annotated[
+            Literal[
+                "info",
+                "list_classes",
+                "get_class_source",
+                "find_refs",
+                "get_manifest",
+                "list_methods",
+                "get_method_source",
+                "find_method_refs",
+                "get_method_calls",
+                "get_call_graph",
+                "find_field_refs",
+                "find_type_refs",
+                "build_xref_index",
+                "search_members",
+                "search_strings",
+            ],
+            Field(description="Session operation; first indexed graph/type query builds the index"),
         ] = "info",
-        prefix: str | None = None,
-        class_name: str | None = None,
-        method_descriptor: str | None = None,
-        field_descriptor: str | None = None,
-        field_access: Literal["all", "read", "write"] = "all",
-        type_descriptor: str | None = None,
-        type_relation: Literal["all", "instruction", "declaration", "annotation"] = "all",
-        source_format: Literal["auto", "java", "smali"] = "auto",
-        debug_info: bool = False,
-        kind: Literal["string", "type", "method", "field", "extends", "impl"] = "string",
-        value: str | None = None,
-        fuzzy_class: bool = False,
-        threads: int = 8,
-        offset: int = 0,
-        limit: int = 200,
+        prefix: Prefix = None,
+        class_name: OptionalClass = None,
+        method_descriptor: MethodId = None,
+        field_descriptor: FieldId = None,
+        field_access: FieldAccess = "all",
+        type_descriptor: TypeId = None,
+        type_relation: TypeRelation = "all",
+        source_format: SourceFormat = "auto",
+        debug_info: DebugInfo = False,
+        kind: ReferenceKind = "string",
+        value: Value = None,
+        fuzzy_class: FuzzyClass = False,
+        threads: Threads = 8,
+        offset: Offset = 0,
+        limit: Limit = 200,
         direction: Annotated[
             Literal["incoming", "outgoing", "both"],
             Field(description="Graph direction; edges retain caller-to-callee orientation."),
@@ -375,7 +612,7 @@ def build_server(
                 description="Graph call-site budget; repeated calls remain separate edges.",
             ),
         ] = 500,
-    ) -> dict[str, object]:
+    ) -> DexResult:
         """Query an immutable DEX session in a supervised worker, with original provenance.
 
         Java, method lists and exact instruction references use optional JADX 1.5.5/JDK 17+.

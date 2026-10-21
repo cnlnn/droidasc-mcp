@@ -41,6 +41,61 @@ def process_runner(settings, monkeypatch):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_remaining_reverse_workflow_over_transport(
+    transport, tmp_path, review_dex_files, request, monkeypatch
+):
+    from test_containers import zip_bytes
+    from test_review import ORACLE
+
+    old = tmp_path / "old.jar"
+    new = tmp_path / "new.aab"
+    old.write_bytes(zip_bytes([("classes.dex", review_dex_files[0].read_bytes())]))
+    new.write_bytes(zip_bytes([("base/dex/classes.dex", review_dex_files[1].read_bytes())]))
+    apk = tmp_path / "unsigned.apk"
+    apk.write_bytes(zip_bytes([("assets/data", b"payload")]))
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    env = {**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)}
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(command=sys.executable, args=["-m", "droidasc_mcp"], env=env)
+    )
+    async with Client(endpoint) as client:
+
+        async def query(tool, **args):
+            result = await client.call_tool(tool, args)
+            assert not result.is_error, result
+            assert result.structured_content["status"] == "ok", result
+            return result.structured_content
+
+        info = await query("asc_inspect_artifact", artifact_path=str(old))
+        assert info["dex_analysis"] and not info["jvm_decompilation"]
+        a = await query("asc_open_artifact_session", artifact_path=str(old))
+        b = await query("asc_open_artifact_session", artifact_path=str(new))
+        try:
+            diff = await query(
+                "asc_diff_dex_sessions",
+                old_session_id=a["session_id"],
+                new_session_id=b["session_id"],
+            )
+            assert {(r["kind"], r["descriptor"], r["change"]) for r in diff["items"]} == ORACLE
+            assert diff["old_artifact_sha256"] == hashlib.sha256(old.read_bytes()).hexdigest()
+            assert diff["new_artifact_sha256"] == hashlib.sha256(new.read_bytes()).hexdigest()
+            secrets = await query("asc_secret_candidates", session_id=a["session_id"])
+            assert secrets["total"] == 3 and all(
+                row["redacted"] == "[REDACTED]" for row in secrets["items"]
+            )
+            assert "AKIA0000000000000000" not in str(secrets)
+            signing = await query("asc_signing_inventory", apk_path=str(apk))
+            assert signing["cryptographic_verification"] == "not_performed"
+            assert all(not s["container_present"] for s in signing["schemes"])
+        finally:
+            await query("asc_close_dex_session", session_id=a["session_id"])
+            await query("asc_close_dex_session", session_id=b["session_id"])
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_archive_workflow_over_transport(transport, tmp_path, request, monkeypatch):
     path = tmp_path / "archive workflow.apk"
     manifest = b"""<manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -973,7 +1028,7 @@ async def test_transport_roundtrip(transport, request, apk_file):
     )
     async with Client(endpoint) as client:
         tools = await client.list_tools()
-        assert len(tools.tools) == 13
+        assert len(tools.tools) == 18
         result = await client.call_tool("asc_ping", {})
         assert not result.is_error
         result = await client.call_tool("asc_apk_info", {"apk_path": str(apk_file)})
@@ -1043,7 +1098,7 @@ async def test_real_apk_all_tools(transport, tmp_path, request, monkeypatch):
             return result.structured_content
 
         assert (await call("asc_ping", {}))["status"] == "ok"
-        assert len((await client.list_tools()).tools) == 13
+        assert len((await client.list_tools()).tools) == 18
         if os.getenv("ASC_TEST_EXPECT_FIXTURE") == "1":
 
             async def refs_call(**kwargs):

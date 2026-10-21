@@ -51,10 +51,25 @@ def main():
                 "uv.lock",
                 "scripts/verify_dist.py",
                 "scripts/verify_archive_workflow.py",
+                "scripts/verify_signing.py",
                 "scripts/benchmark_call_graph.py",
                 "src/droidasc_mcp/archive_worker.py",
                 "src/droidasc_mcp/manifest.py",
                 "src/droidasc_mcp/call_graph.py",
+                "src/droidasc_mcp/signing.py",
+                "src/droidasc_mcp/containers.py",
+                "src/droidasc_mcp/archive_errors.py",
+                "src/droidasc_mcp/review.py",
+                "src/droidasc_mcp/contracts.py",
+                "src/droidasc_mcp/memory_cache.py",
+                "tests/test_memory_cache.py",
+                "src/droidasc_mcp/ReviewBridge.java",
+                "tests/test_signing.py",
+                "tests/test_containers.py",
+                "tests/test_review.py",
+                "tests/fixtures/xrefs/review_old/Review.smali",
+                "tests/fixtures/xrefs/review_new/Review.smali",
+                "tests/fixtures/xrefs/review_new/Added.smali",
                 "tests/test_call_graph.py",
                 "scripts/stability_check.py",
                 "scripts/stability_dex.py",
@@ -85,7 +100,7 @@ def main():
         (project,) = root.iterdir()
 
         def run(command, cwd=project):
-            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=600)
+            subprocess.run(command, cwd=cwd, env=env, check=True, timeout=900)
 
         run(["uv", "sync", "--locked", "--extra", "dev", "--python", sys.executable])
         python = project / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")

@@ -55,12 +55,9 @@ def _build(settings, bundle, target, workspace, identity):
             CREATE TABLE methods (source INTEGER PRIMARY KEY, instructions INTEGER,
                                   without_code INTEGER);
             CREATE TABLE dynamic (id INTEGER PRIMARY KEY, source INTEGER, data BLOB);
-            CREATE INDEX incoming ON edges(kind,target,relation);
-            CREATE INDEX outgoing ON edges(kind,source);
-            CREATE INDEX dynamic_source ON dynamic(source);
         """)
 
-        @lru_cache(maxsize=32768)
+        @lru_cache(maxsize=131072)
         def symbol(name):
             db.execute("INSERT OR IGNORE INTO symbols(name) VALUES (?)", (name,))
             return db.execute("SELECT id FROM symbols WHERE name=?", (name,)).fetchone()[0]
@@ -136,6 +133,10 @@ def _build(settings, bundle, target, workspace, identity):
                 process.kill()
                 raise
         db.executemany("INSERT INTO metadata VALUES (?,?)", identity.items())
+        # Bulk-load first so millions of edges do not rebalance three indexes per row.
+        db.execute("CREATE INDEX incoming ON edges(kind,target,relation)")
+        db.execute("CREATE INDEX outgoing ON edges(kind,source)")
+        db.execute("CREATE INDEX dynamic_source ON dynamic(source)")
         db.commit()
     if temporary.stat().st_size > settings.max_xref_index_bytes:
         raise DroidAscError("Index exceeds configured disk budget")

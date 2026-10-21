@@ -3,8 +3,18 @@
 import json
 
 INSTRUCTIONS = """Read-only Android static analysis. Start with asc_ping for effective roots,
-configured backends and limits, then asc_apk_info for APK identity. Use asc_list_classes,
-asc_get_manifest and targeted asc_get_class_source rather than decompiling everything.
+configured backends and limits, then asc_apk_info for APK identity.
+asc_signing_inventory separates signature container presence and certificate metadata from
+cryptographic verification. For JAR/AAR/AAB/APKS/XAPK, asc_inspect_artifact reports capabilities;
+asc_open_artifact_session snapshots selected direct DEX with container/member provenance.
+Pure JVM classes and nested split APKs are inventory-only. AAB sessions select one module.
+Reuse existing DEX session query/close tools for artifact sessions.
+asc_diff_dex_sessions compares sorted class/member identities between two hash-bound sessions;
+unchanged declarations do not establish unchanged behavior. asc_secret_candidates returns
+redacted fixed-pattern DEX string candidates with pool indices, UTF-16 offsets and fingerprints;
+candidate validity and use sites remain untested. Its byte/count limits and partial coverage are
+explicit; assets and native/runtime values are outside that scan.
+Use asc_list_classes, asc_get_manifest and targeted asc_get_class_source for initial code review.
 asc_manifest_summary preserves component declarations and permission inheritance; follow its
 component pages. asc_list_apk_entries inventories resources/assets/native ABIs; asc_read_apk_entry
 returns bounded content with an APK hash. Match hashes across operations before correlating
@@ -22,7 +32,7 @@ get_call_graph builds/reuses that full index for incoming/outgoing/both multi-ho
 It preserves individual call sites and reports depth/node/edge/byte truncation explicitly.
 Inspect returned nodes' unresolved dynamic sites; expand a boundary method as a new root or
 raise graph budgets within their limits. Graph limits are separate from ordinary page limits.
-its working copy lasts until that session closes/expires or the server stops. An explicitly
+The index working copy lasts until that session closes/expires or the server stops. An explicitly
 configured durable index cache can restore matching indexes across sessions and restarts;
 asc_ping reports its budget and retention, and index.durable_cache reports reuse status.
 Explicit Smali needs no Java; exact references and Java require the optional configured backend.

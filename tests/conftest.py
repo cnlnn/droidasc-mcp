@@ -115,6 +115,11 @@ def graph_dex_files(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def review_dex_files(tmp_path_factory):
+    return assemble_smali(tmp_path_factory, ("review_old", "review_new"))
+
+
+@pytest.fixture(scope="session")
 def memo_dex_files(tmp_path_factory):
     return assemble_smali(tmp_path_factory, ("memo_first", "memo_second"))
 

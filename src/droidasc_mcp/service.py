@@ -35,8 +35,61 @@ class DroidAscService:
     def open_dex_session(self, dex_paths):
         return self.sessions.open(self.settings.validate_dex_paths(dex_paths))
 
+    def inspect_artifact(self, artifact_path, **query):
+        from .containers import validate_budget
+
+        path = self.settings.validate_artifact(artifact_path)
+        validate_budget(query.get("max_uncompressed_bytes", 128 * 1024**2), self.settings)
+        return self.runner.query_archive(path, {"operation": "artifact_inventory", **query})
+
+    def open_artifact_session(
+        self, artifact_path, *, max_uncompressed_bytes=128 * 1024**2, module=None
+    ):
+        from .containers import validate_budget
+
+        path = self.settings.validate_artifact(artifact_path)
+        budget = validate_budget(max_uncompressed_bytes, self.settings)
+        return self.sessions.open([], artifact=path, budget=budget, module=module)
+
     def query_dex_session(self, session_id, **query):
         return self.sessions.query(session_id, _normalize_dex_query(query))
+
+    def diff_dex_sessions(
+        self, old_session_id, new_session_id, *, kind="all", change="all", offset=0, limit=100
+    ):
+        if kind not in {"all", "class", "method", "field"} or change not in {
+            "all",
+            "added",
+            "removed",
+        }:
+            raise ValueError("Select a declaration kind and added/removed change filter")
+        offset, limit = self.runner._page_bounds(offset, limit)
+        return self.sessions.compare(
+            old_session_id,
+            new_session_id,
+            {"kind": kind, "change": change, "offset": offset, "limit": limit},
+        )
+
+    def secret_candidates(
+        self, session_id, *, pattern="all", max_scan_bytes=64 * 1024**2, offset=0, limit=100
+    ):
+        from .review import PATTERNS
+
+        if pattern not in PATTERNS:
+            raise ValueError("Unknown candidate pattern")
+        if type(max_scan_bytes) is not int or not 1 <= max_scan_bytes <= 256 * 1024**2:
+            raise ValueError("max_scan_bytes must be within 1 byte and 256 MiB")
+        offset, limit = self.runner._page_bounds(offset, limit)
+        return self.sessions.query(
+            session_id,
+            {
+                "operation": "secret_candidates",
+                "pattern": pattern,
+                "max_scan_bytes": max_scan_bytes,
+                "offset": offset,
+                "limit": limit,
+            },
+        )
 
     def ping(self) -> dict[str, object]:
         try:
@@ -52,6 +105,23 @@ class DroidAscService:
             "timeout_seconds": self.settings.timeout_seconds,
             "max_worker_memory_bytes": self.settings.max_worker_memory_bytes,
             "max_page_size": self.settings.max_page_size,
+            "artifact_inputs": {
+                "dex_sessions": [
+                    "apk",
+                    "jar",
+                    "zip",
+                    "aar_classes_jar",
+                    "aab_selected_module",
+                    "apks",
+                    "xapk",
+                ],
+                "direct_dex_paths": "arbitrary_case_insensitive_dex_suffix",
+                "inventory_only": ["jvm_classes", "nested_apk_splits"],
+                "signing": "v1_v2_v3_certificate_inventory_without_signature_verification",
+                "v31": "block_presence_only",
+                "revision_diff": "class_method_field_identities_only",
+                "secret_candidates": "redacted_fixed_patterns_in_dex_string_pools",
+            },
             "rust_backend": {
                 "configured": self.settings.rust_asc_executable is not None,
                 "tested_commit": TESTED_COMMIT,
@@ -88,6 +158,8 @@ class DroidAscService:
                 "optional_index": "explicit_build_or_first_type_or_graph_search",
                 "index_persistence": "session_lifetime",
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
+                "memory_page_cache_bytes_per_session": 4 * 1024**2,
+                "memory_page_cache_max_entries": 32,
                 "durable_index_cache": {
                     "enabled": self.settings.xref_cache_dir is not None,
                     "max_bytes": self.settings.max_xref_cache_bytes,

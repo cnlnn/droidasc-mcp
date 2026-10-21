@@ -19,13 +19,42 @@ import jadx.api.*;
 public class MethodBridge {
     static String descriptor(MethodReference method) {
         StringBuilder result = new StringBuilder(method.getDefiningClass())
-            .append("->").append(method.getName()).append('(');
+            .append("->");
+        return result.append(localDescriptor(method)).toString();
+    }
+
+    static String localDescriptor(MethodReference method) {
+        StringBuilder result = new StringBuilder(method.getName()).append('(');
         for (CharSequence type : method.getParameterTypes()) result.append(type);
         return result.append(')').append(method.getReturnType()).toString();
     }
 
     static String descriptor(FieldReference field) {
         return field.getDefiningClass() + "->" + field.getName() + ":" + field.getType();
+    }
+
+    static String definition(String member, boolean field, Map<String, ClassDef> owners,
+            Map<String, String> origins) {
+        String owner = member.substring(0, member.indexOf("->"));
+        ClassDef cls = owners.get(owner);
+        if (cls == null) return null;
+        boolean found = false;
+        if (field) {
+            for (Field candidate : cls.getFields()) {
+                if (descriptor(candidate).equals(member)) {
+                    if (found) throw new IllegalArgumentException("Duplicate field definition");
+                    found = true;
+                }
+            }
+        } else {
+            for (Method candidate : cls.getMethods()) {
+                if (descriptor(candidate).equals(member)) {
+                    if (found) throw new IllegalArgumentException("Duplicate method definition");
+                    found = true;
+                }
+            }
+        }
+        return found ? origins.get(owner) : null;
     }
 
     static boolean matches(Instruction instruction, ReferenceInstruction referenced, String requested, byte[] memo) {
@@ -161,28 +190,23 @@ public class MethodBridge {
         var entries = new ArrayList<>(container.getDexEntryNames());
         Collections.sort(entries);
         boolean fields = operation.equals("find_field_refs");
-        // Index definitions only. Instructions remain streamed and output is paged while scanning.
-        Map<String, String> definitions = new HashMap<>();
+        // Resolve only queried operands; instruction scanning stays independent and complete.
+        Map<String, ClassDef> owners = new HashMap<>();
+        Map<String, String> origins = new HashMap<>();
         for (String entry : entries) {
             for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses()) {
-                if (fields) {
-                    for (Field field : cls.getFields()) {
-                        if (definitions.put(descriptor(field), entry) != null)
-                            throw new IllegalArgumentException("Duplicate field definition");
-                    }
-                } else {
-                    for (Method method : cls.getMethods()) {
-                        if (definitions.put(descriptor(method), entry) != null)
-                            throw new IllegalArgumentException("Duplicate method definition");
-                    }
-                }
+                if (owners.put(cls.getType(), cls) != null)
+                    throw new IllegalArgumentException("Duplicate class definition");
+                origins.put(cls.getType(), entry);
             }
         }
+        Map<String, String> definitions = new HashMap<>();
+        definitions.put(requested, definition(requested, fields, owners, origins));
         boolean incoming = !operation.equals("get_method_calls");
         result.put(fields ? "field_descriptor" : "method_descriptor", requested);
         if (fields) result.put("field_access", access);
         result.put("status", "ok");
-        if (!incoming && !definitions.containsKey(requested)) {
+        if (!incoming && definitions.get(requested) == null) {
             result.put("status", "error");
             result.put("code", "method_not_found");
             return result;
@@ -198,11 +222,16 @@ public class MethodBridge {
             for (ClassDef cls : container.getEntry(entry).getDexFile().getClasses())
                 classes.put(cls.getType(), cls);
             for (ClassDef cls : classes.values()) {
+                if (!incoming && !requested.startsWith(cls.getType() + "->")) continue;
                 TreeMap<String, Method> methods = new TreeMap<>();
-                for (Method method : cls.getMethods()) methods.put(descriptor(method), method);
+                for (Method method : cls.getMethods()) {
+                    if (methods.put(localDescriptor(method), method) != null)
+                        throw new IllegalArgumentException("Duplicate method definition");
+                }
                 for (var member : methods.entrySet()) {
-                    String caller = member.getKey();
-                    if (!incoming && !caller.equals(requested)) continue;
+                    if (!incoming && !member.getKey().equals(requested.substring(requested.indexOf("->") + 2)))
+                        continue;
+                    String caller = null;
                     scannedMethods++;
                     MethodImplementation implementation = member.getValue().getImplementation();
                     if (implementation == null) { withoutCode++; continue; }
@@ -230,9 +259,12 @@ public class MethodBridge {
                             if (callee != null) {
                                 if ((!incoming || callee.equals(requested))
                                         && (!fields || access.equals("all") || access.equals(fieldAccess))) {
+                                    if (!definitions.containsKey(callee))
+                                        definitions.put(callee, definition(callee, fields, owners, origins));
                                     String targetEntry = definitions.get(callee);
                                     if (targetEntry == null) unresolvedMatches++;
                                     if (total >= offset && total - offset < limit) {
+                                        if (caller == null) caller = cls.getType() + "->" + member.getKey();
                                         Map<String, Object> row = new LinkedHashMap<>();
                                         row.put("caller", caller);
                                         row.put(fields ? "field_descriptor" : "callee", callee);
@@ -263,6 +295,7 @@ public class MethodBridge {
                                     || referenceType == ReferenceType.METHOD_HANDLE
                                     || opcode.startsWith("invoke-polymorphic")) {
                                 dynamicSites++;
+                                if (caller == null) caller = cls.getType() + "->" + member.getKey();
                                 if (unresolved.size() < 20) unresolved.add(Map.of(
                                     "caller", caller, "dex_entry", entry,
                                     "instruction_offset", address, "opcode", opcode,

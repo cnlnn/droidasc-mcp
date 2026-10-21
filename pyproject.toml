@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "droidasc-mcp"
-version = "0.2.2"
+version = "0.3.0"
 description = "A safe, structured MCP server for the Droid ASC Android decompiler"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,11 +27,13 @@ classifiers = [
 ]
 dependencies = [
     "axml>=0.0.2,<0.1",
+    "cryptography>=43,<51",
     "droidasc>=0.1.2.post3,<0.2",
     "lxml>=5,<7",
     "mcp>=2,<3",
     "psutil>=7,<8",
     "pydantic>=2,<3",
+    "typing-extensions>=4.12,<5",
     "pywin32==312; sys_platform == 'win32'",
 ]
 
@@ -54,7 +56,7 @@ Source = "https://github.com/cnlnn/droidasc-mcp"
 where = ["src"]
 
 [tool.setuptools.package-data]
-droidasc_mcp = ["MethodBridge.java", "IndexBridge.java", "DiscoveryBridge.java"]
+droidasc_mcp = ["MethodBridge.java", "IndexBridge.java", "DiscoveryBridge.java", "ReviewBridge.java"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"

@@ -14,36 +14,44 @@
 | --- | --- |
 | `asc_ping` | 查看适配器、ASC 版本和当前运行限制 |
 | `asc_apk_info` | 返回文件大小、SHA-256、Manifest 和 DEX 条目 |
-| `asc_list_apk_entries` | 分页列出 APK 内容、资源、assets 和 native ABI（未发布） |
-| `asc_read_apk_entry` | 有界读取 UTF-8/base64 内容，支持二进制 XML 解码（未发布） |
-| `asc_manifest_summary` | 分页返回组件、Intent Filter 和权限来源（未发布） |
+| `asc_list_apk_entries` | 分页列出 APK 内容、资源、assets 和 native ABI |
+| `asc_read_apk_entry` | 有界读取 UTF-8/base64 内容，支持二进制 XML 解码 |
+| `asc_manifest_summary` | 分页返回组件、Intent Filter 和权限来源 |
 | `asc_get_manifest` | 解码并分页读取 `AndroidManifest.xml` |
 | `asc_list_classes` | 按包名前缀分页列出类 |
 | `asc_get_class_source` | 定位并反编译单个类 |
-| `asc_find_refs` | 跨 DEX 查找字符串、类型、方法、字段引用；直接继承/实现查询（未发布） |
-| `asc_analyze_dex` | 分析裸 DEX 或明确指定的 DEX 集合，保留来源和哈希（未发布） |
-| `asc_open_dex_session` | 创建哈希绑定、容量受限的不可变 DEX 会话（未发布） |
-| `asc_query_dex_session` | 查询指定会话，保留原始哈希和 DEX 来源（未发布） |
-| `asc_close_dex_session` | 关闭会话并释放私有文件（未发布） |
+| `asc_find_refs` | 跨 DEX 查找字符串、类型、方法、字段引用；直接继承/实现查询 |
+| `asc_analyze_dex` | 分析裸 DEX 或明确指定的 DEX 集合，保留来源和哈希 |
+| `asc_open_dex_session` | 创建哈希绑定、容量受限的不可变 DEX 会话 |
+| `asc_query_dex_session` | 查询指定会话，保留原始哈希和 DEX 来源 |
+| `asc_close_dex_session` | 关闭会话并释放私有文件 |
+| `asc_signing_inventory` | 签名容器与证书指纹清单，不执行密码学验签 |
+| `asc_inspect_artifact` | APK/JAR/ZIP/AAR/AAB/APKS/XAPK 的 DEX、JVM 与 split 能力清单 |
+| `asc_open_artifact_session` | 将所选容器中的直接 DEX 接入现有会话工作流 |
+| `asc_diff_dex_sessions` | 对比哈希绑定版本的类、方法与字段声明身份 |
+| `asc_secret_candidates` | 固定模式检索 DEX 字符串，返回脱敏候选与精确位置 |
+
+容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
+本批仍为候选实现，统一跨平台、MCP 传输及安装包验收完成前，不标记全部通过。
 
 ## 安装
 
 需要 Python 3.10 或更高版本。CI 覆盖 Linux 和原生
 Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fixtures/android/README.md)
-验收 stdio/HTTP 全部 6 个工具及发布包安装；macOS 尚未验证。
+验收 stdio/HTTP 全部 18 个工具及发布包安装；macOS 尚未验证。
 
 Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.2/droidasc_mcp-0.2.2-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
@@ -98,7 +106,7 @@ asc_find_refs(apk_path="/samples/app.apk", kind="impl", value="java.lang.Runnabl
 asc_get_class_source(apk_path="/samples/app.apk", class_name="com.example.MainActivity")
 ```
 
-### APK 内容与组件研判（未发布）
+### APK 内容与组件研判
 
 三个归档工具均返回 `apk_sha256`，跨资源、组件和代码关联时先核对哈希。
 清单支持分类和区分大小写的字面路径前缀；其中 CRC 是 ZIP 声明值，不代表校验完成。
@@ -124,7 +132,7 @@ URI 授权规则，并标明权限来源。显式空权限清除继承要求；a
 支持正则表达式，无效表达式明确报错。上游 CLI 在参数解析前保留了精确值 `--gui`，
 因此该值会明确报错。方法和字段的精确类名支持 Java 名称和 Dalvik 描述符，模糊类名保留原语义。
 
-未发布的 `extends`、`impl` 查询只返回**直接**父类或接口声明，包括接口继承接口。
+`extends`、`impl` 查询只返回**直接**父类或接口声明，包括接口继承接口。
 依赖要求已提高到 Droid ASC 0.1.2.post3，包含精确方法 Smali 和调试信息输出。
 通过 `value` 传入 Java 类名或 Dalvik 描述符，这两类查询不接受类名过滤参数。
 记录包含 `dex`、`class_name`、`relation`、`target`、`raw`，并标记
@@ -136,9 +144,9 @@ URI 授权规则，并标明权限来源。显式空权限清除继承要求；a
 缓存以查询、
 文件身份、大小和时间戳标识，不是内容寻址证据库。翻页期间不要修改 APK。
 
-## 裸 DEX 分析（未发布）
+## 裸 DEX 分析
 
-此功能需从源码运行，上方 v0.2.2 发布包尚不包含。输入为允许目录内的 1-64 个 `.dex`
+自 v0.3.0 提供。输入为允许目录内的 1-64 个 `.dex`
 文件路径，总大小受 `DROIDASC_MCP_MAX_APK_BYTES` 限制。不接收目录、APK、CompactDex
 或 DEX 041 容器。
 
@@ -169,7 +177,7 @@ MCP 错误和结构化 `status`。
 也不重建原始 Manifest 和资源。覆盖范围固定为 `supplied_files_only`，运行时完整性为
 `unknown`。分析不可信 dump 仍需使用隔离环境。
 
-## DEX 会话与精确方法（未发布）
+## DEX 会话与精确方法
 
 用 `asc_open_dex_session(dex_paths=[...])` 创建会话，再把返回的 `session_id` 传给
 `asc_query_dex_session`。查询参数与 `asc_analyze_dex` 一致，结束时调用 `asc_close_dex_session`。
@@ -241,7 +249,7 @@ JVM，最大堆 512 MiB，共享超时、内存、输出和取消清理约束，
 `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` 配置，默认分别为 `4`、`1800`、`4294967296`。
 磁盘预算包含已有文件及并发准备阶段的预留空间；所有会话只属于当前服务进程，不跨重启恢复。
 
-### 索引与目标发现（未发布）
+### 索引与目标发现
 
 `operation="get_call_graph"` 根据完整 `method_descriptor` 探索多跳静态调用图。
 `direction=incoming|outgoing|both`，默认双向；`depth=1..5`，默认 2；
@@ -279,6 +287,10 @@ DEX 字符串池，使用区分大小写的字面子串，返回 `dex_entry`、`
 每页 256 KiB，与索引共用磁盘预留，完整建库前清空。缓存绑定不可变输入与后端哈希，换页可能
 重新扫描；`query_cache.hit` 表示是否命中。仍保留独立工作进程，不常驻整份 APK 解析对象。
 
+另有每会话最多 32 页、4 MiB 的常驻序列化页缓存，单页上限 256 KiB，命中时无需启动工作进程。
+实现、引擎或索引文件身份变化后失效，不常驻 DEX 解析对象和工作进程。全部 18 个工具提供
+MCP 类型化输出 Schema，覆盖嵌套结果行与诊断字段。
+
 建库有前置时间和磁盘成本。`DROIDASC_MCP_MAX_XREF_INDEX_BYTES` 默认 256 MiB，从会话磁盘总额预留；
 大应用可能需要显式调整索引配额、会话总额和超时。取消、配额耗尽和解码失败不会发布部分索引。
 索引绑定输入哈希、Schema 和后端文件，会话关闭/过期或服务退出即删除工作副本；默认单次查询索引也是临时的。
@@ -298,7 +310,7 @@ TTL/LRU 清理，校验和及原子发布防止使用中断写入结果；淘汰
 服务增加初始化指引、`droidasc://analysis-guide` 资源以及 `triage_apk` / `trace_exact_method` prompts。
 样本字符串和反编译结果始终是非可信数据。与竞品的实测差距见[源码对比](docs/AIMARD_COMPARISON.md)。
 
-### 可选 Rust ASC（未发布）
+### 可选 Rust ASC
 
 安装 Rust 后执行 `uv run python scripts/setup_rust.py`，将 `DROIDASC_MCP_RUST_ASC` 设置为构建出的
 `artifacts/rust_ASC/target/release/rust_ASC`，Windows 为 `rust_ASC.exe`。脚本固定源码与 radguard 提交。
@@ -343,7 +355,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.2.tar.gz dist/droidasc_mcp-0.2.2-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/droidasc_mcp-0.3.0-py3-none-any.whl
 ```
 
 ## 许可证

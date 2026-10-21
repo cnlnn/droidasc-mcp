@@ -14,6 +14,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from importlib.metadata import version
 from pathlib import Path
 
+from .archive_errors import ArchiveError
 from .config import Settings
 from .runner import DroidAscError, DroidAscRunner, _clean_error
 
@@ -158,7 +159,18 @@ def analyze(request: dict, root: Path) -> dict:
             return query_prepared(
                 runner, prepared / "analysis.apk", common, metadata["owners"], query, root
             )
-        paths = settings.validate_dex_paths(request["paths"])
+        origins, artifact_metadata = [], None
+        if request.get("artifact_path"):
+            from .containers import snapshot, validate_budget
+
+            artifact = settings.validate_artifact(request["artifact_path"])
+            budget = validate_budget(request["max_uncompressed_bytes"], settings)
+            paths, origins, artifact_metadata = snapshot(
+                settings, artifact, root, budget, request.get("module")
+            )
+            common.update(artifact_metadata, input_kind="container", has_manifest=False)
+        else:
+            paths = settings.validate_dex_paths(request["paths"])
         bundle = root / "analysis.apk"
         remaining = settings.max_apk_bytes
         # Temporary copies use the existing uncompressed-byte storage reservation.
@@ -176,6 +188,10 @@ def analyze(request: dict, root: Path) -> dict:
                         "source_path": str(source),
                     }
                 common["sources"].append(record)
+                if artifact_metadata is not None:
+                    record["path"] = str(artifact)
+                    record["container_entry"] = origins[index]
+                    source.unlink()
                 remaining -= record["size_bytes"]
         # Inspect each DEX independently so duplicate definitions cannot be hidden by merging.
         owners = {}
@@ -234,12 +250,14 @@ def analyze(request: dict, root: Path) -> dict:
             (root / "prepared.json").write_text(metadata, encoding="utf-8")
             return {**common, "status": "ok"}
         return query_prepared(runner, bundle, common, owners, query, root)
-    except DexInputError as exc:
+    except (DexInputError, ArchiveError) as exc:
         return {**common, "status": "error", "code": exc.code, "message": str(exc)}
     except DroidAscError as exc:
         return {**common, "status": "error", "code": "engine_error", "message": str(exc)}
     except ValueError as exc:
         return {**common, "status": "error", "code": "invalid_query", "message": str(exc)}
+    except (zipfile.BadZipFile, NotImplementedError, RuntimeError, OSError) as exc:
+        return {**common, "status": "error", "code": "invalid_container", "message": str(exc)}
 
 
 def query_prepared(runner, bundle, common, owners, query, workspace):
@@ -253,6 +271,10 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
 
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    if operation in {"revision_diff", "secret_candidates"}:
+        from .review import query_review
+
+        return {**common, **query_review(runner.settings, bundle, common, query, workspace)}
     if operation in INDEX_OPERATIONS or (
         operation in REFERENCE_OPERATIONS | {"search_members"}
         and ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir)

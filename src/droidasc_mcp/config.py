@@ -92,9 +92,13 @@ class Settings:
         )
 
     def validate_apk(self, value: str) -> Path:
+        return self.validate_artifact(value, extensions={".apk"})
+
+    def validate_artifact(self, value: str, *, extensions=None) -> Path:
         path = Path(value).expanduser().resolve()
-        if path.suffix.lower() != ".apk":
-            raise ApkPathError("Only .apk files are accepted")
+        extensions = extensions or {".apk", ".jar", ".aar", ".aab", ".apks", ".xapk", ".zip"}
+        if path.suffix.lower() not in extensions:
+            raise ApkPathError("Only " + ", ".join(sorted(extensions)) + " files are accepted")
         if not path.is_file():
             raise ApkPathError(f"APK file does not exist: {path}")
         if not any(_is_relative_to(path, root) for root in self.allowed_roots):

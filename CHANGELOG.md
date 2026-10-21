@@ -1,7 +1,22 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
+- Publish typed MCP output schemas for all 18 tools, preserving optional diagnostics and
+  rejecting invalid nested wire types. Add generic ZIP and arbitrary directly embedded DEX
+  paths across supported containers, with combined AAR budgets and unambiguous provenance.
+- Add a separate bounded 4-MiB / 32-entry per-session resident exact-page cache, invalidated
+  by implementation/engine/index identity changes. Defer secondary SQLite indexes until
+  after bulk loading, and avoid building unrelated member descriptors in streamed queries.
+
+- Add signing-container/certificate inventories with v1 PKCS7 bags, v2/v3 signer records,
+  v3.1 presence and malformed/unsupported diagnostics, separately from cryptographic validity.
+- Add capability inventory for APK/JAR/ZIP/AAR/AAB/APKS/XAPK and budgeted direct-DEX artifact
+  sessions, preserving original container SHA-256 and member paths. JVM classes and nested
+  split APKs remain inventory-only; AAB selects one module, AAR includes classes.jar.
+- Add bounded sorted revision identity inventories and redacted fixed-pattern DEX secret
+  candidates with pool indices/fingerprints. Keep behavior comparison and credential probing
+  outside these operations. Complete public argument descriptions and schema bounds.
 - Add index-backed multi-hop static call graphs with incoming/outgoing/both traversal,
   bounded depth/nodes/call sites/output bytes, explicit expansion boundaries, external roots,
   original DEX offsets and unresolved dynamic diagnostics. Exercise public multi-DEX cycles,

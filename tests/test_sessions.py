@@ -20,7 +20,7 @@ def store(settings, tmp_path):
 
     def prepare(paths, root, input_bytes):
         (root / "analysis.apk").write_bytes(b"immutable")
-        return {"status": "ok", "input_id": "hash", "sources": [str(p) for p in paths]}
+        return {"status": "ok", "input_id": "hash", "sources": [{"path": str(p)} for p in paths]}
 
     runner.prepare_dex.side_effect = prepare
     runner.query_dex_session.return_value = {"status": "ok"}
@@ -125,6 +125,33 @@ def test_inflight_query_pins_files_against_close_eviction_and_ttl(store, paths):
             release.set()
         assert future.result()["status"] == "ok"
     assert not root.exists()
+
+
+@pytest.mark.parametrize("same", [False, True])
+def test_revision_comparison_pins_both_sessions_until_completion(store, paths, same):
+    old = store.open(paths)["session_id"]
+    new = old if same else store.open(paths)["session_id"]
+    roots = [Path(store.entries[key].storage.name) for key in {old, new}]
+    entered, release = threading.Event(), threading.Event()
+
+    def compare(root, query):
+        entered.set()
+        assert release.wait(3)
+        assert root.exists() and Path(query["other_prepared_root"]).exists()
+        return {"status": "ok"}
+
+    store.runner.query_dex_session.side_effect = compare
+    with ThreadPoolExecutor() as pool:
+        future = pool.submit(store.compare, old, new, {})
+        try:
+            assert entered.wait(2)
+            assert all(entry.users == 1 for entry in store.entries.values())
+            assert all(store.close(key)["cleanup_pending"] for key in {old, new})
+            assert all(root.exists() for root in roots)
+        finally:
+            release.set()
+        assert future.result()["status"] == "ok"
+    assert not store.entries and all(not root.exists() for root in roots)
 
 
 @pytest.mark.parametrize("failure", [RuntimeError("worker killed"), KeyboardInterrupt()])
