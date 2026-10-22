@@ -18,7 +18,7 @@ again and matched to both local SHA-256 and GitHub asset digests. Evidence is un
 artifacts/acceptance-0.2.3-ci-39826824176, including acceptance-summary.json and
 published-readback.json. This increment does not close the overall performance/workflow goal.
 
-v0.2.4 is now published and latest, targeting 29475d9f58edc09969ee08bd6491bd515752a41a.
+v0.2.4 was published, targeting 29475d9f58edc09969ee08bd6491bd515752a41a.
 CI 39836635008 passes all 17 jobs, including 1075 tests per Linux/Windows Python 3.10-3.13
 cell with zero failures/errors/skips and both canonical-sdist/native-wheel clean-install jobs.
 The published packages are those exact CI assets, not local rebuilds. Downloaded asset hashes
@@ -32,12 +32,31 @@ persisted declared call sites. These are full multiset comparisons with unchange
 not count-only checks. The oracle receipts are increment024-29475d9-*.json and
 increment024-ci-wheel-*.json under artifacts/release-renumber-20261022.
 
-The next increment, 0.2.5, is in development, not release-approved. Its preparation changes
-require their own final-runtime accuracy, matched performance and complete Linux/Windows,
-real-MCP and clean-package gates. Older version labels below identify the original scope and
-evidence, not approval of a later candidate; receipts must not be retroactively relabeled.
+v0.2.5 is published and latest, targeting 1b25267d2f123b03d722509f56425da347031818.
+CI 39847579502 passes all 17 jobs, including 1096 tests and seven signing variants per
+Linux/Windows Python 3.10-3.13 cell, zero failures/errors/skips. Both clean-distribution jobs
+verify the same canonical sdist, matching packaged sources and installed native-wheel bytes.
+Fresh source and exact Linux CI-wheel oracles each verify all 884,805 original classes and
+all snapshot DEX bytes across Taobao/WeChat/Douyin. That wheel independently verifies all
+2,914,002 Taobao call sites and 2163 selected string sites. Re-downloaded published assets
+match local and GitHub SHA-256 digests. Receipts:
+artifacts/acceptance-0.2.5-ci-39847579502/{acceptance-summary,published-readback}.json.
 
-Its directory-only five-round before/after diagnostic uses the same Python/runtime/input,
+The 0.2.6 input-integrity increment is in development, not release-approved. It requires its own
+final-runtime accuracy, matched performance and complete Linux/Windows, real-MCP and
+clean-package gates. Older version labels identify their original scope and evidence, not
+approval of a later candidate; receipts must not be retroactively relabeled.
+
+The candidate rechecks file identities after the final complete hash, including a freshly
+reopened path. All identities use fstat rather than mixing Windows path-stat timestamps.
+Both container preparation and archive reads reject late content changes and replacement;
+all original full hashes, DEX checksums, duplicate checks and snapshot isolation remain.
+Failed-before receipts, final regression results and the non-adopted parallel-hash experiment
+are retained under artifacts/release-renumber-20261022/increment026-*.
+The experiment's three-round preparation timings are mixed and do not establish a speedup.
+Its runtime differs from the selected serial-hash fix and cannot approve this candidate.
+
+The v0.2.5 directory-only five-round before/after diagnostic uses the same Python/runtime/input,
 four inherited CPUs and alternating subprocesses. Every inventory name and retained ZipInfo
 slot matches stdlib. CPU medians (v0.2.4 / new reader) are 0.08159 / 0.04712 seconds on Taobao,
 0.26339 / 0.13073 on WeChat and 0.87671 / 0.56246 on Douyin. Peak directory-process RSS changes

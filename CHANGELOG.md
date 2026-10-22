@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.6
+
+- Recheck original, reopened and freshly reopened container handles after the final complete
+  input hash. Reject content changes or path replacement occurring at the end of that hash,
+  for both DEX preparation and archive/manifest/resource reads.
+- Compare identities consistently through fstat, preserving Windows timestamp semantics.
+  Both complete input hashes, DEX checksums, duplicate checks and immutable sessions remain.
+- Add mutation, path-replacement, handle-timestamp and cleanup regressions. The initial-hash
+  overlap experiment is not included: alternating large-APK diagnostics show no stable gain.
+  This is an integrity fix, not a startup/storage improvement; full release gates still apply.
+
 ## 0.2.5
 
 - Avoid constructing discarded ZIP member metadata during validated DEX preparation.

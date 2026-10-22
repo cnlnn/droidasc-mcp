@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 and v0.2.4 are published; 0.2.5 is in development. Remaining deficits stay explicit
+  v0.2.3 through v0.2.5 are published; 0.2.6 is in development. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.4 is now latest.
+  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.5 is now latest.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -79,6 +79,36 @@ all-gap completion goal stays active after an intermediate patch is published.
 
 Update, 2026-10-23:
 
+- Published increment: v0.2.5, main/tag target
+  1b25267d2f123b03d722509f56425da347031818. CI 39847579502 passes all 17 jobs;
+  each Linux/Windows Python 3.10-3.13 cell passes 1096 tests, zero skips/errors/failures,
+  and seven independent signing variants. Both clean-distribution jobs verify the same
+  canonical sdist and installed native-wheel bytes. Fresh source and exact Linux CI-wheel
+  ownership oracles each verify all 884,805 original classes across the three APKs and all
+  snapshot DEX bytes. The wheel additionally verifies all 2,914,002 Taobao call sites and
+  2163 selected string sites independently. Published assets were downloaded and matched to
+  local and server SHA-256 digests. Evidence:
+  artifacts/acceptance-0.2.5-ci-39847579502/{acceptance-summary,published-readback}.json.
+  Matched real-MCP field/fuzzy/concurrent trials pass on the three original APKs, but Douyin's
+  field process-start-to-first-result median remains slower (19.5973 / 18.2279 seconds,
+  ours / competitor, four CPUs). The competitor's three Taobao graph trials fail internally;
+  their failure times are not graph-speed evidence. Snapshots retain about 119/184/485 MB
+  on tmpfs; lower process RSS does not establish a total-memory win. Overall closure stays open.
+- The 0.2.6 increment selects a confirmed input-integrity fix, not a performance claim: recheck
+  original, reopened and freshly reopened handles after the last complete hash in both container
+  preparation and archive reads. Windows identity comparisons consistently use fstat.
+  Failed regressions are preserved as increment026-identity-before.xml and
+  increment026-archive-final-hash-before.xml. The final targeted hash/archive selection passes
+  90 cases, but full source, final-runtime ownership and cross-platform/package gates remain.
+- The initial-hash/ZIP-inventory overlap experiment is not adopted. Three alternating rounds
+  on three original APKs preserve complete metadata, every owner, every snapshot DEX hash and
+  field-result pages. Preparation medians (baseline/experiment) are 2.3208/2.2244, 3.8609/3.9424
+  and 7.7915/7.7844 seconds (Taobao/WeChat/Douyin), with no stable broad gain. Immutable retained
+  bytes do not decrease. Receipt: increment026-preparation-before-after.json; experimental source
+  and tests are archived alongside it. It does not describe the final serial-hash runtime.
+  Earlier coarse-profile ru_maxrss values inherit a pre-exec high-water mark on this launcher
+  and are not usable process-memory evidence; this alternating diagnostic samples actual RSS.
+  The interrupted preliminary full-source run is retained separately and is not acceptance.
 - The 0.2.5 preparation increment avoids allocating discarded ZipInfo objects for ordinary
   omitted resources. Timestamp extra-field bounds, all original name/mode/version/offset and
   duplicate checks remain active; other extensions use the unchanged stdlib decoder. Five-round
@@ -90,8 +120,9 @@ Update, 2026-10-23:
   directories, retained bytes and field pages, but noisy wall time is mixed and Douyin's median
   regresses. It is not evidence of an end-to-end improvement. Receipt:
   increment025-preparation-before-after.json in the same directory. Startup/storage goals remain
-  open. Fresh final-runtime independent ownership, real MCP, Linux/Windows and clean-package
-  gates remain required; this increment is not approved for publication.
+  open. At that pre-release diagnostic stage, fresh independent ownership, real MCP,
+  Linux/Windows and clean-package gates remained required; the accepted v0.2.5 receipt above
+  records their subsequent completion without reinterpreting the mixed timing results.
 - Published increment: v0.2.4, main/tag target
   29475d9f58edc09969ee08bd6491bd515752a41a. CI 39836635008 passes all 17 jobs;
   the eight Linux/Windows Python 3.10-3.13 cells each pass 1075 tests, zero skips/errors/failures.

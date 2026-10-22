@@ -86,10 +86,10 @@ class/manifest resources, native inventory, asset reads, signing, redacted secre
 comparison, prompts, missing-method recovery and session/resource cleanup. Both transports
 passed locally on 2026-10-22 with Java deliberately invalid and JADX/dexlib configuration unset.
 The fixtures are assembled before disabling Java; fixture generation is not a runtime dependency.
-That targeted receipt alone was not release approval. v0.2.4 subsequently passed all 17 CI
-jobs on commit 29475d9f58edc09969ee08bd6491bd515752a41a, including both transports,
-1075 tests per OS/Python cell without skips, and canonical-package acceptance. The next
-preparation increment requires its own final-commit gates.
+That targeted receipt alone was not release approval. v0.2.5 subsequently passed all 17 CI
+jobs on commit 1b25267d2f123b03d722509f56425da347031818, including both transports,
+1096 tests per OS/Python cell without skips, and canonical-package acceptance. The next
+input-integrity increment requires its own final-commit gates.
 
 This matrix describes implemented equivalents and intentional interface differences. The release
 authority is a fresh feature-frozen Linux/Windows matrix, real stdio/HTTP tests, independent signing

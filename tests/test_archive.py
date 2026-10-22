@@ -300,6 +300,32 @@ def test_input_change_discards_result(archive_apk, monkeypatch):
     assert result["code"] == "input_changed" and "items" not in result
 
 
+@pytest.mark.parametrize("change", ["content", "path"])
+def test_final_hash_change_discards_result(archive_apk, monkeypatch, change):
+    replacement = archive_apk.with_name("replacement.apk")
+    replacement.write_bytes(archive_apk.read_bytes())
+    original_hash, original_open, calls = worker._digest, Path.open, []
+
+    def digest(stream):
+        value = original_hash(stream)
+        calls.append(value)
+        if change == "content" and len(calls) == 2:
+            with original_open(archive_apk, "ab") as output:
+                output.write(b"changed after final hash")
+        return value
+
+    def path_open(self, *args, **kwargs):
+        if change == "path" and self == archive_apk and len(calls) == 2:
+            return original_open(replacement, *args, **kwargs)
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(worker, "_digest", digest)
+    monkeypatch.setattr(Path, "open", path_open)
+    result = analyze(archive_apk, operation="list_entries")
+    assert result["code"] == "input_changed" and "items" not in result
+    assert len(calls) == 2
+
+
 def test_path_and_handle_timestamp_semantics_are_not_mixed(archive_apk, monkeypatch):
     query, path_stat = worker._query, Path.stat
 

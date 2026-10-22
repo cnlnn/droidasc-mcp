@@ -61,24 +61,24 @@ and package installation. macOS remains unverified.
 
 Versions 0.3.0 through 0.5.0 have been withdrawn. Accepted updates use increasing 0.2.x
 versions without rolling back the native implementation. These commands install the published
-[0.2.4 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.4).
+[0.2.5 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.5).
 Install the version-pinned x86-64 Linux wheel:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp310-abi3-manylinux_2_34_x86_64.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp310-abi3-win_amd64.whl
 ```
 
 The native stable-ABI wheels support CPython 3.10 and newer; the Linux wheel requires glibc 2.34
 or newer. The canonical source archive is
-`droidasc_mcp-0.2.4.tar.gz`. Source installation retains the Python fallback if no compiler is
+`droidasc_mcp-0.2.5.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. `--force-reinstall` also permits replacing an installed withdrawn
 version with the current stable version; no previously published version number will be reused.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,

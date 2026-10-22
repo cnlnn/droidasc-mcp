@@ -53,23 +53,23 @@ Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fi
 
 0.3.0 至 0.5.0 已撤回，后续每批改动验收通过后按 0.2.x 递增发布，不回退原生实现。
 下列命令固定安装已验收发布的
-[0.2.4 发布包](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.4)。
+[0.2.5 发布包](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.5)。
 x86-64 Linux 安装固定版本的原生 wheel：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp310-abi3-manylinux_2_34_x86_64.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp310-abi3-win_amd64.whl
 ```
 
 原生 stable-ABI wheel 支持 CPython 3.10 及以上，Linux wheel 需要 glibc 2.34 或更新版本。
-canonical 源码包为 `droidasc_mcp-0.2.4.tar.gz`；
+canonical 源码包为 `droidasc_mcp-0.2.5.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
 `--force-reinstall` 也可将已安装的撤回版本替换为当前正式版；后续不复用已发布过的版本号。

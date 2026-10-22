@@ -403,6 +403,12 @@ def analyze(request):
                     or source_hash != _digest(handle)
                 ):
                     raise ArchiveError("input_changed", "APK changed during analysis; retry")
+                with apk.open("rb") as final:
+                    if any(
+                        _identity(before) != _identity(os.fstat(stream.fileno()))
+                        for stream in (handle, current, final)
+                    ):
+                        raise ArchiveError("input_changed", "APK changed during analysis; retry")
         return {
             ("artifact_path" if artifact else "apk_path"): str(apk),
             ("artifact_sha256" if artifact else "apk_sha256"): source_hash,

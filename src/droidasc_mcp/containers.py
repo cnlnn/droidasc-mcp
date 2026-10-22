@@ -41,6 +41,13 @@ def stable_archive(path, maximum, *, preparation=False):
                 or digest != _digest(handle)
             ):
                 raise ArchiveError("input_changed", "Container changed during analysis; retry")
+            # Reopen after hashing: Windows path-stat timestamps can differ from fstat.
+            with path.open("rb") as final:
+                if any(
+                    _identity(before) != _identity(os.fstat(stream.fileno()))
+                    for stream in (handle, current, final)
+                ):
+                    raise ArchiveError("input_changed", "Container changed during analysis; retry")
 
 
 def select(entries, kind, module):
