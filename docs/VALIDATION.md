@@ -32,7 +32,7 @@ persisted declared call sites. These are full multiset comparisons with unchange
 not count-only checks. The oracle receipts are increment024-29475d9-*.json and
 increment024-ci-wheel-*.json under artifacts/release-renumber-20261022.
 
-v0.2.5 is published and latest, targeting 1b25267d2f123b03d722509f56425da347031818.
+v0.2.5 was published, targeting 1b25267d2f123b03d722509f56425da347031818.
 CI 39847579502 passes all 17 jobs, including 1096 tests and seven signing variants per
 Linux/Windows Python 3.10-3.13 cell, zero failures/errors/skips. Both clean-distribution jobs
 verify the same canonical sdist, matching packaged sources and installed native-wheel bytes.
@@ -42,19 +42,35 @@ all snapshot DEX bytes across Taobao/WeChat/Douyin. That wheel independently ver
 match local and GitHub SHA-256 digests. Receipts:
 artifacts/acceptance-0.2.5-ci-39847579502/{acceptance-summary,published-readback}.json.
 
-The 0.2.6 input-integrity increment is in development, not release-approved. It requires its own
-final-runtime accuracy, matched performance and complete Linux/Windows, real-MCP and
-clean-package gates. Older version labels identify their original scope and evidence, not
-approval of a later candidate; receipts must not be retroactively relabeled.
+v0.2.6 is published and latest, targeting a0a34d77f0f21cac27b69a69c85070a663605916.
+CI 39858964129 passes all 17 jobs: each Linux/Windows Python 3.10-3.13 cell passes
+1108 tests without failures, errors or skips and all seven signing variants. Both canonical
+source/native-wheel clean-install jobs pass. Fresh source and exact Linux CI-wheel oracles
+each verify all 884,805 original classes/owners and every snapshot DEX byte. Published asset
+hashes match fresh downloads and GitHub server digests. Receipts:
+artifacts/acceptance-0.2.6-ci-39858964129/{acceptance-summary,published-readback}.json.
+This input-integrity increment does not establish a startup, total-memory or workflow win.
+Older version labels identify their original scope and evidence, not approval of a later
+candidate; receipts must not be retroactively relabeled.
 
-The candidate rechecks file identities after the final complete hash, including a freshly
+The v0.2.6 implementation rechecks file identities after the final complete hash, including a freshly
 reopened path. All identities use fstat rather than mixing Windows path-stat timestamps.
 Both container preparation and archive reads reject late content changes and replacement;
 all original full hashes, DEX checksums, duplicate checks and snapshot isolation remain.
 Failed-before receipts, final regression results and the non-adopted parallel-hash experiment
 are retained under artifacts/release-renumber-20261022/increment026-*.
 The experiment's three-round preparation timings are mixed and do not establish a speedup.
-Its runtime differs from the selected serial-hash fix and cannot approve this candidate.
+Its runtime differs from the released serial-hash fix and does not describe that runtime.
+
+The next query-memory experiment uses one read-only mapping and pinned native buffer per
+stored DEX; compressed members and builds without that capability retain owned bytes.
+The complete CRC, ZIP local-name/overlap checks and checked cursor remain mandatory.
+Python 3.10 uses a native cp310 wheel; Python 3.11+ uses cp311-abi3 because the public
+[buffer API entered the Stable ABI in 3.11](https://docs.python.org/3/c-api/buffer.html).
+The package CI matrix now tests both wheel tiers
+against the same canonical sdist on every supported interpreter and platform. These are
+in-development gates, not completed acceptance. Full-result diagnostics and their mixed
+timing outcomes are recorded in GOAL_02X.md; no overall speed or total-memory win is claimed.
 
 The v0.2.5 directory-only five-round before/after diagnostic uses the same Python/runtime/input,
 four inherited CPUs and alternating subprocesses. Every inventory name and retained ZipInfo

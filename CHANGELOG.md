@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.7
+
+- Share a single read-only mapping of each private stored DEX between Python and native
+  queries instead of allocating a complete owned member. Preserve full CRC, ZIP name/overlap
+  checks, checked instruction boundaries and the owned-byte fallback for compressed members
+  or installations without buffer support. Release buffers on errors and early generator close.
+- Pin native input buffers across argument conversion and every decoder exit. Python 3.10
+  uses a cp310 native wheel; Python 3.11+ uses cp311-abi3 with the public stable buffer API.
+  Expand canonical-source/native-wheel clean-install CI to every supported Python/platform.
+- Five-round large-APK diagnostics preserve complete field/fuzzy results and reduce sampled
+  query-child RSS, but timings remain mixed and retained snapshot/tmpfs bytes do not decrease.
+  This is not a universal speed, startup or total-memory win; full release gates still apply.
+
 ## 0.2.6
 
 - Recheck original, reopened and freshly reopened container handles after the final complete

@@ -131,17 +131,19 @@ jobs:
             signing-results.json
 
   package:
+    name: package (${{ matrix.os }}, ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync --locked --extra dev
       - run: uv build
       - if: runner.os == 'Linux'
@@ -150,11 +152,12 @@ jobs:
         run: uv run python -c "from pathlib import Path; import shutil; [p.unlink() for p in Path('dist').glob('*.whl')]; [shutil.move(str(p), 'dist') for p in Path('repaired').glob('*.whl')]"
       - uses: actions/upload-artifact@v4
         with:
-          name: python-distributions-${{ matrix.os }}
+          name: python-distributions-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*
           if-no-files-found: error
 
   distribution:
+    name: distribution (${{ matrix.os }}, ${{ matrix.python-version }})
     needs: [fixture, package, rust]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -162,19 +165,27 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        include:
+          - python-version: "3.10"
+            wheel-python: "3.10"
+          - python-version: "3.11"
+            wheel-python: "3.11"
+          - python-version: "3.12"
+            wheel-python: "3.11"
+          - python-version: "3.13"
+            wheel-python: "3.11"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: python-distributions-${{ matrix.os }}
+          name: python-distributions-${{ matrix.os }}-py${{ matrix.wheel-python }}
           path: dist
-      - if: runner.os == 'Windows'
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: python-distributions-ubuntu-latest
+          name: python-distributions-ubuntu-latest-py3.11
           path: canonical-dist
-      - if: runner.os == 'Windows'
-        name: Use the exact canonical release sdist on both platforms
+      - name: Use the exact canonical release sdist on every platform and Python
         run: python -c "from pathlib import Path; import shutil; import hashlib; p, = Path('canonical-dist').glob('*.tar.gz'); shutil.copyfile(p, Path('dist') / p.name); print('Canonical sdist SHA256', hashlib.sha256(p.read_bytes()).hexdigest())"
       - uses: actions/download-artifact@v4
         with:
@@ -186,7 +197,7 @@ jobs:
           path: artifacts/complex
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync --locked --extra dev
       - uses: actions/setup-java@v5
         with:

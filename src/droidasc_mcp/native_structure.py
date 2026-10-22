@@ -101,7 +101,7 @@ def render(dex, refs, position, address, op, *, budget=256 * 1024):
             for i, key in enumerate(keys)
         ]
         return name, name + " {" + ", ".join(values) + "}"
-    instruction = get_instruction(refs, op, dex.data[position : position + 10])
+    instruction = get_instruction(refs, op, bytes(dex.data[position : position + 10]))
     name = instruction.get_name()
     if op in {0xFC, 0xFD, 0xFE, 0xFF}:
         # DAD's generic kind renderer does not resolve these reference kinds.

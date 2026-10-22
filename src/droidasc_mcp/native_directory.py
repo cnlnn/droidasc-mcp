@@ -53,6 +53,35 @@ def deferred_name(stream, base, size, header, cls):
     raise InvalidDex("Unterminated DEX string")
 
 
+def stored_member_offset(stream, info):
+    if (
+        info.compress_type != zipfile.ZIP_STORED
+        or info.flag_bits & 1
+        or info.compress_size != info.file_size
+    ):
+        raise InvalidDex("Class directory requires an unencrypted stored snapshot")
+    stream.seek(info.header_offset)
+    local = stream.read(30)
+    if len(local) != 30 or local[:4] != b"PK\x03\x04":
+        raise InvalidDex("Invalid stored DEX local header")
+    flags, method = struct.unpack_from("<HH", local, 6)
+    different_flags = flags ^ info.flag_bits
+    # Recent zipfile backports keep UTF-8 in live ZipInfo but clear it on the
+    # wire for ASCII names. Every other flag must still agree exactly.
+    if (
+        different_flags and not (different_flags == 0x800 and info.filename.isascii())
+    ) or method != info.compress_type:
+        raise InvalidDex("Stored DEX local header disagrees with its inventory")
+    name_size, extra_size = struct.unpack_from("<HH", local, 26)
+    try:
+        expected_name = info.filename.encode("utf-8" if flags & 0x800 else "cp437")
+    except UnicodeEncodeError as exc:
+        raise InvalidDex("Stored DEX local header has an invalid filename encoding") from exc
+    if stream.read(name_size) != expected_name:
+        raise InvalidDex("Stored DEX local header filename disagrees with its inventory")
+    return info.header_offset + 30 + name_size + extra_size
+
+
 def class_names(bundle, info, *, accelerator=True):
     """Read one closed member, including before the enclosing ZIP is finalized.
 
@@ -67,38 +96,13 @@ def class_names(bundle, info, *, accelerator=True):
 
             checked = hasattr(_dexscan, "mapped_checked_classes")
             native = _dexscan.mapped_checked_classes if checked else _dexscan.mapped_classes
-    if (
-        info.compress_type != zipfile.ZIP_STORED
-        or info.flag_bits & 1
-        or info.compress_size != info.file_size
-    ):
-        raise InvalidDex("Class directory requires an unencrypted stored snapshot")
     with bundle.open("rb") as stream:
         handle = stream.fileno()
         if os.name == "nt":
             import msvcrt
 
             handle = msvcrt.get_osfhandle(handle)
-        stream.seek(info.header_offset)
-        local = stream.read(30)
-        if len(local) != 30 or local[:4] != b"PK\x03\x04":
-            raise InvalidDex("Invalid stored DEX local header")
-        flags, method = struct.unpack_from("<HH", local, 6)
-        different_flags = flags ^ info.flag_bits
-        # Recent zipfile backports keep UTF-8 in live ZipInfo but clear it on the
-        # wire for ASCII names. Every other flag must still agree exactly.
-        if (
-            different_flags and not (different_flags == 0x800 and info.filename.isascii())
-        ) or method != info.compress_type:
-            raise InvalidDex("Stored DEX local header disagrees with its inventory")
-        name_size, extra_size = struct.unpack_from("<HH", local, 26)
-        try:
-            expected_name = info.filename.encode("utf-8" if flags & 0x800 else "cp437")
-        except UnicodeEncodeError as exc:
-            raise InvalidDex("Stored DEX local header has an invalid filename encoding") from exc
-        if stream.read(name_size) != expected_name:
-            raise InvalidDex("Stored DEX local header filename disagrees with its inventory")
-        base = info.header_offset + 30 + name_size + extra_size
+        base = stored_member_offset(stream, info)
         header = read_at(stream, base, info.file_size, 0, 112)
         if native is None:
             from .native_dex import Dex

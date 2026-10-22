@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 through v0.2.5 are published; 0.2.6 is in development. Remaining deficits stay explicit
+  v0.2.3 through v0.2.6 are published; the next increment is in development. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.5 is now latest.
+  Completed 2026-10-23; fresh readback confirms the four tags are absent. v0.2.6 is now latest.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -79,6 +79,45 @@ all-gap completion goal stays active after an intermediate patch is published.
 
 Update, 2026-10-23:
 
+- Published increment: v0.2.6, main/tag target
+  a0a34d77f0f21cac27b69a69c85070a663605916. CI 39858964129 passes all 17 jobs;
+  all eight Linux/Windows Python 3.10-3.13 cells pass 1108 tests without failures,
+  errors or skips and seven signing variants each. Both canonical-source/native-wheel
+  distribution jobs pass. Fresh source and exact Linux CI-wheel ownership receipts each
+  independently verify all 884,805 classes from the three original APKs. Published assets
+  match local and server digests; readback verifies main/tag identity, the four withdrawn
+  versions' absence and unchanged preexisting tag objects. Evidence:
+  artifacts/acceptance-0.2.6-ci-39858964129/{acceptance-summary,published-readback}.json.
+  This is an input-integrity increment, not startup/storage or complete-workflow closure.
+- The next query-memory experiment replaces whole-member byte allocation with read-only
+  stored windows, preserving ZIP header/overlap checks, complete CRC and the same checked
+  native decoder. The initial per-call mapping variant is rejected: three alternating
+  full-result field/fuzzy trials on each original APK preserve complete response hashes,
+  but fuzzy query medians regress by about 19-33%. Its source patch and diagnostic are
+  retained as increment027-per-call-experiment.patch and increment027-per-call-before-after.json.
+  A second, dual-window variant also remains rejected: WeChat field-query median regresses
+  from 0.8084 to 1.0658 seconds. Its source patch and complete diagnostic are retained as
+  increment027-dual-window-experiment.patch and increment027-owned-window-before-after.json.
+  The current experiment shares one read-only Python mapping with the checked native decoders
+  through the public pinned-buffer API; all error paths release the export before unmapping.
+  Python 3.10 uses its native wheel ABI and Python 3.11+ uses cp311-abi3, following the actual
+  stable-buffer-API floor. Five alternating rounds on each original APK preserve all complete
+  field/fuzzy response hashes in all 60 trials. Median query-child RSS decreases by 11-19%
+  for fields and 14-17% for fuzzy references; retained tmpfs snapshot bytes are unchanged.
+  Timing remains mixed: field medians (owned/mapped, seconds) are 0.4520/0.4912,
+  0.6624/0.6266 and 2.3028/2.2131; fuzzy medians are 0.9917/0.9294,
+  1.3418/1.3180 and 3.4103/3.4868 (Taobao/WeChat/Douyin). This is not a stable
+  across-workload speed win or real-MCP/startup evidence. Receipt:
+  increment027-shared-buffer-before-after.json. Final-runtime independent accuracy,
+  original-workload MCP performance, full source, Windows and package acceptance remain
+  required before adopting or releasing it.
+- The pre-freeze shared-buffer source suite passes all 1132 tests, zero skips/errors/failures.
+  Locally built cp310-cp310 and cp311-abi3 wheels load in isolated Python 3.10-3.13 environments
+  and reproduce the complete fixture class/member/instruction results, including pinned-buffer
+  failure cleanup. Receipts: increment027-source.xml and increment027-isolated-wheel-tiers.json.
+  Those diagnostic wheels still carry pre-freeze 0.2.6 metadata and are not release assets.
+  The candidate metadata is now 0.2.7; exact final-commit CI/packages and independent
+  large-input/MCP receipts are still required. No main merge, tag or release has occurred.
 - Published increment: v0.2.5, main/tag target
   1b25267d2f123b03d722509f56425da347031818. CI 39847579502 passes all 17 jobs;
   each Linux/Windows Python 3.10-3.13 cell passes 1096 tests, zero skips/errors/failures,

@@ -1,4 +1,4 @@
-"""Verify an sdist and its wheel in a clean environment (Python 3.12+ and uv)."""
+"""Verify an sdist and its wheel in a clean environment (Python 3.10+ and uv)."""
 
 import argparse
 import hashlib
@@ -115,9 +115,12 @@ def main():
                 "src/droidasc_mcp/native_dex.py",
                 "src/droidasc_mcp/native_scan.py",
                 "src/droidasc_mcp/native_directory.py",
+                "src/droidasc_mcp/native_snapshot.py",
                 "src/droidasc_mcp/class_directory.py",
                 "src/droidasc_mcp/preparation_directory.py",
                 "tests/test_native_directory.py",
+                "tests/test_mapped_queries.py",
+                "tests/test_native_build.py",
                 "tests/test_class_directory.py",
                 "tests/test_preparation_directory.py",
                 "scripts/verify_preparation_directory.py",

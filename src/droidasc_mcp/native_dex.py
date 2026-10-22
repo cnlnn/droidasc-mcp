@@ -96,11 +96,12 @@ DYNAMIC_NAMES = {
 
 
 class Dex:
-    def __init__(self, data):
+    def __init__(self, data, *, find=None):
         self.data = data
+        self._find = find
         if len(data) < 112 or data[:4] != b"dex\n" or data[7] != 0:
             raise InvalidDex("Invalid standard DEX header")
-        self.version = int(data[4:7])
+        self.version = int(bytes(data[4:7]))
         if self.version not in {35, 37, 38, 39, 40}:
             raise InvalidDex("Unsupported DEX version")
         if self.u32(32) != len(data) or self.u32(36) != 112 or self.u32(40) != 0x12345678:
@@ -125,6 +126,7 @@ class Dex:
         for cache in (self.string, self.type, self.proto, self.method, self.field):
             cache.cache_clear()
         self.data = b""
+        self._find = None
 
     def check(self, offset, size):
         if offset < 0 or size < 0 or offset + size > len(self.data):
@@ -164,10 +166,10 @@ class Dex:
     def _string(self, index):
         offset = self.u32(self.item(0, index))
         length, offset = self.leb(offset)
-        end = self.data.find(b"\0", offset)
+        end = self.data.find(b"\0", offset) if self._find is None else self._find(b"\0", offset)
         if end < 0:
             raise InvalidDex("Unterminated DEX string")
-        return decode_mutf8(self.data[offset:end], length)
+        return decode_mutf8(bytes(self.data[offset:end]), length)
 
     def _type(self, index):
         return self.string(self.u32(self.item(1, index)))
@@ -427,16 +429,15 @@ class Dex:
             position += width * 2
 
 
-def dex_entries(bundle):
+def dex_entries(bundle, *, mapped=True):
+    from .native_snapshot import query_dex
+
     with zipfile.ZipFile(bundle) as archive:
-        for entry in sorted(archive.namelist()):
-            if not entry.endswith(".dex"):
+        for info in sorted(archive.infolist(), key=lambda item: item.filename):
+            if not info.filename.endswith(".dex"):
                 continue
-            dex = Dex(archive.read(entry))
-            try:
-                yield entry, dex
-            finally:
-                dex.close()
+            with query_dex(bundle, archive, info, mapped=mapped) as dex:
+                yield info.filename, dex
 
 
 def class_inventory(bundle):

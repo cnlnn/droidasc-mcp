@@ -11,6 +11,24 @@
 #include <unistd.h>
 #endif
 
+#define WINDOW_NAME "droidasc_mcp._dexscan.window"
+typedef struct {
+    const unsigned char *data;
+    Py_ssize_t length;
+} InputWindow;
+
+/* Capsules are private to buffer_call; the Py_buffer pins every input read. */
+static int input_data(PyObject *object, char **data, Py_ssize_t *length) {
+    if (PyCapsule_IsValid(object, WINDOW_NAME)) {
+        InputWindow *window = PyCapsule_GetPointer(object, WINDOW_NAME);
+        if (!window) return -1;
+        *data = (char *)window->data;
+        *length = window->length;
+        return 0;
+    }
+    return PyBytes_AsStringAndSize(object, data, length);
+}
+
 static uint16_t u16(const unsigned char *p) {
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
@@ -83,7 +101,7 @@ static int decode(const unsigned char *data, const unsigned char *widths,
     return 0;
 }
 
-/* Buffers remain owned by Python; no pointer survives this call. All lengths
+/* Inputs stay pinned by the caller; no pointer survives this call. All lengths
  * and payload products are checked before pointer arithmetic or operand reads. */
 static PyObject *scan(PyObject *self, PyObject *args) {
     PyObject *data_obj, *width_obj, *mask_obj, *rows;
@@ -94,7 +112,7 @@ static PyObject *scan(PyObject *self, PyObject *args) {
     (void)self;
     if (!PyArg_ParseTuple(args, "OniOOiii|n", &data_obj, &code, &version,
                           &width_obj, &mask_obj, &fields, &incoming, &pool, &resume)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0 ||
+    if (input_data(data_obj, &raw, &length) < 0 ||
         PyBytes_AsStringAndSize(width_obj, &width_raw, &width_length) < 0 ||
         PyBytes_AsStringAndSize(mask_obj, &mask_raw, &mask_length) < 0) return NULL;
     data = (const unsigned char *)raw;
@@ -174,7 +192,7 @@ static PyObject *members(PyObject *self, PyObject *args) {
     uint64_t total = 0;
     (void)self;
     if (!PyArg_ParseTuple(args, "OnII", &data_obj, &position, &field_pool, &method_pool)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0) return NULL;
+    if (input_data(data_obj, &raw, &length) < 0) return NULL;
     data = (const unsigned char *)raw;
     if (position < 0 || position >= length || field_pool > 65536 || method_pool > 65536)
         goto invalid_members;
@@ -277,7 +295,7 @@ static int parse_class_selection(PyObject *args, int bulk, ClassSelection *scan,
                                 &widths, &mask, &scan->fields, &scan->field_pool, &scan->method_pool,
                                 &scan->method_offset, &scan->strings, &scan->protos, &scan->access,
                                 &callers)) return -1;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &scan->length) < 0 ||
+    if (input_data(data_obj, &raw, &scan->length) < 0 ||
         PyBytes_AsStringAndSize(widths, &width_raw, &width_length) < 0 ||
         PyBytes_AsStringAndSize(mask, &mask_raw, &mask_length) < 0) return -1;
     scan->data = (const unsigned char *)raw;
@@ -460,7 +478,7 @@ static PyObject *select_methods(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "OOiOOiinnni", &data_obj, &methods, &version,
                          &widths, &mask, &fields, &pool, &method_offset, &strings,
                          &protos, &access)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0 ||
+    if (input_data(data_obj, &raw, &length) < 0 ||
         PyBytes_AsStringAndSize(widths, &width_raw, &width_length) < 0 ||
         PyBytes_AsStringAndSize(mask, &mask_raw, &mask_length) < 0) return NULL;
     data = (const unsigned char *)raw;
@@ -586,7 +604,7 @@ static PyObject *classes_impl(PyObject *args, int checked) {
     Py_ssize_t length, class_offset, count, type_offset, types, string_offset, strings;
     if (!PyArg_ParseTuple(args, "Onnnnnn", &data_obj, &class_offset, &count,
                          &type_offset, &types, &string_offset, &strings)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0) return NULL;
+    if (input_data(data_obj, &raw, &length) < 0) return NULL;
     return class_rows((const unsigned char *)raw, length, class_offset, count,
                       type_offset, types, string_offset, strings, 0, checked);
 }
@@ -607,8 +625,8 @@ typedef struct {
     size_t size;
 } MappedRegion;
 
-/* Map just one stored DEX window, not an entire APK's virtual address space.
- * Python owns the source handle. The view never escapes this synchronous call. */
+/* Map one stored DEX, not an entire APK. The caller owns the view until unmap;
+ * Python owns the source handle while the private snapshot is being queried. */
 static int map_region(Py_ssize_t handle, Py_ssize_t offset, Py_ssize_t length, MappedRegion *region) {
     uint64_t file_size, aligned, padding, granularity;
     if (handle < 0 || offset < 0 || length <= 0 || offset > PY_SSIZE_T_MAX-length)
@@ -771,7 +789,7 @@ static PyObject *matching_names(PyObject *args, int direct) {
         types = strings;
     } else if (!PyArg_ParseTuple(args, "OnnnnOpp", &data_obj, &type_offset, &types,
                                 &string_offset, &strings, &query_obj, &fuzzy, &sensitive)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0 ||
+    if (input_data(data_obj, &raw, &length) < 0 ||
         PyBytes_AsStringAndSize(query_obj, &query, &query_length) < 0) return NULL;
     data = (const unsigned char *)raw;
     if (type_offset < 0 || type_offset > length || types < 0 || types > (length-type_offset)/4 ||
@@ -868,7 +886,7 @@ static PyObject *owner_members(PyObject *self, PyObject *args) {
     Py_ssize_t length, mask_length, offset, count, types, i;
     (void)self;
     if (!PyArg_ParseTuple(args,"OnnnO",&data_obj,&offset,&count,&types,&mask_obj)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj,&raw,&length) < 0 ||
+    if (input_data(data_obj,&raw,&length) < 0 ||
         PyBytes_AsStringAndSize(mask_obj,&mask,&mask_length) < 0) return NULL;
     if (offset < 0 || offset > length || count < 0 || count > (length-offset)/8 ||
         types < 0 || mask_length != 65536) {
@@ -897,23 +915,82 @@ static PyObject *owner_members(PyObject *self, PyObject *args) {
     return result;
 }
 
+/* The exact same checked decoders consume bytes or a pinned contiguous view.
+ * All exits release the exported buffer, including errors and allocation failure. */
+static PyObject *buffer_call(PyObject *self, PyObject *args, PyCFunction function) {
+    PyObject *source, *replacement = NULL, *capsule = NULL, *result = NULL;
+    Py_ssize_t count = PyTuple_Size(args), i;
+    Py_buffer view;
+    InputWindow window;
+    if (count < 1) return function(self, args);
+    source = PyTuple_GetItem(args, 0);
+    if (PyBytes_Check(source)) return function(self, args);
+    if (PyObject_GetBuffer(source, &view, PyBUF_CONTIG_RO) < 0) return NULL;
+    if (!view.readonly || view.itemsize != 1) {
+        PyErr_SetString(PyExc_ValueError, "DEX input requires a read-only contiguous byte buffer");
+        goto finished_buffer_call;
+    }
+    window.data = view.buf;
+    window.length = view.len;
+    capsule = PyCapsule_New(&window, WINDOW_NAME, NULL);
+    if (!capsule) goto finished_buffer_call;
+    replacement = PyTuple_New(count);
+    if (!replacement) goto finished_buffer_call;
+    Py_INCREF(capsule);
+    if (PyTuple_SetItem(replacement, 0, capsule) < 0) goto finished_buffer_call;
+    for (i = 1; i < count; i++) {
+        PyObject *item = PyTuple_GetItem(args, i);
+        Py_INCREF(item);
+        if (PyTuple_SetItem(replacement, i, item) < 0) goto finished_buffer_call;
+    }
+    result = function(self, replacement);
+finished_buffer_call:
+    Py_XDECREF(replacement);
+    Py_XDECREF(capsule);
+    PyBuffer_Release(&view);
+    return result;
+}
+
+#define BUFFER_ENTRY(name) \
+static PyObject *buffer_##name(PyObject *self, PyObject *args) { \
+    return buffer_call(self, args, name); \
+}
+BUFFER_ENTRY(scan)
+BUFFER_ENTRY(members)
+BUFFER_ENTRY(select_methods)
+BUFFER_ENTRY(select_class)
+BUFFER_ENTRY(select_classes)
+BUFFER_ENTRY(classes)
+BUFFER_ENTRY(checked_classes)
+BUFFER_ENTRY(matching_types)
+BUFFER_ENTRY(matching_strings)
+BUFFER_ENTRY(owner_members)
+
 static PyMethodDef methods[] = {
-    {"scan", scan, METH_VARARGS, "Scan checked instruction boundaries and selected operands."},
-    {"members", members, METH_VARARGS, "Decode bounded DEX class member definitions."},
-    {"select_methods", select_methods, METH_VARARGS, "Scan and count a bounded class method set."},
-    {"select_class", select_class, METH_VARARGS, "Decode and select checked class data without unused rows."},
-    {"select_classes", select_classes, METH_VARARGS, "Select a validated directory with the same checked class cursor."},
-    {"classes", classes, METH_VARARGS, "Read checked ASCII class identities; defer modified UTF8."},
-    {"checked_classes", checked_classes, METH_VARARGS, "Validate ASCII duplicates and return only deferred Unicode row indices."},
+    {"scan", buffer_scan, METH_VARARGS, "Scan checked instruction boundaries and selected operands."},
+    {"members", buffer_members, METH_VARARGS, "Decode bounded DEX class member definitions."},
+    {"select_methods", buffer_select_methods, METH_VARARGS, "Scan and count a bounded class method set."},
+    {"select_class", buffer_select_class, METH_VARARGS, "Decode and select checked class data without unused rows."},
+    {"select_classes", buffer_select_classes, METH_VARARGS, "Select a validated directory with the same checked class cursor."},
+    {"classes", buffer_classes, METH_VARARGS, "Read checked ASCII class identities; defer modified UTF8."},
+    {"checked_classes", buffer_checked_classes, METH_VARARGS, "Validate ASCII duplicates and return only deferred Unicode row indices."},
     {"mapped_classes", mapped_classes, METH_VARARGS, "Read CRC-checked names; defer only non-ASCII class offsets."},
     {"mapped_checked_classes", mapped_checked_classes, METH_VARARGS, "Read CRC-checked names and validate ASCII duplicates without a Python directory walk."},
-    {"matching_types", matching_types, METH_VARARGS, "Match checked ASCII types; defer modified UTF8."},
-    {"matching_strings", matching_strings, METH_VARARGS, "Match checked ASCII strings; defer modified UTF8."},
-    {"owner_members", owner_members, METH_VARARGS, "Select bounded member IDs by checked owner IDs."},
+    {"matching_types", buffer_matching_types, METH_VARARGS, "Match checked ASCII types; defer modified UTF8."},
+    {"matching_strings", buffer_matching_strings, METH_VARARGS, "Match checked ASCII strings; defer modified UTF8."},
+    {"owner_members", buffer_owner_members, METH_VARARGS, "Select bounded member IDs by checked owner IDs."},
     {NULL, NULL, 0, NULL}
 };
 static struct PyModuleDef module = {
     PyModuleDef_HEAD_INIT, "_dexscan", NULL, -1, methods,
     NULL, NULL, NULL, NULL
 };
-PyMODINIT_FUNC PyInit__dexscan(void) { return PyModule_Create(&module); }
+PyMODINIT_FUNC PyInit__dexscan(void) {
+    PyObject *result = PyModule_Create(&module);
+    if (!result) return NULL;
+    if (PyModule_AddIntConstant(result, "buffer_inputs", 1) < 0) {
+        Py_DECREF(result);
+        return NULL;
+    }
+    return result;
+}
