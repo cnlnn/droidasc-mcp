@@ -63,18 +63,20 @@ Install the version-pinned GitHub release on Linux:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
 ```
 
 These wheels target x86-64 CPython 3.10+. Other environments can build from the release's
 `droidasc_mcp-0.3.0.tar.gz`; macOS remains unverified.
+The old 0.3.0 through 0.5.0 releases were withdrawn. `--force-reinstall` replaces any
+previous installation of the original 0.3.0 rather than keeping its different same-version code.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 

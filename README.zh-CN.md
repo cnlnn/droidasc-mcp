@@ -55,19 +55,21 @@ Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
 ```
 
 以上 wheel 面向 x86-64 CPython 3.10+；其他环境可从发布页的 `droidasc_mcp-0.3.0.tar.gz`
 构建，macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
+旧的 0.3.0 至 0.5.0 发布已撤回；`--force-reinstall` 确保曾安装原始 0.3.0 的用户也会替换为
+本次重新发布的代码，而不是保留同版本号的旧实现。
 
 ## 接入 Codex
 
