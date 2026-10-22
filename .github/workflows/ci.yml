@@ -166,6 +166,14 @@ jobs:
         with:
           name: python-distributions-${{ matrix.os }}
           path: dist
+      - if: runner.os == 'Windows'
+        uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-ubuntu-latest
+          path: canonical-dist
+      - if: runner.os == 'Windows'
+        name: Use the exact canonical release sdist on both platforms
+        run: python -c "from pathlib import Path; import shutil; import hashlib; p, = Path('canonical-dist').glob('*.tar.gz'); shutil.copyfile(p, Path('dist') / p.name); print('Canonical sdist SHA256', hashlib.sha256(p.read_bytes()).hexdigest())"
       - uses: actions/download-artifact@v4
         with:
           name: acceptance-apk

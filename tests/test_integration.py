@@ -1906,7 +1906,9 @@ async def test_persistent_index_transport(
                         if "droidasc_mcp.dex_worker" in args:
                             java_pid = child.pid
                             java_temporary = Path(args[-1]).parent
-                            (java_temporary / "cleanup-sentinel").write_text("temporary")
+                            # This short-lived native worker may already be cleaning up.
+                            # Creating/opening a new file races rmtree on Windows; observe
+                            # the real request directory without modifying its contents.
                             break
                 await anyio.sleep(0.01)
             assert java_pid is not None, "Native index worker did not start"
@@ -1915,7 +1917,11 @@ async def test_persistent_index_transport(
         while (alive(java_pid) or java_temporary.exists()) and time.monotonic() < deadline:
             await anyio.sleep(0.01)
         assert not alive(java_pid), "Cancelled native index worker is still executing"
-        assert not java_temporary.exists(), "Cancelled index temporary files remain"
+        assert not java_temporary.exists(), (
+            "Cancelled index temporary files remain: "
+            + str(java_temporary)
+            + ((tmp_path / "http.log").read_text(errors="replace") if transport == "http" else "")
+        )
 
         annotation = await query(
             "find_type_refs",

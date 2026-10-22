@@ -1,8 +1,8 @@
 # Local acceptance checks
 
-## v0.5.0 native-query candidate, 2026-10-22
+## v0.5.0 native-query gate, 2026-10-22
 
-Candidate only: main, tags and release assets must remain unchanged until the frozen
+Release policy: main, tags and release assets must remain unchanged until the frozen
 Linux/Windows, installed sdist/wheel, signing, stability and accuracy gates pass.
 
 Core references, discovery, structure and streaming indexes now use checked native DEX
@@ -47,6 +47,15 @@ uv run --with ./artifacts/aimard-asc-mcp python scripts/verify_fuzzy_references.
 It compares every matching call site and matched target, plus the full instruction count,
 against Androguard method-ID pools and sequential instruction decoding. It does not turn
 static declared operands into resolved virtual dispatch, reflection or JNI targets.
+
+Frozen workload results, startup/end-to-end caveats and graph failure semantics are
+recorded in [NATIVE_QUERY_VALIDATION.md](NATIVE_QUERY_VALIDATION.md). Verify the full
+persisted call-index multiset separately from bounded graph responses:
+
+```sh
+uv run --with ./artifacts/aimard-asc-mcp python scripts/verify_call_index.py INPUT.apk \
+  --output call-index-oracle.json
+```
 
 ## v0.4.1 cold-query gate, 2026-10-22
 

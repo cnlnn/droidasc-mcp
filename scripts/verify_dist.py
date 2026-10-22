@@ -49,6 +49,7 @@ def main():
                 "README.zh-CN.md",
                 "docs/VALIDATION.md",
                 "docs/COMPETITOR_API_AUDIT.md",
+                "docs/NATIVE_QUERY_VALIDATION.md",
                 "scripts/audit_competitor.py",
                 "tests/test_competitor_audit.py",
                 "uv.lock",
