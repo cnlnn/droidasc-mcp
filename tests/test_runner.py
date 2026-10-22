@@ -10,6 +10,25 @@ from droidasc_mcp.config import Settings
 from droidasc_mcp.runner import DroidAscError, DroidAscRunner
 
 
+def test_preparation_progress_does_not_replace_open_reader(tmp_path):
+    from droidasc_mcp.dex_worker import preparation_progress
+    from droidasc_mcp.runner import _read_preparation_progress
+
+    path = tmp_path / "progress.jsonl"
+    assert _read_preparation_progress(path) is None
+    preparation_progress(tmp_path, 0, 4, "start")
+    with path.open("rb") as reader:
+        preparation_progress(tmp_path, 4, 4, "ready")
+        assert b"ready" in reader.read()
+    assert _read_preparation_progress(path) == (4, 4, "ready")
+    with path.open("ab") as stream:
+        stream.write(b'{"completed":')
+    assert _read_preparation_progress(path) == (4, 4, "ready")
+    with path.open("ab") as stream:
+        stream.write(b"x" * 65536)
+    assert _read_preparation_progress(path) is None
+
+
 @pytest.fixture
 def fake_droidasc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     package_root = tmp_path / "fake-package"

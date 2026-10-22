@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0
+
+- Move core DEX references, discovery, structure and streaming indexes to checked native
+  decoding. Core queries require neither JADX nor Java; ASC remains the public Smali engine.
+  DEX 041 uses a separately configured standalone dexlib2 3.0.9 normalizer, not JADX.
+- Ship an optional stable-ABI C accelerator with independent Python fallback, exact
+  instruction/payload boundaries, bounded per-DEX identity caches and sparse caller decoding.
+- Add one-pass fuzzy reference unions with literal owner/name filters, optional member names,
+  exact prototype/type filters, read/write selection and global pagination.
+- Build call-only graph indexes on demand, allow independent immutable-session queries to
+  run concurrently and retain bounded completed pages without resident analysis workers.
+- Report actual snapshot/class-directory startup progress while retaining integrity and
+  duplicate-class validation. Keep startup and first-query costs separate in comparisons.
+- Preserve Windows SQLite readers during concurrent durable-cache restoration. Add native,
+  fallback, malformed-input, no-Java transport and installed-accelerator regressions, plus
+  alternating large-APK cold/warm/concurrent competitor and independent accuracy checks.
+
 ## 0.4.1
 
 - Cache decoded DEX names, types and prototypes inside each isolated query and reuse

@@ -26,11 +26,10 @@ class DexInputError(ValueError):
 
 
 def preparation_progress(root, completed, total, message):
-    temporary = root / "progress.partial.json"
-    temporary.write_text(
-        json.dumps({"completed": completed, "total": total, "message": message}), encoding="utf-8"
-    )
-    temporary.replace(root / "progress.json")
+    # Append instead of replacing a file that a Windows reader may have open.
+    encoded = json.dumps({"completed": completed, "total": total, "message": message}).encode()
+    with (root / "progress.jsonl").open("ab") as stream:
+        stream.write(encoded + b"\n")
 
 
 class BoundedText(io.StringIO):

@@ -32,6 +32,21 @@ ReferenceKind = Literal["string", "type", "method", "field", "extends", "impl"]
 PREPARATION_PROGRESS = ContextVar("droidasc_preparation_progress", default=None)
 
 
+def _read_preparation_progress(path):
+    try:
+        with path.open("rb") as stream:
+            encoded = stream.read(65537)
+        if len(encoded) > 65536:
+            return None
+        lines = encoded.rsplit(b"\n", 2)
+        if len(lines) < 2:
+            return None
+        update = json.loads(lines[-2])
+        return update["completed"], update["total"], update["message"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 class DroidAscError(RuntimeError):
     """Raised when Droid ASC fails or violates an adapter limit."""
 
@@ -448,10 +463,19 @@ class DroidAscRunner:
         last_progress = None
         progress_callback = PREPARATION_PROGRESS.get()
         progress_path = (
-            Path(args[0]).parent / "progress.json"
+            Path(args[0]).parent / "progress.jsonl"
             if (progress_callback and module_name == "droidasc_mcp.dex_worker" and args)
             else None
         )
+
+        def emit_progress():
+            nonlocal last_progress
+            if progress_path is not None:
+                update = _read_preparation_progress(progress_path)
+                if update is not None and update != last_progress:
+                    progress_callback(*update)
+                    last_progress = update
+
         started = []
         try:
             readers = [
@@ -476,16 +500,7 @@ class DroidAscRunner:
                 now = time.monotonic()
                 if progress_path is not None and (now >= progress_at or process.poll() is not None):
                     progress_at = now + 0.1
-                    try:
-                        encoded = progress_path.read_bytes()
-                        if encoded != last_progress:
-                            update = json.loads(encoded)
-                            progress_callback(
-                                update["completed"], update["total"], update["message"]
-                            )
-                            last_progress = encoded
-                    except (FileNotFoundError, ValueError, KeyError):
-                        pass
+                    emit_progress()
                 if now >= memory_check_at:
                     if _process_tree_rss(process.pid) > self.settings.max_worker_memory_bytes:
                         raise DroidAscError(
@@ -503,6 +518,8 @@ class DroidAscRunner:
                         f"Droid ASC timed out after {self.settings.timeout_seconds} seconds"
                     )
                 time.sleep(0.01)
+            # Exit can occur after a progress read but before the completion poll.
+            emit_progress()
             # Readers may finish between the loop's flag check and completion check.
             if exceeded.is_set():
                 raise DroidAscError("Droid ASC output exceeds configured stream limit")

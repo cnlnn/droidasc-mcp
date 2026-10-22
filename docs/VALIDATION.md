@@ -36,6 +36,18 @@ graph timing or evidence of our graph completeness. Verify every emitted graph s
 the independent decoder and complete method/field rows and diagnostics against the frozen
 JVM oracle (`benchmark_reference_scan.py --native`). Pilot results are not release authority.
 
+The large fuzzy union also has a complete independent instruction-decoder check, rather
+than only checking the first page or trusting another implementation's byte candidates:
+
+```sh
+uv run --with ./artifacts/aimard-asc-mcp python scripts/verify_fuzzy_references.py INPUT.apk \
+  --output fuzzy-oracle.json
+```
+
+It compares every matching call site and matched target, plus the full instruction count,
+against Androguard method-ID pools and sequential instruction decoding. It does not turn
+static declared operands into resolved virtual dispatch, reflection or JNI targets.
+
 ## v0.4.1 cold-query gate, 2026-10-22
 
 The scanner optimization preserves fresh supervised workers and the existing 512-MiB JVM
