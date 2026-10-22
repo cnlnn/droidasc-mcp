@@ -51,6 +51,9 @@ it is not a runtime rollback or a claim that all competitor gaps have been close
   coverage. Python ASC remains the default; unsupported Rust hierarchy requests are rejected.
 - Preserve Windows SQLite readers during concurrent durable-cache restoration and make
   preparation progress Windows-safe. Validate cancellation and cleanup over stdio/HTTP.
+- Handle recent zipfile ASCII-name encoding flags while verifying local filename bytes and
+  all other flags. Keep cached SDK schema descriptions stable across Python docstring
+  dedenting without changing live tool descriptions or strict validation.
 - Add independent full method/field/fuzzy/call-index accuracy oracles, malformed-input,
   Unicode, payload, native/fallback and no-Java regressions, plus matched large-APK cold,
   warm, concurrent and bounded-graph comparisons. Workload-specific wins do not establish

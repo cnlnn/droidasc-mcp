@@ -84,9 +84,20 @@ def class_names(bundle, info, *, accelerator=True):
         if len(local) != 30 or local[:4] != b"PK\x03\x04":
             raise InvalidDex("Invalid stored DEX local header")
         flags, method = struct.unpack_from("<HH", local, 6)
-        if flags != info.flag_bits or method != info.compress_type:
+        different_flags = flags ^ info.flag_bits
+        # Recent zipfile backports keep UTF-8 in live ZipInfo but clear it on the
+        # wire for ASCII names. Every other flag must still agree exactly.
+        if (
+            different_flags and not (different_flags == 0x800 and info.filename.isascii())
+        ) or method != info.compress_type:
             raise InvalidDex("Stored DEX local header disagrees with its inventory")
         name_size, extra_size = struct.unpack_from("<HH", local, 26)
+        try:
+            expected_name = info.filename.encode("utf-8" if flags & 0x800 else "cp437")
+        except UnicodeEncodeError as exc:
+            raise InvalidDex("Stored DEX local header has an invalid filename encoding") from exc
+        if stream.read(name_size) != expected_name:
+            raise InvalidDex("Stored DEX local header filename disagrees with its inventory")
         base = info.header_offset + 30 + name_size + extra_size
         header = read_at(stream, base, info.file_size, 0, 112)
         if native is None:

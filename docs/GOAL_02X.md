@@ -119,6 +119,13 @@ Update, 2026-10-23:
   package bytes against the exact wheel. Ten additional regressions check changed/missing/
   extra source/data, metadata, CRLF drift and missing/duplicate native accelerators. Checkouts
   now pin LF bytes on both platforms. This stricter clean-package gate still requires CI.
+- The frozen candidate's CI 39820634142 failed on newer Python patch releases and was not
+  published. Reproduction confirmed live ZipInfo UTF-8 bit drift for ASCII names, plus Python
+  3.13 versus older-minor docstring indentation in input-schema descriptions. The reader now
+  verifies wire filename bytes and permits only the ASCII-equivalent encoding-bit difference;
+  all security-relevant flags and non-ASCII mismatches remain strict. Schema records normalize
+  descriptions while SDK tools preserve their original live docstrings. Nine new regressions
+  increase the final complete suite to 1008; final cross-platform gates must rerun in full.
 
 - Source inventory refreshed: 25 tools, two templates, three prompts, 87 parameters;
   no AST omissions at competitor commit 848c711f1d80a1c2577283f1fa5f475ff734aa40.

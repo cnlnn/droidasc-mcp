@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "ec192900758797701d3bf1cce5f2a447e16c2556d208300823b5d27625cd7a4a",
+  "source_sha256": "14fe9f5b61b5994e48921564661cd931407001d191335ab93a15017ea0b4f65f",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "80d07b310272d4c13d72d2e83f679e59b681b89f60ffdc7039659261d33d73a4",
+  "records_sha256": "fe34f21db1d8c31b59bd1d71e044b21096a866d72a139081ef3df9693297110f",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -16,7 +16,7 @@
       "is_async": false
     },
     "asc_signing_inventory": {
-      "description": "Inventory v1/v2/v3 containers and certificate fingerprints; detect v3.1 block presence.\n\nContainer presence is independent of cryptographic validity. APK digests, signatures,\ntrust, rotation lineage and v4 sidecars remain unverified. Malformed containers produce\nexplicit diagnostics. v1 certificates are a PKCS7 bag, not resolved signer identities.\n",
+      "description": "Inventory v1/v2/v3 containers and certificate fingerprints; detect v3.1 block presence.\n\nContainer presence is independent of cryptographic validity. APK digests, signatures,\ntrust, rotation lineage and v4 sidecars remain unverified. Malformed containers produce\nexplicit diagnostics. v1 certificates are a PKCS7 bag, not resolved signer identities.",
       "parameters": {
         "properties": {
           "apk_path": {
@@ -35,7 +35,7 @@
       "is_async": false
     },
     "asc_inspect_artifact": {
-      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.\n",
+      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.",
       "parameters": {
         "properties": {
           "artifact_path": {
@@ -129,7 +129,7 @@
       "is_async": false
     },
     "asc_open_artifact_session": {
-      "description": "Snapshot selected direct DEX into an immutable reusable session with container hashes.\n\nDirect DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module\nare supported. Pure JVM\nclasses and nested split APKs stay inventory-only. Duplicate classes are rejected.\nQuery and close the resulting ID with the existing DEX session tools.\n",
+      "description": "Snapshot selected direct DEX into an immutable reusable session with container hashes.\n\nDirect DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module\nare supported. Pure JVM\nclasses and nested split APKs stay inventory-only. Duplicate classes are rejected.\nQuery and close the resulting ID with the existing DEX session tools.",
       "parameters": {
         "properties": {
           "artifact_path": {
@@ -169,7 +169,7 @@
       "is_async": false
     },
     "asc_diff_dex_sessions": {
-      "description": "Compare class/member identities with full descriptors and old/new source hashes.\n\nUses native DEX declarations without Java or an instruction index. Unchanged\nidentities say nothing about changed behavior, access flags, annotations or bodies.\nInventory is bounded to 1M identities and 64 MiB of cumulative declaration records.\n",
+      "description": "Compare class/member identities with full descriptors and old/new source hashes.\n\nUses native DEX declarations without Java or an instruction index. Unchanged\nidentities say nothing about changed behavior, access flags, annotations or bodies.\nInventory is bounded to 1M identities and 64 MiB of cumulative declaration records.",
       "parameters": {
         "properties": {
           "old_session_id": {
@@ -232,7 +232,7 @@
       "is_async": false
     },
     "asc_secret_candidates": {
-      "description": "Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.\n\nUses native DEX string pools without Java/JADX.\nValues are redacted unless include_values=true.\nCandidate validity and instruction use sites remain untested. Strings over 64K UTF-16\nunits are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.\nAssets, native code, runtime values and arbitrary encodings are outside this scan.\n",
+      "description": "Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.\n\nUses native DEX string pools without Java/JADX.\nValues are redacted unless include_values=true.\nCandidate validity and instruction use sites remain untested. Strings over 64K UTF-16\nunits are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.\nAssets, native code, runtime values and arbitrary encodings are outside this scan.",
       "parameters": {
         "properties": {
           "session_id": {
@@ -320,7 +320,7 @@
       "is_async": false
     },
     "asc_list_apk_entries": {
-      "description": "List APK contents, sizes, CRC metadata and native ABIs without extracting files.\n\nSHA-256 binds this page to the APK. CRC values here are declarations, not verification.\nNative rows are an archive inventory, not ELF analysis. Follow next_offset for more.\n",
+      "description": "List APK contents, sizes, CRC metadata and native ABIs without extracting files.\n\nSHA-256 binds this page to the APK. CRC values here are declarations, not verification.\nNative rows are an archive inventory, not ELF analysis. Follow next_offset for more.",
       "parameters": {
         "properties": {
           "apk_path": {
@@ -389,7 +389,7 @@
       "is_async": false
     },
     "asc_read_apk_entry": {
-      "description": "Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.\n\nBinary XML decoding and returned-content truncation are separate statuses. Partial raw\nreads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.\n",
+      "description": "Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.\n\nBinary XML decoding and returned-content truncation are separate statuses. Partial raw\nreads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.",
       "parameters": {
         "properties": {
           "apk_path": {
@@ -435,7 +435,7 @@
       "is_async": false
     },
     "asc_manifest_summary": {
-      "description": "Read structured Manifest components, filters, metadata and permission inheritance.\n\nRaw declarations are preserved separately. Unspecified exported defaults and resource\nvalues remain unresolved. Provider path rules and URI grants need separate review;\npermission inheritance is static triage, not a runtime accessibility or vulnerability test.\n",
+      "description": "Read structured Manifest components, filters, metadata and permission inheritance.\n\nRaw declarations are preserved separately. Unspecified exported defaults and resource\nvalues remain unresolved. Provider path rules and URI grants need separate review;\npermission inheritance is static triage, not a runtime accessibility or vulnerability test.",
       "parameters": {
         "properties": {
           "apk_path": {
@@ -623,7 +623,7 @@
       "is_async": false
     },
     "asc_find_refs": {
-      "description": "Find cross-DEX references or direct subclasses/interface implementors.\n\nextends/impl use an exact class in value and return direct declarations only.\nOptional rust_asc supports string/type/method/field only and has unverified coverage.\n",
+      "description": "Find cross-DEX references or direct subclasses/interface implementors.\n\nextends/impl use an exact class in value and return direct declarations only.\nOptional rust_asc supports string/type/method/field only and has unverified coverage.",
       "parameters": {
         "properties": {
           "apk_path": {
@@ -716,7 +716,7 @@
       "is_async": false
     },
     "asc_analyze_dex": {
-      "description": "Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.\n\nReturns status=ok, error, or not_applicable. Errors carry a diagnostic code;\nduplicate class definitions are rejected. Manifest is not applicable to DEX.\nCoverage is limited to supplied files; this tool does not unpack applications.\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nExplicit source_format=java alone selects the optional compatibility backend.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nUse a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nfind_type_refs reports exact type operands, declarations and annotation types/values.\nbuild_xref_index builds a bounded complete static index; one-shot indexes are temporary.\nget_call_graph builds/reuses the index for bounded multi-hop static exploration.\nGraph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.\nsearch_members scans declarations without building an index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nsource_format=auto uses ASC exact-method Smali without Java/JADX;\nsource_format=java explicitly opts into the optional JADX compatibility backend.\njava never silently falls back, smali always disassembles that exact method.\n",
+      "description": "Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.\n\nReturns status=ok, error, or not_applicable. Errors carry a diagnostic code;\nduplicate class definitions are rejected. Manifest is not applicable to DEX.\nCoverage is limited to supplied files; this tool does not unpack applications.\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nExplicit source_format=java alone selects the optional compatibility backend.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nUse a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nfind_type_refs reports exact type operands, declarations and annotation types/values.\nbuild_xref_index builds a bounded complete static index; one-shot indexes are temporary.\nget_call_graph builds/reuses the index for bounded multi-hop static exploration.\nGraph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.\nsearch_members scans declarations without building an index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nsource_format=auto uses ASC exact-method Smali without Java/JADX;\nsource_format=java explicitly opts into the optional JADX compatibility backend.\njava never silently falls back, smali always disassembles that exact method.",
       "parameters": {
         "properties": {
           "dex_paths": {
@@ -993,7 +993,7 @@
       "is_async": false
     },
     "asc_open_dex_session": {
-      "description": "Validate and snapshot DEX inputs once; return an immutable hash-bound session.\n\nReuses the validated bundle, not a resident engine. Idle sessions expire and may\nbe evicted at capacity. Source file changes require opening a new session.\n",
+      "description": "Validate and snapshot DEX inputs once; return an immutable hash-bound session.\n\nReuses the validated bundle, not a resident engine. Idle sessions expire and may\nbe evicted at capacity. Source file changes require opening a new session.",
       "parameters": {
         "properties": {
           "dex_paths": {
@@ -1036,7 +1036,7 @@
       "is_async": false
     },
     "asc_query_dex_session": {
-      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph builds/reuses it for bounded multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.\n",
+      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph builds/reuses it for bounded multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
       "parameters": {
         "properties": {
           "session_id": {

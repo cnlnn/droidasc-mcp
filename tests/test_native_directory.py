@@ -73,6 +73,56 @@ def test_directory_matches_independent_unicode_cursor(tmp_path, accelerator):
     bundle.unlink()
 
 
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_live_zipinfo_utf8_flag_can_differ_for_verified_ascii_name(tmp_path, accelerator):
+    from droidasc_mcp.native_directory import class_names
+
+    bundle = tmp_path / "live.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("classes.dex", class_dex(["La/A;"]))
+        archive.fp.flush()
+        info = archive.getinfo("classes.dex")
+        wire_flags = struct.unpack_from("<H", bundle.read_bytes(), 6)[0]
+        info.flag_bits = wire_flags ^ 0x800
+        assert class_names(bundle, info, accelerator=accelerator) == ["La/A;"]
+
+
+@pytest.mark.parametrize("mutation", ["encryption", "descriptor", "name", "method"])
+def test_live_snapshot_still_rejects_non_encoding_header_mismatches(tmp_path, mutation):
+    from droidasc_mcp.native_directory import class_names
+
+    bundle = tmp_path / "tampered.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("classes.dex", class_dex(["La/A;"]))
+        archive.fp.flush()
+        info = archive.getinfo("classes.dex")
+        data = bytearray(bundle.read_bytes())
+        if mutation in {"encryption", "descriptor"}:
+            flags = struct.unpack_from("<H", data, 6)[0]
+            struct.pack_into("<H", data, 6, flags ^ (1 if mutation == "encryption" else 8))
+        elif mutation == "method":
+            struct.pack_into("<H", data, 8, zipfile.ZIP_DEFLATED)
+        else:
+            data[30] ^= 1
+        bundle.write_bytes(data)
+        with pytest.raises(InvalidDex, match="local header"):
+            class_names(bundle, info)
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_non_ascii_encoding_flag_disagreement_remains_invalid(tmp_path, accelerator):
+    from droidasc_mcp.native_directory import class_names
+
+    bundle = tmp_path / "unicode-name.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("cl\u00e1sses.dex", class_dex(["La/A;"]))
+        archive.fp.flush()
+        info = archive.getinfo("cl\u00e1sses.dex")
+        info.flag_bits = struct.unpack_from("<H", bundle.read_bytes(), 6)[0] ^ 0x800
+        with pytest.raises(InvalidDex, match="local header"):
+            class_names(bundle, info, accelerator=accelerator)
+
+
 @pytest.mark.parametrize("legacy", [False, True])
 @pytest.mark.parametrize(
     "names",

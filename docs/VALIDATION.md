@@ -23,6 +23,17 @@ new distribution-identity regressions additionally reject source/data, version a
 accelerator drift. Final CI must run all 999 tests per OS/interpreter and both clean-package
 suites on the exact candidate commit; these local results do not replace that release gate.
 
+The first full CI attempt (39820634142) failed and was not released. It exposed two actual
+compatibility defects absent from the older local interpreters. Python 3.13 dedents compiled
+docstrings, unlike 3.10-3.12: input-cache records now canonicalize descriptions for generation
+checks, while public SDK tools still receive each live function's exact original docstring.
+Latest zipfile backports can keep bit 11 in a live ZipInfo while clearing it in an ASCII
+filename's local header. The snapshot reader accepts only that ASCII-equivalent encoding
+difference and verifies the exact local filename bytes; encryption, descriptor, compression
+and non-ASCII flag mismatches still fail. CRC, DEX integrity and original input hashes remain
+mandatory. Nine new regressions bring the final suite to 1008 tests per matrix cell. Failed
+logs/XML are preserved separately; all final CI/package/accuracy receipts must be refreshed.
+
 Release policy: the authorized withdrawal is complete. New main merges, release tags and
 assets must wait for that increment's frozen Linux/Windows, installed sdist/wheel, signing,
 stability and accuracy gates. An incremental release does not close remaining overall deficits.

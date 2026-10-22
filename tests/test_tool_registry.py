@@ -1,6 +1,7 @@
 """Compiled schema registration must preserve SDK contracts and strict validation."""
 
 import json
+from types import SimpleNamespace
 
 import pydantic
 import pytest
@@ -12,6 +13,24 @@ from droidasc_mcp import contracts
 
 def output() -> contracts.DexResult:
     return {"status": "ok", "items": [{"instruction_offset": 12}]}
+
+
+def test_compiled_descriptions_are_stable_across_python_docstring_dedenting():
+    from droidasc_mcp.input_schemas import schema_document
+
+    tool = SimpleNamespace(
+        name="example",
+        description="Summary.\n\n    Details.\n    ",
+        parameters={"type": "object"},
+        context_kwarg=None,
+        is_async=True,
+        resolved_params={},
+        resolver_plans={},
+    )
+    indented = schema_document([tool])
+    tool.description = "Summary.\n\nDetails.\n"
+    assert schema_document([tool]) == indented
+    assert indented["tools"]["example"]["description"] == "Summary.\n\nDetails."
 
 
 def test_registry_reuses_schema_without_eager_output_adapter(monkeypatch):

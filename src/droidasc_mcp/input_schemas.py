@@ -1,6 +1,7 @@
 """Source-bound SDK input schemas with original per-call validation built on demand."""
 
 import hashlib
+import inspect
 import json
 from copy import deepcopy
 from importlib.metadata import version
@@ -35,7 +36,7 @@ def schema_document(tools):
         if tool.resolved_params or tool.resolver_plans:
             raise ValueError("Compiled registration does not support resolver parameters")
         records[tool.name] = {
-            "description": tool.description,
+            "description": inspect.cleandoc(tool.description),
             "parameters": tool.parameters,
             "context_kwarg": tool.context_kwarg,
             "is_async": tool.is_async,
@@ -117,7 +118,7 @@ def cached_tool(fn, annotations, contract, output_schema, records):
     return Tool(
         fn=fn,
         name=fn.__name__,
-        description=record["description"],
+        description=fn.__doc__ or "",
         parameters=deepcopy(record["parameters"]),
         fn_metadata=metadata,
         is_async=record["is_async"],
