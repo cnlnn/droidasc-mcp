@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "droidasc-mcp"
-version = "0.5.0"
+version = "0.3.0"
 description = "A safe, structured MCP server for the Droid ASC Android decompiler"
 readme = "README.md"
 requires-python = ">=3.10"

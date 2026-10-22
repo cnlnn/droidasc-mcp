@@ -1,6 +1,14 @@
 # Local acceptance checks
 
-## v0.5.0 native-query gate, 2026-10-22
+## v0.3.0 native-query gate, 2026-10-22
+
+The maintainer requested republishing the former v0.5.0 implementation as v0.3.0 and
+withdrawing the old v0.3.0 through v0.5.0 releases/tags. Runtime code is unchanged.
+Rebuild package metadata and run the complete Linux/Windows and clean-sdist/native-wheel
+gates on the renumbered commit before publishing its exact CI artifacts. Release notes
+must identify that new commit, run and hashes. The older version labels in the historical
+sections below identify withdrawn releases and their original evidence, not current
+installation targets; the original receipts must not be renamed or retroactively relabeled.
 
 Release policy: main, tags and release assets must remain unchanged until the frozen
 Linux/Windows, installed sdist/wheel, signing, stability and accuracy gates pass.

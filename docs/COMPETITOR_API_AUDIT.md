@@ -78,7 +78,7 @@ check is not a substitute for the behavioral tests linked in each row.
 
 This matrix describes implemented equivalents and intentional interface differences. The release
 authority is a fresh feature-frozen Linux/Windows matrix, real stdio/HTTP tests, independent signing
-variants, stability checks and clean sdist/wheel installations. Historical v0.3.0 receipts do not
+variants, stability checks and clean sdist/wheel installations. Receipts for the withdrawn original v0.3.0 do not
 approve this candidate. See VALIDATION.md for the final commit/run-specific gate receipt.
 Historical cold-reference timings do not describe this candidate's native scanner. Refresh the
 same-condition runtime and independent accuracy receipts before claiming a performance advantage;

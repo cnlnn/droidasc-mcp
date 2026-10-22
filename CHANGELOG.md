@@ -1,122 +1,55 @@
 # Changelog
 
-## 0.5.0
+## 0.3.0
+
+This release consolidates the implementation formerly published as 0.5.0. The original
+0.3.0, 0.4.0, 0.4.1 and 0.5.0 releases and tags are withdrawn at the maintainer's request.
+Git commit history and historical validation evidence are retained. Packages are rebuilt
+and accepted under the 0.3.0 version; this is not a runtime rollback.
 
 - Move core DEX references, discovery, structure and streaming indexes to checked native
   decoding. Core queries require neither JADX nor Java; ASC remains the public Smali engine.
-  DEX 041 uses a separately configured standalone dexlib2 3.0.9 normalizer, not JADX.
-- Ship an optional stable-ABI C accelerator with independent Python fallback, exact
-  instruction/payload boundaries, bounded per-DEX identity caches and sparse caller decoding.
-- Add one-pass fuzzy reference unions with literal owner/name filters, optional member names,
-  exact prototype/type filters, read/write selection and global pagination.
-- Build call-only graph indexes on demand, allow independent immutable-session queries to
-  run concurrently and retain bounded completed pages without resident analysis workers.
-- Report actual snapshot/class-directory startup progress while retaining integrity and
-  duplicate-class validation. Keep startup and first-query costs separate in comparisons.
-- Preserve Windows SQLite readers during concurrent durable-cache restoration. Add native,
-  fallback, malformed-input, no-Java transport and installed-accelerator regressions, plus
-  alternating large-APK cold/warm/concurrent competitor and independent accuracy checks.
-
-## 0.4.1
-
-- Cache decoded DEX names, types and prototypes inside each isolated query and reuse
-  ordered class identities, avoiding repeated UTF-8 decoding without retaining workers.
-- Reduce cold method/field reference scanning allocations using the pinned decoder's
-  version-specific opcode/format table and lazy numeric member-ID memoization. Keep exact
-  instruction boundaries, payload validation, complete scan counters and fresh isolated workers.
-- Construct full method signatures only for overloaded sorting keys and emitted callers;
-  preserve descriptor ordering, duplicate detection, pagination and dynamic-site diagnostics.
-- Add decoder-differential cursor checks, invalid/truncated/overflowing payload regressions,
-  prefix-name ordering fixtures and alternating fresh-JVM complete-result benchmarks.
-
-## 0.4.0
-
-- Complete a source-traceable workflow map of all 25 competitor tools, two resource templates,
-  three prompts and 87 parameters, with an AST inventory regression guard.
-- Add class search, typed outlines, hierarchy/cycle diagnostics, string use sites, decoded
-  instruction search/disassembly and source-token metadata with explicit offset semantics.
-- Support strict DEX 041 logical-container imports, including shared physical string data,
-  preserving original hashes/header offsets separately from normalized standalone DEX hashes.
-- Inventory first-level nested JAR JVM classes, filter JVM names and compare hash-bound JVM
-  identities. Keep JVM decompilation and split reconstruction explicitly unsupported.
-- Read generic archive resources with resumable byte pages; add manifest/class resource
-  templates and a revision-comparison prompt. Keep allowed-root and immutable-session checks.
-- Extend credential-assignment patterns and add explicit opt-in matched values; default output
-  remains redacted and no credentials are contacted. Preserve bounded supervised execution.
-
-## 0.3.0
-
-- Publish typed MCP output schemas for all 18 tools, preserving optional diagnostics and
-  rejecting invalid nested wire types. Add generic ZIP and arbitrary directly embedded DEX
-  paths across supported containers, with combined AAR budgets and unambiguous provenance.
-- Add a separate bounded 4-MiB / 32-entry per-session resident exact-page cache, invalidated
-  by implementation/engine/index identity changes. Defer secondary SQLite indexes until
-  after bulk loading, and avoid building unrelated member descriptors in streamed queries.
-
-- Add signing-container/certificate inventories with v1 PKCS7 bags, v2/v3 signer records,
-  v3.1 presence and malformed/unsupported diagnostics, separately from cryptographic validity.
-- Add capability inventory for APK/JAR/ZIP/AAR/AAB/APKS/XAPK and budgeted direct-DEX artifact
-  sessions, preserving original container SHA-256 and member paths. JVM classes and nested
-  split APKs remain inventory-only; AAB selects one module, AAR includes classes.jar.
-- Add bounded sorted revision identity inventories and redacted fixed-pattern DEX secret
-  candidates with pool indices/fingerprints. Keep behavior comparison and credential probing
-  outside these operations. Complete public argument descriptions and schema bounds.
-- Add index-backed multi-hop static call graphs with incoming/outgoing/both traversal,
-  bounded depth/nodes/call sites/output bytes, explicit expansion boundaries, external roots,
-  original DEX offsets and unresolved dynamic diagnostics. Exercise public multi-DEX cycles,
-  self-recursion, overloads and invoke-custom/polymorphic fixtures over both MCP transports.
-- Add an opt-in durable xref cache across sessions/server restarts, keyed by input/schema/backend
-  hashes, with checksum verification, a separate byte/entry budget, TTL/LRU eviction, OS process
-  locks and atomic publication. Keep default session cleanup and fresh-worker supervision.
-  Verify restart reuse with Java unavailable, concurrent writers, corruption and killed writers.
-- Make member discovery declaration-only rather than implicitly building the full xref index;
-  add literal DEX string-pool discovery with entry/index provenance. Add bounded, hash-bound
-  exact-page caching without retaining worker processes, and measure large-APK cold/warm costs.
-- Add independently assembled field-reference boundary regressions: opcode-like bytes in
-  adjacent code-item headers and array payloads must never become executable reference hits.
-- Close the acceptance test's SQLite connection on Windows and retry transient JADX download
-  failures with bounded backoff while retaining mandatory archive hash verification.
-- Add bounded atomic session-lifetime SQLite xref indexes, exact type relationships across
-  instructions/declarations/annotations, and literal method/field declaration discovery.
-  Preserve streaming-query semantics, source identities and fail-closed incomplete scans.
-- Add opt-in pinned Rust ASC APK backend with supervised native workers and explicit unverified
-  coverage; keep Python ASC as the default and reject unsupported Rust hierarchy queries.
-- Add MCP initialization guidance, an analysis-guide resource, two investigation prompts and
-  explicit tool annotations. Record a source-backed competitor comparison and remaining gaps.
-- Add `find_field_refs` for full `class->name:type` identities, read/write filters, static/instance
-  access labels, exact instruction offsets and cross-DEX provenance. Same-name fields of different
-  types remain distinct. Encoded initializers, reflection, inherited field resolution and handle
-  targets are not represented as direct accesses. Verify both transports and malformed-scan failure.
-- Upgrade the minimum and lock to ASC 0.1.2.post3. Explicit method Smali now uses its public
-  `disassemble --method` CLI without a JVM, with optional debug directives and stable not-found errors.
-- Add descriptor-exact incoming/outgoing method operands with DEX provenance, code-unit offsets,
-  dynamic/unresolved diagnostics and bounded pagination through the optional dexlib2 backend.
-  Decode opcodes according to each DEX version; reject unknown instructions instead of claiming
-  complete coverage. These are static operands, not a resolved runtime call graph.
-- Add cross-DEX and polymorphic-call instruction oracles, Smali reassembly, and a source-built
-  Kotlin 2.1.0/R8 release fixture tested over both transports and clean package installations.
+  Java source decompilation requires explicit opt-in. DEX 041 uses a separately configured
+  standalone dexlib2 3.0.9 normalizer, not JADX.
+- Ship an optional stable-ABI C accelerator with independent Python fallback, strict modified
+  UTF-8 handling, exact instruction/payload boundaries, bounded per-DEX identity caches and
+  sparse caller decoding. Reject malformed scans instead of claiming complete coverage.
 - Add immutable hash-bound DEX sessions with explicit close, idle TTL, count/disk limits,
   concurrent preparation reservations, active-query pinning and lifecycle cleanup.
-- Add optional JADX 1.5.5/JDK 17 method queries: raw DEX full descriptors, exact Java lookup,
-  exact-method baksmali fallback and explicit engine/fallback diagnostics. Existing ASC tools
-  remain Java-independent. Existing `find_refs` remains best-effort ASC text.
-- Add overload, constructor, synthetic bridge, Unicode, array/native method and real JVM
-  cancellation acceptance over stdio/HTTP; package the Java source bridge in sdist and wheel.
-
-- Add exact `extends` / `impl` queries for APK and DEX, with structured direct-declaration
-  records, descriptor normalization and explicit rejection of inapplicable class filters.
-- Hierarchy queries require Droid ASC 0.1.2.post2 or newer; the previous minimum 0.1.1.post1 lacks hierarchy
-  commands and fails the new real-engine acceptance.
-- Verify reference caller sets before and after decompilation through both MCP transports,
-  forcing fresh queries so cached output cannot hide a call-order regression.
-- Add `asc_analyze_dex` for explicit single/multi-DEX inputs through the public ASC entry point.
-  Preserve original bytes and SHA-256 provenance; validate standard DEX headers, table bounds
-  and integrity fields before creating private, temporary analysis containers.
-- Reject duplicate class definitions, distinguish absent classes/empty searches/engine errors,
-  and return an explicit not-applicable result for DEX manifest requests.
-- Apply the existing allowed-root, concurrency, worker memory/time/output limits to DEX analysis.
-  Parent-owned temporary directories are cleaned even after worker termination or cancellation.
-- Add source-built DEX regression coverage, stdio/HTTP operations and bilingual usage boundaries.
+- Add exact method/field references with original DEX offsets, cross-DEX provenance,
+  read/write filters and dynamic/unresolved diagnostics. These are declared instruction
+  operands, not resolved virtual dispatch, reflection or JNI targets.
+- Add one-pass fuzzy reference unions with literal owner/name filters, optional member names,
+  exact prototype/type filters, read/write selection and global pagination.
+- Add literal declaration/string discovery, class search, typed outlines, hierarchy/cycle
+  diagnostics, string use sites, decoded instruction search/disassembly and source-token links.
+- Build call-only SQLite graph indexes on demand, with incoming/outgoing/both traversal,
+  bounded depth/nodes/sites/output, explicit truncation and unresolved dynamic diagnostics.
+- Allow independent immutable-session queries to run concurrently. Keep completed-page
+  caching bounded without resident analysis workers; add optional hash-bound durable xref
+  caching with independent budgets, process locks, checksums and TTL/LRU eviction.
+- Report actual snapshot/class-directory preparation progress while preserving integrity and
+  duplicate-class validation. Keep startup and first-query costs separate in comparisons.
+- Add signing-container/certificate inventories with malformed/unsupported diagnostics,
+  separately from cryptographic signature validity.
+- Inventory APK/JAR/ZIP/AAR/AAB/APKS/XAPK capabilities, direct DEX artifacts and first-level
+  nested JAR JVM classes. Preserve container/member hashes and explicit inventory-only limits
+  for JVM decompilation, split reconstruction and unsupported container operations.
+- Compare bounded, sorted revision identities and return redacted fixed-pattern secret
+  candidates with pool provenance; matched values require explicit opt-in.
+- Add resumable archive byte pages, manifest/class resources, investigation/revision prompts,
+  typed output schemas and a source-traceable competitor map covering 25 tools, two resource
+  templates, three prompts and 87 parameters with an AST inventory regression guard.
+- Add an opt-in pinned Rust ASC APK backend with supervised workers and explicit unverified
+  coverage. Python ASC remains the default; unsupported Rust hierarchy requests are rejected.
+- Preserve Windows SQLite readers during concurrent durable-cache restoration and make
+  preparation progress Windows-safe. Validate cancellation and cleanup over stdio/HTTP.
+- Add independent full method/field/fuzzy/call-index accuracy oracles, malformed-input,
+  Unicode, payload, native/fallback and no-Java regressions, plus matched large-APK cold,
+  warm, concurrent and bounded-graph comparisons. Workload-specific wins do not establish
+  universal superiority; startup-to-first-result remains slower than the measured competitor.
+- Require full Linux/Windows Python 3.10-3.13, clean canonical-sdist/native-wheel, independent
+  signing and stability acceptance before publishing the exact successful CI artifacts.
 
 ## 0.2.2
 

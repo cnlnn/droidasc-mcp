@@ -1,4 +1,10 @@
-# Native-query validation, v0.5.0
+# Native-query validation, v0.3.0
+
+The native implementation formerly released as v0.5.0 is republished as v0.3.0 at the
+maintainer's request. Runtime code is unchanged; distribution metadata and installation
+links are rebuilt for 0.3.0. The former v0.3.0, v0.4.0, v0.4.1 and v0.5.0 releases/tags
+are withdrawn. Historical receipt filenames and source hashes below remain unchanged
+so the original measurements stay traceable; they do not describe new package bytes.
 
 ## Scope and reproducibility
 

@@ -34,11 +34,12 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.4.1 减少冷引用查询的对象分配和 DEX 名称重复解码，保留精确指令边界、完整扫描诊断及
-每次查询的新隔离进程。[源码与性能对照](docs/AIMARD_COMPARISON.md) 分开记录全量结果一致性、
-具体查询耗时及未采用的调优方案，不把局部提速写成全面领先。
+0.3.0 的核心 DEX 引用、发现、结构视图及惰性索引不依赖 Java 或 JADX；可选 stable-ABI C
+加速器保留独立 Python 回退，Smali 仍使用 ASC 官方 CLI。只有显式请求 Java 源码才使用可选
+JADX。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
+冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
 
-0.4.0 在现有 DEX 查询工具中增加类搜索、结构、继承关系、字符串使用位置、指令文本检索、
+同时包含类搜索、结构、继承关系、字符串使用位置、指令文本检索、
 结构化反汇编和源码 token 引用；补充 DEX 041 容器、一级嵌套 JAR 的 JVM 清单与身份对比、
 资源字节续页、Manifest/类资源模板、版本对比提示和候选密钥原值的显式开关。
 [逐项源码对照表](docs/COMPETITOR_API_AUDIT.md) 覆盖竞品全部 25 个工具、2 个资源、3 个提示及
@@ -54,17 +55,18 @@ Linux 安装固定版本的 GitHub 发布包：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.1/droidasc_mcp-0.4.1-py3-none-any.whl
+.venv/bin/python -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.4.1/droidasc_mcp-0.4.1-py3-none-any.whl
+.\.venv\Scripts\python.exe -m pip install https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
 ```
 
-Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
+以上 wheel 面向 x86-64 CPython 3.10+；其他环境可从发布页的 `droidasc_mcp-0.3.0.tar.gz`
+构建，macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
 
 ## 接入 Codex
@@ -392,7 +394,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.4.1.tar.gz dist/droidasc_mcp-0.4.1-py3-none-any.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/*.whl
 ```
 
 ## 许可证
