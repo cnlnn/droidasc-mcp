@@ -73,7 +73,12 @@ def test_prepended_zip_with_unadjusted_offsets_matches_stdlib():
 
 @pytest.mark.parametrize("name", ["../bad", "/absolute", "a\\b", "a/./b", "a//b", "C:/bad"])
 def test_omitted_resource_names_still_validated(name):
-    data = archive_bytes(entries=[("classes.dex", b"dex"), (name, b"resource")])
+    wire_name = name.replace("\\", "/")
+    data = archive_bytes(entries=[("classes.dex", b"dex"), (wire_name, b"resource")])
+    if wire_name != name:
+        # Windows ZipInfo writers normalize backslashes; mutate both on-wire names.
+        assert data.count(wire_name.encode()) == 2
+        data = data.replace(wire_name.encode(), name.encode())
     with pytest.raises(ArchiveError, match="safe relative"):
         PreparationZipFile(io.BytesIO(data))
 
@@ -110,8 +115,13 @@ def test_inventory_limit_includes_omitted_resources(monkeypatch):
         PreparationZipFile(io.BytesIO(data))
 
 
+@pytest.mark.parametrize("legacy_reader", [False, True])
 @pytest.mark.parametrize("failure", ["crc", "local_name", "overlap"])
-def test_stdlib_selected_member_checks_remain_active(failure):
+def test_stdlib_selected_member_checks_remain_active(failure, legacy_reader, monkeypatch):
+    if legacy_reader:
+        from droidasc_mcp import preparation_zip
+
+        monkeypatch.setattr(preparation_zip, "_MEMBER_BOUNDS", False)
     data = bytearray(archive_bytes(entries=[("classes.dex", b"payload"), ("assets/end", b"end")]))
     first = data.index(zipfile.stringCentralDir)
     if failure == "crc":
@@ -123,6 +133,39 @@ def test_stdlib_selected_member_checks_remain_active(failure):
         struct.pack_into("<I", data, second + 42, 1)
     with PreparationZipFile(io.BytesIO(data)) as archive, pytest.raises(zipfile.BadZipFile):
         archive.read("classes.dex")
+
+
+def test_legacy_overlap_guard_runs_before_stdlib_open(monkeypatch):
+    from droidasc_mcp import preparation_zip
+
+    monkeypatch.setattr(preparation_zip, "_MEMBER_BOUNDS", False)
+    data = bytearray(archive_bytes(entries=[("classes.dex", b"payload"), ("assets/end", b"end")]))
+    first = data.index(zipfile.stringCentralDir)
+    second = data.index(zipfile.stringCentralDir, first + 4)
+    struct.pack_into("<I", data, second + 42, 1)
+    with PreparationZipFile(io.BytesIO(data)) as archive:
+
+        def unchecked_open(*args, **kwargs):
+            pytest.fail("Legacy stdlib must not receive an overlapping payload")
+
+        monkeypatch.setattr(zipfile.ZipFile, "open", unchecked_open)
+        with pytest.raises(zipfile.BadZipFile, match="Overlapped"):
+            archive.read("classes.dex")
+
+
+def test_legacy_reader_preserves_payloads_and_stream_positions(monkeypatch):
+    from droidasc_mcp import preparation_zip
+
+    monkeypatch.setattr(preparation_zip, "_MEMBER_BOUNDS", False)
+    data = archive_bytes(prefix=b"prefix")
+    with (
+        PreparationZipFile(io.BytesIO(data)) as archive,
+        archive.open("classes.dex") as first,
+        archive.open("pkg/Test.class") as second,
+    ):
+        assert first.read(5) == b"first"
+        assert second.read() == b"class file"
+        assert first.read() == (b"first dex" * 100)[5:]
 
 
 @pytest.mark.parametrize("failure", ["variable_bounds", "header_offset", "signature", "extra"])

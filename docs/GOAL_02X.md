@@ -126,6 +126,13 @@ Update, 2026-10-23:
   all security-relevant flags and non-ASCII mismatches remain strict. Schema records normalize
   descriptions while SDK tools preserve their original live docstrings. Nine new regressions
   increase the final complete suite to 1008; final cross-platform gates must rerun in full.
+- Candidate CI 39822842186 passed all four Linux suites and canonical Linux distribution
+  acceptance but failed Windows; its artifacts are not release-approved. Windows Python
+  3.10.11 predates ZipInfo's overlap-bound slot, and Windows ZIP writers normalized the
+  unsafe-backslash test input. Preparation now retains an explicit payload-bound guard on
+  older patch releases, validates original wire paths before Windows normalization, and the
+  test constructs actual unsafe wire bytes. Five added legacy-reader cases bring the suite
+  to 1013 tests. All 44 preparation ZIP tests pass locally; complete gates must rerun.
 
 - Source inventory refreshed: 25 tools, two templates, three prompts, 87 parameters;
   no AST omissions at competitor commit 848c711f1d80a1c2577283f1fa5f475ff734aa40.

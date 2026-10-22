@@ -14,7 +14,7 @@ from itertools import pairwise
 from zlib import crc32
 
 from .archive_errors import ArchiveError
-from .archive_worker import MAX_ENTRIES, validate_entry
+from .archive_worker import MAX_ENTRIES, safe_name, validate_entry
 
 _HEADER = struct.Struct(zipfile.structCentralDir)
 _KEEP = (".dex", ".class", ".jar", ".apk")
@@ -22,20 +22,48 @@ _KEEP = (".dex", ".class", ".jar", ".apk")
 # not Python minor versions; no zipfile module/class is monkeypatched.
 _EXTRA_CRC = zipfile.ZipInfo._decodeExtra.__code__.co_argcount > 1
 _ZIP64_LOCATION = "_ECD_LOCATION" in zipfile._EndRecData64.__code__.co_names
+_MEMBER_BOUNDS = "_end_offset" in zipfile.ZipInfo.__slots__
 
 
 class PreparationZipFile(zipfile.ZipFile):
     """Read-only preparation adapter; ``inventory`` includes omitted resource names.
 
     The isolated _RealGetContents override is the only custom directory path. Public
-    ZipFile.open(ZipInfo) and ZipExtFile retain the standard member-reader behavior.
+    ZipFile.open(ZipInfo) and ZipExtFile retain the standard member-reader behavior,
+    with an overlap guard for Python patch releases predating that stdlib check.
     infolist/getinfo intentionally expose only the code/container members retained here.
     Resource operations must continue using a normal ZipFile.
     """
 
     def __init__(self, handle):
         self.inventory = {}
+        self._member_bounds = {}
         super().__init__(handle, "r")
+
+    def open(self, name, mode="r", pwd=None, *, force_zip64=False):
+        if not _MEMBER_BOUNDS and mode == "r" and self.fp is not None:
+            info = name if isinstance(name, zipfile.ZipInfo) else self.getinfo(name)
+            # Old stdlib readers lack both the ZipInfo slot and the overlap guard.
+            # Check the wire payload extent without changing their CRC/decoder path.
+            with self._lock:
+                position = self.fp.tell()
+                try:
+                    self.fp.seek(info.header_offset)
+                    raw = self.fp.read(zipfile.sizeFileHeader)
+                finally:
+                    self.fp.seek(position)
+            if len(raw) != zipfile.sizeFileHeader:
+                raise zipfile.BadZipFile("Truncated file header")
+            header = struct.unpack(zipfile.structFileHeader, raw)
+            payload = (
+                info.header_offset
+                + zipfile.sizeFileHeader
+                + header[zipfile._FH_FILENAME_LENGTH]
+                + header[zipfile._FH_EXTRA_FIELD_LENGTH]
+            )
+            if payload + info.compress_size > self._member_bounds[info.filename]:
+                raise zipfile.BadZipFile("Overlapped entries (possible zip bomb)")
+        return super().open(name, mode, pwd, force_zip64=force_zip64)
 
     def _RealGetContents(self):
         source = self.fp
@@ -77,7 +105,11 @@ class PreparationZipFile(zipfile.ZipFile):
                 raise zipfile.BadZipFile("Truncated central directory member")
             name = raw[:name_size]
             encoding = "utf-8" if row[5] & 0x800 else "cp437"
-            info = zipfile.ZipInfo(name.decode(encoding))
+            decoded_name = name.decode(encoding)
+            if "\0" in decoded_name:
+                raise ArchiveError("unsafe_entry", "Archive entry name contains a NUL byte")
+            # ZipInfo normalizes backslashes on Windows; validate original wire names.
+            info = zipfile.ZipInfo(safe_name(decoded_name))
             info.extra = raw[name_size : name_size + extra_size]
             info.comment = raw[name_size + extra_size :]
             info.header_offset = row[18]
@@ -127,6 +159,7 @@ class PreparationZipFile(zipfile.ZipFile):
             raise zipfile.BadZipFile("Overlapped local headers")
         for info in self.filelist:
             position = bisect.bisect_right(local_offsets, info.header_offset)
-            info._end_offset = (
-                local_offsets[position] if position < len(local_offsets) else self.start_dir
-            )
+            bound = local_offsets[position] if position < len(local_offsets) else self.start_dir
+            self._member_bounds[info.filename] = bound
+            if _MEMBER_BOUNDS:
+                info._end_offset = bound

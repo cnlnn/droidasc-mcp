@@ -54,6 +54,8 @@ it is not a runtime rollback or a claim that all competitor gaps have been close
 - Handle recent zipfile ASCII-name encoding flags while verifying local filename bytes and
   all other flags. Keep cached SDK schema descriptions stable across Python docstring
   dedenting without changing live tool descriptions or strict validation.
+- Preserve payload-overlap checks on older Python ZIP readers without the bound slot,
+  and validate raw entry names before Windows path normalization.
 - Add independent full method/field/fuzzy/call-index accuracy oracles, malformed-input,
   Unicode, payload, native/fallback and no-Java regressions, plus matched large-APK cold,
   warm, concurrent and bounded-graph comparisons. Workload-specific wins do not establish
