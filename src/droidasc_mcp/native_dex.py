@@ -305,20 +305,71 @@ class Dex:
                 )
             yield from rows
 
-    def matching_ids(self, requested, fields):
-        owner = requested.split("->", 1)[0]
-        owners = {index for index in range(self.tables[1][0]) if self.type(index) == owner}
-        if not owners:
-            return set()
+    def matching_types(self, owner, *, fuzzy=False, case_sensitive=True, accelerator=True):
+        matches = set()
+        deferred = range(self.tables[1][0])
+        if accelerator and owner.isascii():
+            try:
+                from ._dexscan import matching_types as native_types
+            except ImportError:
+                pass
+            else:
+                try:
+                    selected, deferred = native_types(
+                        self.data,
+                        self.tables[1][1],
+                        self.tables[1][0],
+                        self.tables[0][1],
+                        self.tables[0][0],
+                        owner.encode("ascii"),
+                        fuzzy,
+                        case_sensitive,
+                    )
+                    matches.update(selected)
+                except ValueError as exc:
+                    raise InvalidDex(str(exc)) from exc
+        if not case_sensitive:
+            owner = owner.lower()
+        for index in deferred:
+            candidate = self.type(index)
+            if not case_sensitive:
+                candidate = candidate.lower()
+            if owner in candidate if fuzzy else owner == candidate:
+                matches.add(index)
+        return matches
+
+    def owner_members(self, fields, owners, *, accelerator=True):
         table = 3 if fields else 4
         count, offset, _ = self.tables[table]
+        if accelerator:
+            try:
+                from ._dexscan import owner_members as native_owners
+            except ImportError:
+                pass
+            else:
+                mask = bytearray(65536)
+                for index in owners:
+                    if 0 <= index < len(mask):
+                        mask[index] = 1
+                try:
+                    return native_owners(self.data, offset, count, self.tables[1][0], bytes(mask))
+                except ValueError as exc:
+                    raise InvalidDex(str(exc)) from exc
+        result = []
+        for index in range(count):
+            owner = self.u16(self.item(table, index))
+            self.item(1, owner)
+            if owner in owners:
+                result.append(index)
+        return result
+
+    def matching_ids(self, requested, fields):
+        owner = requested.split("->", 1)[0]
+        owners = self.matching_types(owner)
+        if not owners:
+            return set()
         member = self.field if fields else self.method
-        return {
-            index
-            for index in range(count)
-            if struct.unpack_from("<H", self.data, offset + index * 8)[0] in owners
-            and member(index) == requested
-        }
+        return {index for index in self.owner_members(fields, owners) if member(index) == requested}
 
     def instructions(self, code):
         if not code:
@@ -416,20 +467,22 @@ def _references(bundle, query, settings):
         member = dex.field if fields else dex.method
         targets = set()
         if fuzzy:
-            for i in range(dex.tables[3 if fields else 4][0]):
-                position = dex.item(3 if fields else 4, i)
-                owner = dex.type(dex.u16(position))
-                owner_query = query.get("class_name")
-                if owner_query:
-                    candidate_owner = owner
-                    if not query.get("case_sensitive", True):
-                        candidate_owner, owner_query = candidate_owner.lower(), owner_query.lower()
-                    if (
-                        owner_query not in candidate_owner
-                        if query.get("fuzzy_class")
-                        else candidate_owner != owner_query
-                    ):
-                        continue
+            owner_query = query.get("class_name")
+            owners = (
+                dex.matching_types(
+                    owner_query,
+                    fuzzy=query.get("fuzzy_class", False),
+                    case_sensitive=query.get("case_sensitive", True),
+                )
+                if owner_query
+                else None
+            )
+            candidates = (
+                dex.owner_members(fields, owners)
+                if owners is not None
+                else range(dex.tables[3 if fields else 4][0])
+            )
+            for i in candidates:
                 text = member(i)
                 _, local = text.split("->", 1)
                 target_descriptor = query.get("target_descriptor")

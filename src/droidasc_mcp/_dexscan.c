@@ -22,6 +22,46 @@ static int append(PyObject *rows, Py_ssize_t position, Py_ssize_t address,
     return status;
 }
 
+/* Shared checked cursor for row emission and allocation-free candidate selection. */
+static int decode(const unsigned char *data, const unsigned char *widths,
+                  const unsigned char *mask, Py_ssize_t position, Py_ssize_t end,
+                  int version, int fields, int incoming, int pool,
+                  unsigned int *opcode, uint64_t *bytes, int *special) {
+    unsigned int op, width;
+    int reference;
+    if (end - position < 2) return -1;
+    op = data[position];
+    width = widths[op];
+    if (!width || (op >= 0xfa && version < (op >= 0xfe ? 39 : 38))) return -1;
+    *bytes = (uint64_t)width * 2;
+    *special = 0;
+    if (op == 0 && data[position + 1]) {
+        unsigned int kind = data[position + 1], size;
+        if (position % 4 || kind > 3 || end - position < (kind == 3 ? 8 : 4)) return -1;
+        size = u16(data + position + 2);
+        if (kind == 1) *bytes = 8 + (uint64_t)size * 4;
+        else if (kind == 2) *bytes = 4 + (uint64_t)size * 8;
+        else {
+            if (size != 1 && size != 2 && size != 4 && size != 8) return -1;
+            *bytes = 8 + (((uint64_t)size * u32(data + position + 4) + 1) / 2) * 2;
+        }
+        *special = 1;
+    }
+    if (*bytes > (uint64_t)(end - position)) return -1;
+    reference = fields ? (op >= 0x52 && op <= 0x6d) :
+        ((op >= 0x6e && op <= 0x72) || (op >= 0x74 && op <= 0x78) || op == 0xfa || op == 0xfb);
+    if (reference) {
+        unsigned int index;
+        if (*bytes < 4) return -1;
+        index = u16(data + position + 2);
+        if ((uint64_t)index >= (uint64_t)pool) return -1;
+        if (!incoming || mask[index]) *special = 1;
+    }
+    if (op >= 0xfa && op <= 0xfe) *special = 1;
+    *opcode = op;
+    return 0;
+}
+
 /* Buffers remain owned by Python; no pointer survives this call. All lengths
  * and payload products are checked before pointer arithmetic or operand reads. */
 static PyObject *scan(PyObject *self, PyObject *args) {
@@ -58,38 +98,11 @@ static PyObject *scan(PyObject *self, PyObject *args) {
     if (!rows) return NULL;
     position = resume ? resume : start;
     while (position < end) {
-        unsigned int op = data[position], width = widths[op];
-        int special = 0, reference;
+        unsigned int op;
+        int special;
         uint64_t bytes;
-        if (end - position < 2 || !width ||
-            (op >= 0xfa && version < (op >= 0xfe ? 39 : 38))) goto invalid;
-        bytes = (uint64_t)width * 2;
-        if (op == 0 && data[position + 1]) {
-            unsigned int kind = data[position + 1];
-            unsigned int size;
-            if (position % 4 || kind > 3 || end - position < (kind == 3 ? 8 : 4))
-                goto invalid;
-            size = u16(data + position + 2);
-            if (kind == 1) bytes = 8 + (uint64_t)size * 4;
-            else if (kind == 2) bytes = 4 + (uint64_t)size * 8;
-            else {
-                if (size != 1 && size != 2 && size != 4 && size != 8) goto invalid;
-                bytes = 8 + (((uint64_t)size * u32(data + position + 4) + 1) / 2) * 2;
-            }
-            special = 1;
-        }
-        if (bytes > (uint64_t)(end - position)) goto invalid;
-        reference = fields ? (op >= 0x52 && op <= 0x6d) :
-            ((op >= 0x6e && op <= 0x72) || (op >= 0x74 && op <= 0x78) ||
-             op == 0xfa || op == 0xfb);
-        if (reference) {
-            unsigned int index;
-            if (bytes < 4) goto invalid;
-            index = u16(data + position + 2);
-            if ((uint64_t)index >= (uint64_t)pool) goto invalid;
-            if (!incoming || mask[index]) special = 1;
-        }
-        if (op >= 0xfa && op <= 0xfe) special = 1;
+        if (decode(data, widths, mask, position, end, version, fields, incoming, pool,
+                   &op, &bytes, &special) < 0) goto invalid;
         skipped++;
         if (special) {
             if (append(rows, position, (position - start) / 2, (int)op, skipped) < 0)
@@ -188,22 +201,27 @@ failed_members:
 
 static PyObject *select_methods(PyObject *self, PyObject *args) {
     PyObject *data_obj, *methods, *widths, *mask, *selected = NULL;
-    char *raw;
-    Py_ssize_t length, method_offset, strings, protos, i;
+    char *raw, *width_raw, *mask_raw;
+    const unsigned char *data;
+    Py_ssize_t length, width_length, mask_length, method_offset, strings, protos, i;
     unsigned long long instructions = 0, dynamic = 0, without = 0;
     int version, fields, pool, access;
     (void)self;
     if (!PyArg_ParseTuple(args, "OOiOOiinnni", &data_obj, &methods, &version,
                          &widths, &mask, &fields, &pool, &method_offset, &strings,
                          &protos, &access)) return NULL;
-    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0) return NULL;
+    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0 ||
+        PyBytes_AsStringAndSize(widths, &width_raw, &width_length) < 0 ||
+        PyBytes_AsStringAndSize(mask, &mask_raw, &mask_length) < 0) return NULL;
+    data = (const unsigned char *)raw;
     if (!PyList_Check(methods) || method_offset < 0 || method_offset > length ||
-        strings < 0 || protos < 0) goto invalid_select;
+        strings < 0 || protos < 0 || width_length != 256 || mask_length != 65536 || pool < 0)
+        goto invalid_select;
     selected = PyList_New(0);
     if (!selected) return NULL;
     for (i = 0; i < PyList_Size(methods); i++) {
-        PyObject *method = PyList_GetItem(methods, i), *index_obj, *code_obj, *scan_args, *rows;
-        Py_ssize_t index, code, row_index, resume = 0;
+        PyObject *method = PyList_GetItem(methods, i), *index_obj, *code_obj;
+        Py_ssize_t index, code, position, end;
         int wanted = 0;
         if (!PyTuple_Check(method) || PyTuple_Size(method) != 3) goto invalid_select;
         index_obj = PyTuple_GetItem(method, 0);
@@ -216,29 +234,27 @@ static PyObject *select_methods(PyObject *self, PyObject *args) {
             u16((unsigned char *)raw + method_offset + index * 8 + 2) >= (uint64_t)protos)
             goto invalid_select;
         if (!code) { without++; continue; }
-        do {
-            scan_args = Py_BuildValue("OniOOiiin", data_obj, code, version, widths, mask,
-                                     fields, 1, pool, resume);
-            if (!scan_args) goto failed_select;
-            rows = scan(NULL, scan_args);
-            Py_DECREF(scan_args);
-            if (!rows) goto failed_select;
-            resume = 0;
-            for (row_index = 0; row_index < PyList_Size(rows); row_index++) {
-                PyObject *row = PyList_GetItem(rows, row_index);
-                int op = (int)PyLong_AsLong(PyTuple_GetItem(row, 2));
-                instructions += PyLong_AsUnsignedLongLong(PyTuple_GetItem(row, 3));
-                if (op == -2) resume = PyLong_AsSsize_t(PyTuple_GetItem(row, 0));
-                if (op >= 0xfa && op <= 0xfe) { dynamic++; wanted = 1; }
-                if (fields ? (op >= 0x52 && op <= 0x6d) :
-                    ((op >= 0x6e && op <= 0x72) || (op >= 0x74 && op <= 0x78) || op == 0xfa || op == 0xfb)) {
-                    int read = (op >= 0x52 && op <= 0x58) || (op >= 0x60 && op <= 0x66);
-                    if (!fields || !access || access == (read ? 1 : 2)) wanted = 1;
-                }
+        if (code < 0 || code % 4 || code > length || length - code < 16) goto invalid_select;
+        position = code + 16;
+        if ((uint64_t)u32(data + code + 12) * 2 > (uint64_t)(length - position))
+            goto invalid_select;
+        end = position + (Py_ssize_t)u32(data + code + 12) * 2;
+        while (position < end) {
+            unsigned int op;
+            uint64_t bytes;
+            int special;
+            if (decode(data, (unsigned char *)width_raw, (unsigned char *)mask_raw,
+                       position, end, version, fields, 1, pool, &op, &bytes, &special) < 0)
+                goto invalid_select;
+            instructions++;
+            if (op >= 0xfa && op <= 0xfe) { dynamic++; wanted = 1; }
+            if (special && (fields ? (op >= 0x52 && op <= 0x6d) :
+                ((op >= 0x6e && op <= 0x72) || (op >= 0x74 && op <= 0x78) || op == 0xfa || op == 0xfb))) {
+                int read = (op >= 0x52 && op <= 0x58) || (op >= 0x60 && op <= 0x66);
+                if (!fields || !access || access == (read ? 1 : 2)) wanted = 1;
             }
-            Py_DECREF(rows);
-            if (PyErr_Occurred()) goto failed_select;
-        } while (resume);
+            position += (Py_ssize_t)bytes;
+        }
         if (wanted && PyList_Append(selected, method) < 0) goto failed_select;
     }
     {
@@ -302,11 +318,115 @@ failed_classes:
     return NULL;
 }
 
+static unsigned char ascii_lower(unsigned char value) {
+    return value >= 'A' && value <= 'Z' ? value + ('a' - 'A') : value;
+}
+
+/* Compare validated ASCII type names without allocating a Python string per
+ * pool entry. Non-ASCII names must still pass the strict Python MUTF8 decoder. */
+static PyObject *matching_types(PyObject *self, PyObject *args) {
+    PyObject *data_obj, *query_obj, *matches = NULL, *deferred = NULL, *result = NULL;
+    char *raw, *query;
+    const unsigned char *data;
+    Py_ssize_t length, query_length, type_offset, types, string_offset, strings, i;
+    int fuzzy, sensitive;
+    (void)self;
+    if (!PyArg_ParseTuple(args, "OnnnnOpp", &data_obj, &type_offset, &types,
+                         &string_offset, &strings, &query_obj, &fuzzy, &sensitive)) return NULL;
+    if (PyBytes_AsStringAndSize(data_obj, &raw, &length) < 0 ||
+        PyBytes_AsStringAndSize(query_obj, &query, &query_length) < 0) return NULL;
+    data = (const unsigned char *)raw;
+    if (type_offset < 0 || type_offset > length || types < 0 || types > (length-type_offset)/4 ||
+        string_offset < 0 || string_offset > length || strings < 0 || strings > (length-string_offset)/4)
+        goto invalid_types;
+    for (i = 0; i < query_length; i++)
+        if ((unsigned char)query[i] >= 128) goto invalid_types;
+    matches = PyList_New(0);
+    deferred = PyList_New(0);
+    if (!matches || !deferred) goto failed_types;
+    for (i = 0; i < types; i++) {
+        uint32_t string = u32(data+type_offset+i*4), units;
+        Py_ssize_t position, end, start, j, size;
+        PyObject *index, *destination = NULL;
+        if (string >= (uint64_t)strings) goto invalid_types;
+        position = u32(data+string_offset+string*4);
+        if (position >= length || leb(data,length,&position,&units) < 0) goto invalid_types;
+        end = position;
+        while (end < length && data[end] && data[end] < 128) end++;
+        if (end == length) goto invalid_types;
+        if (data[end]) destination = deferred;
+        else {
+            size = end-position;
+            if ((uint64_t)size != units) goto invalid_types;
+            if (query_length <= size && (fuzzy || query_length == size)) {
+                for (start = 0; start <= (fuzzy ? size-query_length : 0); start++) {
+                    for (j = 0; j < query_length; j++) {
+                        unsigned char a = data[position+start+j], b = (unsigned char)query[j];
+                        if ((sensitive ? a : ascii_lower(a)) != (sensitive ? b : ascii_lower(b))) break;
+                    }
+                    if (j == query_length) { destination = matches; break; }
+                }
+            }
+        }
+        if (destination) {
+            index = PyLong_FromSsize_t(i);
+            if (!index) goto failed_types;
+            if (PyList_Append(destination,index) < 0) { Py_DECREF(index); goto failed_types; }
+            Py_DECREF(index);
+        }
+    }
+    result = PyTuple_Pack(2,matches,deferred);
+    goto failed_types;
+invalid_types:
+    PyErr_SetString(PyExc_ValueError,"Invalid DEX type directory, query or string");
+failed_types:
+    Py_XDECREF(matches);
+    Py_XDECREF(deferred);
+    return result;
+}
+
+static PyObject *owner_members(PyObject *self, PyObject *args) {
+    PyObject *data_obj, *mask_obj, *result;
+    char *raw, *mask;
+    Py_ssize_t length, mask_length, offset, count, types, i;
+    (void)self;
+    if (!PyArg_ParseTuple(args,"OnnnO",&data_obj,&offset,&count,&types,&mask_obj)) return NULL;
+    if (PyBytes_AsStringAndSize(data_obj,&raw,&length) < 0 ||
+        PyBytes_AsStringAndSize(mask_obj,&mask,&mask_length) < 0) return NULL;
+    if (offset < 0 || offset > length || count < 0 || count > (length-offset)/8 ||
+        types < 0 || mask_length != 65536) {
+        PyErr_SetString(PyExc_ValueError,"Invalid DEX member directory or owner mask");
+        return NULL;
+    }
+    result = PyList_New(0);
+    if (!result) return NULL;
+    for (i = 0; i < count; i++) {
+        unsigned int owner = u16((const unsigned char *)raw+offset+i*8);
+        PyObject *index;
+        if (owner >= (uint64_t)types) {
+            PyErr_SetString(PyExc_ValueError,"DEX member owner index out of bounds");
+            Py_DECREF(result);
+            return NULL;
+        }
+        if (!mask[owner]) continue;
+        index = PyLong_FromSsize_t(i);
+        if (!index || PyList_Append(result,index) < 0) {
+            Py_XDECREF(index);
+            Py_DECREF(result);
+            return NULL;
+        }
+        Py_DECREF(index);
+    }
+    return result;
+}
+
 static PyMethodDef methods[] = {
     {"scan", scan, METH_VARARGS, "Scan checked instruction boundaries and selected operands."},
     {"members", members, METH_VARARGS, "Decode bounded DEX class member definitions."},
     {"select_methods", select_methods, METH_VARARGS, "Scan and count a bounded class method set."},
     {"classes", classes, METH_VARARGS, "Read checked ASCII class identities; defer modified UTF8."},
+    {"matching_types", matching_types, METH_VARARGS, "Match checked ASCII types; defer modified UTF8."},
+    {"owner_members", owner_members, METH_VARARGS, "Select bounded member IDs by checked owner IDs."},
     {NULL, NULL, 0, NULL}
 };
 static struct PyModuleDef module = {

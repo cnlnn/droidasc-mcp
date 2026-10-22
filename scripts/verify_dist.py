@@ -58,6 +58,7 @@ def main():
                 "scripts/benchmark_call_graph.py",
                 "scripts/benchmark_competitor_runtime.py",
                 "scripts/verify_fuzzy_references.py",
+                "scripts/verify_call_index.py",
                 "setup.py",
                 "scripts/setup_dexlib.py",
                 "src/droidasc_mcp/_dexscan.c",

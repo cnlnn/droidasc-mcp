@@ -79,6 +79,45 @@ def test_bulk_cursor_matches_simple_cursor(
         dex.close()
 
 
+def test_allocation_free_selector_matches_independent_cursor(
+    smali_dex_files, boundary_dex_file, graph_dex_files
+):
+    from droidasc_mcp.native_dex import METHOD_NAMES
+    from droidasc_mcp.native_scan import method_selector
+
+    for path in [*smali_dex_files, boundary_dex_file, *graph_dex_files]:
+        dex = Dex(path.read_bytes())
+        for fields in (False, True):
+            targets = set(range(0, dex.tables[3 if fields else 4][0], 2))
+            for access in ("all", "read", "write"):
+                select = method_selector(dex, targets, fields, access)
+                if select is None:
+                    pytest.skip("Optional C accelerator is not installed")
+                for _, cls in dex.classes():
+                    _, methods = dex.raw_members(cls)
+                    expected = []
+                    instructions = dynamic = without = 0
+                    for method in methods:
+                        _, _, code = method
+                        without += not code
+                        wanted = False
+                        for position, _, op in dex.instructions(code) if code else ():
+                            instructions += 1
+                            dynamic += op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE}
+                            wanted |= op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE}
+                            if 0x52 <= op <= 0x6D if fields else op in METHOD_NAMES:
+                                read = 0x52 <= op <= 0x58 or 0x60 <= op <= 0x66
+                                wanted |= dex.u16(position + 2) in targets and (
+                                    not fields
+                                    or access == "all"
+                                    or access == ("read" if read else "write")
+                                )
+                        if wanted:
+                            expected.append(method)
+                    assert select(methods) == (expected, instructions, dynamic, without)
+        dex.close()
+
+
 def test_native_rejects_truncated_payload(boundary_dex_file):
     dex = Dex(boundary_dex_file.read_bytes())
     for _, cls in dex.classes():
@@ -93,6 +132,99 @@ def test_native_rejects_truncated_payload(boundary_dex_file):
                 list(altered.instructions(code))
             return
     pytest.fail("Fixture has no code")
+
+
+def type_pool_dex(values):
+    import struct
+
+    count = len(values)
+    data = bytearray(112 + count * 8)
+    data[:8] = b"dex\n039\0"
+    struct.pack_into("<II", data, 36, 112, 0x12345678)
+    struct.pack_into("<IIII", data, 56, count, 112, count, 112 + count * 4)
+    for index, value in enumerate(values):
+        struct.pack_into("<I", data, 112 + index * 4, len(data))
+        struct.pack_into("<I", data, 112 + count * 4 + index * 4, index)
+        data.extend(value)
+    struct.pack_into("<I", data, 32, len(data))
+    return Dex(bytes(data))
+
+
+@pytest.mark.parametrize("fuzzy", [False, True])
+@pytest.mark.parametrize("case_sensitive", [False, True])
+def test_type_matching_matches_strict_decoder(fuzzy, case_sensitive):
+    # Deliberately unsorted IDs, duplicate strings and Unicode case mappings.
+    values = ["Lz;", "LABC;", "Labc;", "L\u212a;", "L\u4e2d;", "L\U0001f600;", "L\0;", "Labc;"]
+    encoded = []
+    for value in values:
+        units = value.encode("utf-16-le", "surrogatepass")
+        mutf = "".join(
+            chr(int.from_bytes(units[i : i + 2], "little")) for i in range(0, len(units), 2)
+        )
+        encoded.append(
+            bytes([len(units) // 2])
+            + mutf.encode("utf-8", "surrogatepass").replace(b"\0", b"\xc0\x80")
+            + b"\0"
+        )
+    dex = type_pool_dex(encoded)
+    try:
+        for query in ["", "Labc;", "abc", "k", "L\u4e2d;", "\U0001f600", "\0", "missing"]:
+            expected = dex.matching_types(
+                query, fuzzy=fuzzy, case_sensitive=case_sensitive, accelerator=False
+            )
+            assert dex.matching_types(query, fuzzy=fuzzy, case_sensitive=case_sensitive) == expected
+    finally:
+        dex.close()
+
+
+@pytest.mark.parametrize(
+    "value", [b"\x02A\0", b"\x01A", b"\xff\xff\xff\xff\x10A\0", b"\x01\xff\0", b"\x02\xc0\x80\0"]
+)
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_type_matching_rejects_unmatched_malformed_strings(value, accelerator):
+    dex = type_pool_dex([b"\x01Z\0", value])
+    with pytest.raises(InvalidDex):
+        dex.matching_types("missing", accelerator=accelerator)
+    dex.close()
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_type_matching_rejects_invalid_string_id(accelerator):
+    import struct
+
+    dex = type_pool_dex([b"\x01Z\0"])
+    data = bytearray(dex.data)
+    struct.pack_into("<I", data, dex.tables[1][1], 1)
+    dex.close()
+    dex = Dex(bytes(data))
+    with pytest.raises(InvalidDex):
+        dex.matching_types("missing", accelerator=accelerator)
+    dex.close()
+
+
+@pytest.mark.parametrize("fields", [False, True])
+def test_owner_member_filter_matches_independent_pool(smali_dex_files, fields):
+    for path in smali_dex_files:
+        dex = Dex(path.read_bytes())
+        for owners in (set(), {0}, set(range(0, dex.tables[1][0], 2))):
+            assert dex.owner_members(fields, owners) == dex.owner_members(
+                fields, owners, accelerator=False
+            )
+        dex.close()
+
+
+@pytest.mark.parametrize("accelerator", [False, True])
+def test_owner_member_filter_rejects_invalid_owner(smali_dex_files, accelerator):
+    import struct
+
+    dex = Dex(smali_dex_files[0].read_bytes())
+    data = bytearray(dex.data)
+    struct.pack_into("<H", data, dex.tables[4][1], dex.tables[1][0])
+    dex.close()
+    dex = Dex(bytes(data))
+    with pytest.raises(InvalidDex):
+        dex.owner_members(False, set(), accelerator=accelerator)
+    dex.close()
 
 
 def code_dex(stream, version=39, pool=1):
