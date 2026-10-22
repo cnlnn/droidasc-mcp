@@ -67,7 +67,7 @@ native-query enhancements. Install the version-pinned x86-64 Linux wheel:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-manylinux_2_34_x86_64.whl
 ```
 
 Windows (PowerShell):
@@ -77,7 +77,8 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-win_amd64.whl
 ```
 
-The native stable-ABI wheels support CPython 3.10 and newer; the canonical source archive is
+The native stable-ABI wheels support CPython 3.10 and newer; the Linux wheel requires glibc 2.34
+or newer. The canonical source archive is
 `droidasc_mcp-0.2.3.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. `--force-reinstall` also permits replacing an installed withdrawn
 version with the current stable version; no previously published version number will be reused.
