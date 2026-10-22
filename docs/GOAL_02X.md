@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  The next unused version is 0.2.3. Remaining performance/workflow deficits stay explicit
+  v0.2.3 is published; 0.2.4 is the current acceptance candidate. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; GitHub readback confirms v0.2.2 is latest and the four tags are absent.
+  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.3 is now latest.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -78,6 +78,42 @@ all-gap completion goal stays active after an intermediate patch is published.
 ## In-progress evidence, 2026-10-22
 
 Update, 2026-10-23:
+
+- Published increment: v0.2.3, main/tag target
+  4c28572935eda91bd8250c54d1663526d532a858. CI 39826824176 passes all 17 jobs;
+  each of the eight Linux/Windows Python 3.10-3.13 cells passes 1019 tests without
+  failures/errors/skips. Both clean-distribution jobs use the same canonical sdist and
+  verify installed native wheels. The release contains the exact successful CI packages;
+  downloaded asset hashes and GitHub server digests match. Receipt root:
+  artifacts/acceptance-0.2.3-ci-39826824176; release-published.json,
+  acceptance-summary.json and published-readback.json record the accepted increment.
+  This closes that release's gates only, not the remaining overall goal or v0.2.4's gates.
+- The larger-prefetch experiment is not adopted. Alternating three-round direct preparation
+  probes on Douyin/WeChat/Taobao compare 64/256-KiB blocks with unchanged runtime/input and
+  identical complete preparation metadata. Douyin improves, but the other medians regress
+  and peak RSS increases. Other project tests also introduce host contention; the receipt
+  is diagnostic rather than valid evidence of a stable latency advantage. Production keeps
+  its two bounded 64-KiB streams. Receipt: increment024-prefetch-probe-cpu4.json.
+- Source review found an avoidable literal-string handoff gap: the old string-use workflow
+  required clients to escape discovered text as a regex. An in-progress find_string_refs
+  operation accepts it unchanged, scans const-string/jumbo with the checked native cursor,
+  uses a compact 32-bit-pool bitset, and preserves old find_refs semantics. It remains
+  unaccepted for release until independent large-APK, full source, Windows and clean-package
+  gates pass. Preparation/storage/startup performance work remains open independently.
+- The 0.2.4 increment selects literal-string handoff, checked 32-bit string operands and
+  native ASCII pool matching. Profiling identified per-string Python decoding as the initial
+  regression; validated ASCII matching now uses a linear-time cursor, while Unicode entries
+  and malformed encodings retain strict Python decoding. Three-round alternating real-stdio
+  string trials pass on Taobao (four CPUs), WeChat (two) and Douyin (four), with unchanged
+  input/runtime/installed competitor and verified descendant CPU affinity. Cold batch medians
+  are 0.6325/1.8091, 0.6809/3.6947 and 1.9230/6.6112 seconds respectively (ours/competitor).
+  Process-start-to-first-result medians are 3.2130/3.3581, 4.0617/5.1220 and 8.3953/8.8902.
+  These are workload-specific measurements, not universal startup or total-memory wins.
+  Retained snapshots/tmpfs remain a separate cost and the overall startup/storage goal stays open.
+  Receipts: increment024-{taobao-affinity4-ascii-pool,wechat-affinity2-ascii-pool-512mib-8gib,
+  douyin-affinity4-ascii-pool-512mib-8gib}.json under artifacts/release-renumber-20261022.
+  The earlier slow-string and undersized expansion/reservation-budget failures are retained;
+  complete final-commit accuracy, Linux/Windows and canonical-package gates remain required.
 
 - Withdrawal preflight re-read all four live releases and matched metadata, all 16 asset
   sizes/SHA-256 values and remote tag objects to the verified complete Git bundle. All four

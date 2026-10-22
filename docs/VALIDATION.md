@@ -8,20 +8,61 @@ ergonomics, performance and independent accuracy remain the overall completion c
 The maintainer superseded the replacement-v0.3.0 plan with accepted 0.2.x increments.
 Old v0.3.0/v0.4.0/v0.4.1/v0.5.0 releases and tags were withdrawn on 2026-10-23 after
 verifying their backup metadata, all 16 asset hashes and Git tag objects. v0.2.2 and
-earlier releases/tags remain unchanged; GitHub now reports v0.2.2 as latest.
-Runtime code has changed: preparation/storage and the checked native selector are being
-restructured. The next candidate is v0.2.3, not frozen or published. Rebuild package metadata
-and run the complete Linux/Windows and clean-sdist/native-wheel
+earlier releases/tags remain unchanged. v0.2.3 is now published and latest, targeting
+4c28572935eda91bd8250c54d1663526d532a858 on main and its annotated tag.
+CI 39826824176 passes all 17 jobs: each of the eight Linux/Windows Python 3.10-3.13
+cells passes 1019 tests, zero failures/errors/skips, plus signing, Rust, stability,
+packaging and both clean-distribution jobs. The latter use the same canonical sdist.
+The exact accepted Linux/Windows native wheels and sdist were published, downloaded
+again and matched to both local SHA-256 and GitHub asset digests. Evidence is under
+artifacts/acceptance-0.2.3-ci-39826824176, including acceptance-summary.json and
+published-readback.json. This increment does not close the overall performance/workflow goal.
+
+Current acceptance candidate: 0.2.4; it is not yet approved or published.
+The native literal-string use-site operation and checked cursor changes require fresh
+independent accuracy and cross-platform acceptance. Rebuild package metadata and run the
+complete Linux/Windows and clean-sdist/native-wheel
 gates on the final commit before publishing its exact CI artifacts. Release notes must identify
 that commit, run and hashes. Older version labels below identify historical releases and their
 original evidence, not approval of this candidate; receipts must not be retroactively relabeled.
 
-The pre-freeze Linux source matrix passes 989 tests on each of Python 3.10-3.13, with zero
+The selected increment adds literal string-search-to-use-site handoff, a checked 32-bit jumbo
+operand path and native ASCII pool matching with strict Unicode fallback. A profile of the
+first correct implementation attributed most query cost to Python decoding of every pool
+entry. The common ASCII matcher now uses linear-time substring matching; even nonmatching
+ASCII entries retain length validation and non-ASCII entries retain strict modified UTF-8
+decoding. The same matcher also serves type filters, so their accuracy must be revalidated.
+
+Alternating three-round real-stdio string trials use the pinned unmodified installed competitor,
+the same interpreter/input and actual inherited CPU affinity. Cold-batch / process-start-to-first
+medians in seconds (ours versus competitor):
+
+| APK | CPUs | Cold string query | Process start to first result |
+| --- | --- | --- | --- |
+| Taobao 10.62.0 | 4 | 0.6325 / 1.8091 | 3.2130 / 3.3581 |
+| WeChat 8.0.74 | 2 | 0.6809 / 3.6947 | 4.0617 / 5.1220 |
+| Douyin 39.1.0 | 4 | 1.9230 / 6.6112 | 8.3953 / 8.8902 |
+
+Receipts: artifacts/release-renumber-20261022/increment024-taobao-affinity4-ascii-pool.json,
+increment024-wechat-affinity2-ascii-pool-512mib-8gib.json and
+increment024-douyin-affinity4-ascii-pool-512mib-8gib.json. All trials and before/after identities
+pass. Taobao also retains the slower pre-optimization receipt. Two failed WeChat configurations
+remain explicit: 128 MiB was below the input's expanded DEX size; 512 MiB with a 4-GiB session
+ceiling could not accommodate the existing conservative preparation reservation. Successful
+large-input runs explicitly allow 512-MiB expansion and an 8-GiB common external temporary-file
+ceiling. These are configuration changes, not weakened product bounds. OS caches are retained
+and other desktop processes may introduce noise. Within-product cold/warm structured equality
+is checked; cross-product grouped totals do not prove site equality. Independent full-site
+oracles and final cross-platform/package gates are still required before publication.
+The snapshot/tmpfs, other workflows and universal startup claims remain outside these wins.
+
+Historical v0.2.3 pre-freeze evidence: the Linux matrix passed 989 tests on each of
+Python 3.10-3.13, with zero
 failures/errors/skips and unchanged runtime hashes. Its supported-upgrade environments use
 Pydantic 2.14.1; all 23 schema-cache/fallback tests also pass on locked Pydantic 2.13.5. Ten
 new distribution-identity regressions additionally reject source/data, version and native
-accelerator drift. Final CI must run all 999 tests per OS/interpreter and both clean-package
-suites on the exact candidate commit; these local results do not replace that release gate.
+accelerator drift. These were intermediate results, superseded by the accepted 1019-test
+CI run above; they do not approve a later increment.
 
 The first full CI attempt (39820634142) failed and was not released. It exposed two actual
 compatibility defects absent from the older local interpreters. Python 3.13 dedents compiled

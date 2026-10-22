@@ -129,7 +129,13 @@ def process_runner(settings, monkeypatch):
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_complete_investigation_handoffs_without_java(
-    transport, tmp_path, smali_dex_files, review_dex_files, request, monkeypatch
+    transport,
+    tmp_path,
+    smali_dex_files,
+    review_dex_files,
+    string_reference_dex_files,
+    request,
+    monkeypatch,
 ):
     apk = tmp_path / "investigation + handoff.apk"
     manifest = (
@@ -139,7 +145,9 @@ async def test_complete_investigation_handoffs_without_java(
     )
     with zipfile.ZipFile(apk, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("AndroidManifest.xml", manifest)
-        for i, dex in enumerate([*smali_dex_files, review_dex_files[0]]):
+        for i, dex in enumerate(
+            [*smali_dex_files, review_dex_files[0], string_reference_dex_files[0]]
+        ):
             archive.writestr("classes.dex" if i == 0 else f"classes{i + 1}.dex", dex.read_bytes())
         archive.writestr("assets/config.txt", b"fixture-only\n")
         archive.writestr("lib/arm64-v8a/libfixture.so", b"not-executable-fixture")
@@ -222,7 +230,23 @@ async def test_complete_investigation_handoffs_without_java(
             constants = await pages("get_string_constants", class_name=owner)
             value = constants[0]["value"]
             assert (await query("search_strings", value=value))["total"] > 0
+            string_sites = await pages("find_string_refs", value=value)
+            assert any(row["caller"].startswith(owner + "->") for row in string_sites)
             assert (await query("find_refs", kind="string", value=re.escape(value)))["total"] > 0
+            discovered = await query("search_strings", value="a[b]?")
+            literal = next(
+                row["value"] for row in discovered["items"] if row["value"].startswith("https://")
+            )
+            literal_sites = await pages("find_string_refs", value=literal)
+            assert len(literal_sites) == 3
+            assert {row["opcode"] for row in literal_sites} == {
+                "const-string",
+                "const-string/jumbo",
+            }
+            unicode_sites = await pages(
+                "find_string_refs", value="mixedcase \u4e2d\u6587", case_sensitive=False
+            )
+            assert len(unicode_sites) == 2
             assert (await query("search_method_bodies", value="const/4"))["total"] > 0
             assert (await query("get_class_hierarchy", class_name=owner))["items"]
             graph = await query("get_call_graph", method_descriptor=method, depth=3, max_edges=1)

@@ -29,15 +29,25 @@ def pool_ids(count):
     return b"(?:" + b"|".join(choices) + b")" if choices else b"(?!)"
 
 
+def target_mask(dex, targets, fields):
+    if fields == 2:
+        if not isinstance(targets, bytes) or len(targets) != (dex.tables[0][0] + 7) // 8:
+            raise InvalidDex("Invalid string reference bitset")
+        return targets
+    mask = bytearray(65536)
+    for index in targets:
+        if not 0 <= index < 65536:
+            raise InvalidDex("DEX reference index exceeds 16 bits")
+        mask[index] = 1
+    return bytes(mask)
+
+
 def method_selector(dex, targets, fields, access):
     try:
         from ._dexscan import select_methods as native_select
     except ImportError:
         return None
-    mask = bytearray(65536)
-    for index in targets:
-        mask[index] = 1
-    mask = bytes(mask)
+    mask = target_mask(dex, targets, fields)
 
     def select(methods):
         try:
@@ -48,7 +58,7 @@ def method_selector(dex, targets, fields, access):
                 WIDTHS,
                 mask,
                 int(fields),
-                dex.tables[3 if fields else 4][0],
+                dex.tables[0 if fields == 2 else 3 if fields else 4][0],
                 dex.tables[4][1],
                 dex.tables[0][0],
                 dex.tables[2][0],
@@ -65,10 +75,7 @@ def class_selector(dex, targets, fields, access, *, callers=None):
         from . import _dexscan
     except ImportError:
         return None
-    mask = bytearray(65536)
-    for index in targets:
-        mask[index] = 1
-    mask = bytes(mask)
+    mask = target_mask(dex, targets, fields)
     arguments = (
         dex.version,
         WIDTHS,
@@ -135,13 +142,8 @@ def scanner(dex, targets, fields, incoming, *, accelerator=True):
         except ImportError:
             pass
         else:
-            mask = bytearray(65536)
-            for index in targets:
-                if not 0 <= index < 65536:
-                    raise InvalidDex("DEX reference index exceeds 16 bits")
-                mask[index] = 1
-            mask = bytes(mask)
-            pool = dex.tables[3 if fields else 4][0]
+            mask = target_mask(dex, targets, fields)
+            pool = dex.tables[0 if fields == 2 else 3 if fields else 4][0]
 
             def accelerated(code):
                 resume = 0
@@ -168,6 +170,28 @@ def scanner(dex, targets, fields, incoming, *, accelerator=True):
                         return
 
             return accelerated
+    if fields == 2:
+        mask = target_mask(dex, targets, fields)
+
+        def strings(code):
+            skipped = 0
+            for position, address, op in dex.instructions(code):
+                skipped += 1
+                selected = op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE} or (
+                    op == 0 and dex.data[position + 1] != 0
+                )
+                if op in {0x1A, 0x1B}:
+                    index = dex.u16(position + 2) if op == 0x1A else dex.u32(position + 2)
+                    dex.item(0, index)
+                    selected |= not incoming or bool(mask[index >> 3] & (1 << (index & 7)))
+                if selected:
+                    yield position, address, op, skipped
+                    skipped = 0
+            if skipped:
+                end = code + 16 + dex.u32(code + 12) * 2
+                yield end, (end - code - 16) // 2, -1, skipped
+
+        return strings
     widths = bytearray(WIDTHS)
     if dex.version < 38:
         widths[0xFA:] = bytes(6)

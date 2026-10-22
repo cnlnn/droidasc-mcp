@@ -22,7 +22,13 @@ STRUCTURE_OPERATIONS = {
     "search_method_bodies",
     "disassemble_method",
 }
-REFERENCE_OPERATIONS = {"find_method_refs", "get_method_calls", "find_field_refs", "search_refs"}
+REFERENCE_OPERATIONS = {
+    "find_method_refs",
+    "get_method_calls",
+    "find_field_refs",
+    "search_refs",
+    "find_string_refs",
+}
 SCHEMA = "4"
 
 
@@ -189,6 +195,8 @@ def _unpack_edge(kind, payload, source, target, relation, entry):
 
 
 def query_index(settings, bundle, common, query, workspace):
+    if query["operation"] == "find_string_refs":
+        return None
     from .durable_index import DurableIndexes
 
     if (

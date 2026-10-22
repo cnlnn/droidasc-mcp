@@ -184,6 +184,7 @@ class DexSessions:
                     "find_method_refs",
                     "get_method_calls",
                     "find_field_refs",
+                    "find_string_refs",
                     "search_refs",
                     "search_members",
                     "search_strings",

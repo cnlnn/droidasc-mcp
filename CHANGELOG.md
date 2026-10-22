@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4
+
+- Add native literal `find_string_refs` navigation from discovered string values to
+  const-string/jumbo use sites, without client-side regex escaping or index construction.
+  Preserve case selection, global pagination, bounded session caching, checked 32-bit
+  jumbo IDs and independent Python fallback. Legacy `find_refs` keeps its existing semantics.
+- Match validated ASCII pool entries natively with linear-time substring matching; retain
+  strict modified UTF-8 decoding for Unicode and malformed entries and the Python fallback.
+  This removes per-entry Python decoding from the common literal-string query path.
+- Extend real stdio/HTTP investigation handoffs, full-site independent string oracles,
+  malformed-input/jumbo-ID regressions and clean canonical-package acceptance for this path.
+  Candidate publication remains gated on fresh cross-platform and clean-package acceptance.
+
 ## 0.2.3
 
 The maintainer switched to accepted 0.2.x increments. The original 0.3.0, 0.4.0, 0.4.1

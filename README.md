@@ -36,7 +36,7 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Version 0.2.3 provides checked native DEX references, discovery, structural views and lazy
+Version 0.2.4 provides checked native DEX references, discovery, structural views and lazy
 indexes without Java or JADX. An optional stable-ABI C accelerator has an independent Python
 fallback; ASC remains the public Smali engine. Only explicit Java source requests use optional
 JADX. The [native-query validation](docs/NATIVE_QUERY_VALIDATION.md) records accuracy,
@@ -60,26 +60,26 @@ all 18 tools over stdio/HTTP against a source-built
 and package installation. macOS remains unverified.
 
 Versions 0.3.0 through 0.5.0 have been withdrawn. Accepted updates use increasing 0.2.x
-versions without rolling back the native implementation. The following 0.2.3 assets become
-available only after its acceptance release; until then use the retained
-[0.2.2 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.2), which lacks these
-native-query enhancements. Install the version-pinned x86-64 Linux wheel:
+versions without rolling back the native implementation. These commands target 0.2.4;
+before its accepted release, use the published
+[0.2.3 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3).
+Install the version-pinned x86-64 Linux wheel:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-manylinux_2_34_x86_64.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp310-abi3-win_amd64.whl
 ```
 
 The native stable-ABI wheels support CPython 3.10 and newer; the Linux wheel requires glibc 2.34
 or newer. The canonical source archive is
-`droidasc_mcp-0.2.3.tar.gz`. Source installation retains the Python fallback if no compiler is
+`droidasc_mcp-0.2.4.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. `--force-reinstall` also permits replacing an installed withdrawn
 version with the current stable version; no previously published version number will be reused.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
@@ -373,6 +373,13 @@ Member discovery reads declarations only and does not build the full xref index.
 search with `dex_entry`, `string_index` and `value` provenance; pool presence is not a use site.
 Both discovery operations return `instruction_scan_complete=false`.
 
+Added in 0.2.4: pass a discovered string unchanged to
+`operation="find_string_refs", value=...` for literal const-string/jumbo use sites.
+It returns caller, opcode, string index and code-unit offset without building an index;
+`case_sensitive=false` enables case-insensitive substring matching. Pages retain a complete
+scan count; pool-only/encoded initial values are not instruction use sites. Existing
+`find_refs` remains the legacy regex/name-level interface.
+
 Use `search_refs` for a single-pass union of matching reference sites, without first enumerating
 declarations or building a full index. For example:
 
@@ -511,7 +518,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.3.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.4.tar.gz dist/*.whl
 ```
 
 ## License

@@ -110,6 +110,11 @@ def smali_dex_files(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def string_reference_dex_files(tmp_path_factory):
+    return assemble_smali(tmp_path_factory, ("string_refs", "structure"))
+
+
+@pytest.fixture(scope="session")
 def graph_dex_files(tmp_path_factory):
     return assemble_smali(tmp_path_factory, ("graph_first", "graph_second"))
 

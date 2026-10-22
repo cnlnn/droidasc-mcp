@@ -376,6 +376,10 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
 
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    if operation == "find_string_refs":
+        from .native_strings import query_strings
+
+        return {**common, **query_strings(runner.settings, bundle, query)}
     if ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir) and (
         operation in REFERENCE_OPERATIONS - {"search_refs"}
         or (

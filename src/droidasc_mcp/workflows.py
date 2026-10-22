@@ -31,6 +31,9 @@ Use list_methods for a known class, or search_members (kind=method/field, litera
 discover declarations across supplied files without building a full index. search_strings finds
 literal DEX string-pool values, not instruction use sites. Identical discovery and non-indexed
 reference pages reuse a bounded session cache.
+Pass a discovered string value unchanged to find_string_refs for literal const-string/jumbo
+use sites, including opcode, caller, DEX entry and code-unit offset. case_sensitive=false
+matches case-insensitive literal substrings; legacy find_refs retains its regex semantics.
 Discovery supports case_sensitive=false; search_members member_match=name matches only names.
 search_classes matches literal Dalvik or dotted names, including names returned by the manifest,
 plus an optional dotted/Dalvik prefix. It returns exact Dalvik identities for later queries.

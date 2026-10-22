@@ -501,6 +501,7 @@ def build_server(
                 "get_method_calls",
                 "get_call_graph",
                 "find_field_refs",
+                "find_string_refs",
                 "search_refs",
                 "find_type_refs",
                 "build_xref_index",
@@ -578,6 +579,7 @@ def build_server(
         get_call_graph builds/reuses the index for bounded multi-hop static exploration.
         Graph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.
         search_members scans declarations without building an index; kind=method/field.
+        find_string_refs accepts a literal value and returns const-string/jumbo use sites.
         value is a case-sensitive literal substring of the full descriptor, not regex.
         class_name restricts exact owner. search_strings scans DEX string-pool values
         using a case-sensitive literal value, not instruction use sites.
@@ -654,6 +656,7 @@ def build_server(
                 "get_method_calls",
                 "get_call_graph",
                 "find_field_refs",
+                "find_string_refs",
                 "search_refs",
                 "find_type_refs",
                 "build_xref_index",
@@ -717,6 +720,7 @@ def build_server(
 
         Native instruction/declaration queries need no JVM or JADX; Smali uses ASC.
         search_refs combines literal owner/name/prototype filters without global preprocessing.
+        find_string_refs accepts a literal value and returns const-string/jumbo use sites.
         target_descriptor optionally filters exact prototypes/field types.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         method_descriptor is the full DEX class->name(args)return identity.

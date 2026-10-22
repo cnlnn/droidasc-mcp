@@ -97,6 +97,17 @@ def test_warm_consistency_only_ignores_cache_lifecycle_not_index_identity(benchm
     assert benchmark.query_content(original) != benchmark.query_content(warm)
 
 
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
+def test_string_scenario_uses_literal_api_with_the_same_value(benchmark, implementation):
+    [(tool, params)] = benchmark.queries(implementation, "key", "string", benchmark.GRAPH_ROOT, 3)
+    assert params["value"] == "https://" and params["limit"] == 100
+    if implementation == "ours":
+        assert tool == "asc_query_dex_session" and params["operation"] == "find_string_refs"
+        assert params["session_id"] == "key"
+    else:
+        assert tool == "apk_find_string_references" and params["analysis_id"] == "key"
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("implementation", ["ours", "competitor"])
 @pytest.mark.parametrize("scenario", ["method", "concurrent"])

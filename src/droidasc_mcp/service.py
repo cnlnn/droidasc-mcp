@@ -166,6 +166,7 @@ class DroidAscService:
                     "get_method_calls",
                     "get_call_graph",
                     "find_field_refs",
+                    "find_string_refs",
                     "search_refs",
                     "find_type_refs",
                     "build_xref_index",
@@ -320,6 +321,7 @@ def _normalize_dex_query(query):
         "search_classes",
         "search_method_bodies",
         "search_refs",
+        "find_string_refs",
     }
     if type(query.get("case_sensitive", True)) is not bool:
         raise ValueError("case_sensitive must be a boolean")
@@ -393,6 +395,23 @@ def _normalize_dex_query(query):
             raise ValueError("search_strings requires a nonempty literal value")
         if query.get("class_name") or query.get("method_descriptor") or query.get("fuzzy_class"):
             raise ValueError("search_strings searches the DEX string pool, not a class or method")
+    if operation == "find_string_refs":
+        if not query.get("value"):
+            raise ValueError("find_string_refs requires a nonempty literal value")
+        if any(
+            query.get(key)
+            for key in (
+                "class_name",
+                "method_descriptor",
+                "field_descriptor",
+                "type_descriptor",
+                "fuzzy_class",
+                "prefix",
+            )
+        ):
+            raise ValueError("find_string_refs uses literal value across supplied DEX methods")
+        if query.get("kind", "string") != "string":
+            raise ValueError("find_string_refs requires kind=string")
     if query.get("operation") == "search_members":
         if query.get("kind") not in {"method", "field"}:
             raise ValueError("search_members requires kind=method or field")

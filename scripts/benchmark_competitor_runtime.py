@@ -113,6 +113,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
             "class_name": "java.lang",
             "fuzzy_class": True,
         }
+        string = {"operation": "find_string_refs", "value": "https://"}
         graph = {
             "operation": "get_call_graph",
             "method_descriptor": graph_root,
@@ -151,6 +152,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
                 "exact_name": False,
             },
         )
+        string = ("apk_find_string_references", {"value": "https://"})
         owner, local = graph_root.split("->", 1)
         name, proto = local.split("(", 1)
         graph = (
@@ -171,7 +173,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
                 **params,
             }
 
-    chosen = {"method": method, "field": field, "fuzzy": fuzzy, "graph": graph}
+    chosen = {"method": method, "field": field, "fuzzy": fuzzy, "string": string, "graph": graph}
     return (
         [command(method), command(field)]
         if scenario == "concurrent"
@@ -531,7 +533,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scenarios",
         nargs="+",
-        choices=["method", "field", "fuzzy", "graph", "concurrent"],
+        choices=["method", "field", "fuzzy", "string", "graph", "concurrent"],
         default=["method", "field", "fuzzy", "graph", "concurrent"],
     )
     parser.add_argument("--rounds", type=int, default=3)
