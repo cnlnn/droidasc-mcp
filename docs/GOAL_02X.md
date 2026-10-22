@@ -133,6 +133,15 @@ Update, 2026-10-23:
   older patch releases, validates original wire paths before Windows normalization, and the
   test constructs actual unsafe wire bytes. Five added legacy-reader cases bring the suite
   to 1013 tests. All 44 preparation ZIP tests pass locally; complete gates must rerun.
+- CI 39825195709 confirms both ZIP fixes, including Windows Python 3.10, but Windows
+  3.11/3.13 exposed a test observer race: a terminated owner process disappeared between
+  is_running() and status(). The assertion now handles disappearance throughout observation
+  while continuing to reject live processes. Six deterministic observer cases reproduce
+  both missing-process races and check live/stopped/zombie outcomes; suite total is 1019.
+  Product runtime bytes are unchanged by this test-only fix. Fresh final-runtime receipts
+  increment023-dd3a3a9-* verify all three APK ownership/snapshots, all 2,914,002 call sites,
+  complete exact/fuzzy references, nine frontier/full-index traversals, real MCP emitted
+  sites and both polymorphic formats. Complete cross-platform gates still must pass.
 
 - Source inventory refreshed: 25 tools, two templates, three prompts, 87 parameters;
   no AST omissions at competitor commit 848c711f1d80a1c2577283f1fa5f475ff734aa40.

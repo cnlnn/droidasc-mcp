@@ -4,6 +4,7 @@ import json
 import threading
 import zipfile
 
+import psutil
 import pytest
 from test_dex import empty_dex
 from test_native_directory import class_dex
@@ -12,6 +13,40 @@ from droidasc_mcp import dex_worker
 from droidasc_mcp.class_directory import ClassDirectory
 from droidasc_mcp.runner import DroidAscRunner
 from droidasc_mcp.worker_runtime import WorkerSettings
+
+
+def assert_process_stopped(pid):
+    try:
+        process = psutil.Process(pid)
+        assert not process.is_running() or process.status() == psutil.STATUS_ZOMBIE
+    except psutil.NoSuchProcess:
+        pass
+
+
+@pytest.mark.parametrize("stage", ["construct", "running", "status", "stopped", "zombie", "live"])
+def test_process_exit_observer_races(monkeypatch, stage):
+    from types import SimpleNamespace
+
+    def check(current, value):
+        if current == stage:
+            raise psutil.NoSuchProcess(123)
+        return value
+
+    def process(pid):
+        check("construct", None)
+        return SimpleNamespace(
+            is_running=lambda: check("running", stage != "stopped"),
+            status=lambda: check(
+                "status", psutil.STATUS_ZOMBIE if stage == "zombie" else psutil.STATUS_RUNNING
+            ),
+        )
+
+    monkeypatch.setattr(psutil, "Process", process)
+    if stage == "live":
+        with pytest.raises(AssertionError):
+            assert_process_stopped(123)
+    else:
+        assert_process_stopped(123)
 
 
 def request_for(settings, tmp_path, groups):
@@ -249,7 +284,6 @@ async def test_live_owner_writer_termination_cleans_pending_storage_and_recovers
     from pathlib import Path
 
     import anyio
-    import psutil
 
     from droidasc_mcp.worker_errors import DroidAscError
 
@@ -306,12 +340,7 @@ async def test_live_owner_writer_termination_cleans_pending_storage_and_recovers
     while root.exists() and time.monotonic() < deadline:
         await anyio.sleep(0.01)
     assert not root.exists(), "Killed owner writer left pending session storage"
-    try:
-        process = psutil.Process(state["pid"])
-    except psutil.NoSuchProcess:
-        pass
-    else:
-        assert not process.is_running() or process.status() == psutil.STATUS_ZOMBIE
+    assert_process_stopped(state["pid"])
     monkeypatch.setattr(runner, "_command", command)
     recovered = runner.analyze_dex([path], {"operation": "info", "offset": 0, "limit": 1})
     assert recovered["status"] == "ok" and recovered["class_count"] == 1
