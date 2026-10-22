@@ -8,7 +8,7 @@ ergonomics, performance and independent accuracy remain the overall completion c
 The maintainer superseded the replacement-v0.3.0 plan with accepted 0.2.x increments.
 Old v0.3.0/v0.4.0/v0.4.1/v0.5.0 releases and tags were withdrawn on 2026-10-23 after
 verifying their backup metadata, all 16 asset hashes and Git tag objects. v0.2.2 and
-earlier releases/tags remain unchanged. v0.2.3 is now published and latest, targeting
+earlier releases/tags remain unchanged. v0.2.3 was published, targeting
 4c28572935eda91bd8250c54d1663526d532a858 on main and its annotated tag.
 CI 39826824176 passes all 17 jobs: each of the eight Linux/Windows Python 3.10-3.13
 cells passes 1019 tests, zero failures/errors/skips, plus signing, Rust, stability,
@@ -18,13 +18,34 @@ again and matched to both local SHA-256 and GitHub asset digests. Evidence is un
 artifacts/acceptance-0.2.3-ci-39826824176, including acceptance-summary.json and
 published-readback.json. This increment does not close the overall performance/workflow goal.
 
-Current acceptance candidate: 0.2.4; it is not yet approved or published.
-The native literal-string use-site operation and checked cursor changes require fresh
-independent accuracy and cross-platform acceptance. Rebuild package metadata and run the
-complete Linux/Windows and clean-sdist/native-wheel
-gates on the final commit before publishing its exact CI artifacts. Release notes must identify
-that commit, run and hashes. Older version labels below identify historical releases and their
-original evidence, not approval of this candidate; receipts must not be retroactively relabeled.
+v0.2.4 is now published and latest, targeting 29475d9f58edc09969ee08bd6491bd515752a41a.
+CI 39836635008 passes all 17 jobs, including 1075 tests per Linux/Windows Python 3.10-3.13
+cell with zero failures/errors/skips and both canonical-sdist/native-wheel clean-install jobs.
+The published packages are those exact CI assets, not local rebuilds. Downloaded asset hashes
+match both the staged files and GitHub's server digests. Receipts:
+artifacts/acceptance-0.2.4-ci-39836635008/{acceptance-summary,published-readback}.json.
+
+Independent v0.2.4 string oracles match all 7679 selected literal `https://` sites across
+86,473,182 instructions in Taobao/WeChat/Douyin. Taobao fuzzy matching verifies 28,110 sites;
+the exact Linux wheel additionally verifies 2163 selected string sites and all 2,914,002
+persisted declared call sites. These are full multiset comparisons with unchanged input/runtime,
+not count-only checks. The oracle receipts are increment024-29475d9-*.json and
+increment024-ci-wheel-*.json under artifacts/release-renumber-20261022.
+
+The next increment, 0.2.5, is in development, not release-approved. Its preparation changes
+require their own final-runtime accuracy, matched performance and complete Linux/Windows,
+real-MCP and clean-package gates. Older version labels below identify the original scope and
+evidence, not approval of a later candidate; receipts must not be retroactively relabeled.
+
+Its directory-only five-round before/after diagnostic uses the same Python/runtime/input,
+four inherited CPUs and alternating subprocesses. Every inventory name and retained ZipInfo
+slot matches stdlib. CPU medians (v0.2.4 / new reader) are 0.08159 / 0.04712 seconds on Taobao,
+0.26339 / 0.13073 on WeChat and 0.87671 / 0.56246 on Douyin. Peak directory-process RSS changes
+are small; immutable snapshot/owner bytes are unchanged. A full preparation diagnostic checks
+complete metadata, all owner rows and field-query pages against v0.2.4, but wall-clock results
+are mixed: the Douyin median is slower. No universal startup or total-memory improvement is
+claimed. Both receipts are increment025-{directory,preparation}-before-after.json under
+artifacts/release-renumber-20261022. Their direct-worker timings are not real MCP acceptance.
 
 The selected increment adds literal string-search-to-use-site handoff, a checked 32-bit jumbo
 operand path and native ASCII pool matching with strict Unicode fallback. A profile of the
@@ -53,7 +74,7 @@ large-input runs explicitly allow 512-MiB expansion and an 8-GiB common external
 ceiling. These are configuration changes, not weakened product bounds. OS caches are retained
 and other desktop processes may introduce noise. Within-product cold/warm structured equality
 is checked; cross-product grouped totals do not prove site equality. Independent full-site
-oracles and final cross-platform/package gates are still required before publication.
+oracles and final cross-platform/package gates were subsequently completed for v0.2.4 above.
 The snapshot/tmpfs, other workflows and universal startup claims remain outside these wins.
 
 Historical v0.2.3 pre-freeze evidence: the Linux matrix passed 989 tests on each of

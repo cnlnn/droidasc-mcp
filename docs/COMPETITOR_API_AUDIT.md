@@ -1,7 +1,7 @@
 # Competitor API Source Audit
 
 Baseline: aimardcr/asc-mcp commit `848c711f1d80a1c2577283f1fa5f475ff734aa40`,
-rechecked against GitHub main on 2026-10-22. This is a functional workflow map,
+rechecked against GitHub main on 2026-10-23. This is a functional workflow map,
 not a drop-in API-name compatibility promise or a blanket performance claim.
 
 Read the actual [server](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/server.py),
@@ -28,7 +28,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `apk_find_method_references` | `analysis_id,class_name,method_name,fuzzy_class,exact_name,descriptor,cursor,limit` | find_method_refs selects a full identity; search_refs(kind=method) scans a fuzzy owner/name union once, with optional exact prototype, omitted name, case mode and global pagination. | tests/test_native_dex.py; tests/test_methods.py; tests/test_integration.py |
 | tool | `apk_find_field_references` | `analysis_id,class_name,field_name,fuzzy_class,exact_name,field_type,cursor,limit` | search_refs(kind=field) supports owner/name/type filtering in one pass; find_field_refs selects a full class->name:type. Read/write filters and checked individual instruction sites are preserved, without heuristic byte matches. | tests/test_native_dex.py; tests/test_methods.py; tests/test_integration.py |
 | tool | `apk_find_type_instructions` | `analysis_id,type_name,cursor,limit` | find_type_refs with exact Dalvik type and type_relation=instruction. Dotted names become Lpkg/Type;. Broader pattern discovery uses class search before exact queries; declarations/annotations are separate optional relations. | tests/test_xref_index.py; tests/test_integration.py |
-| tool | `apk_find_string_references` | `analysis_id,value,cursor,limit` | find_string_refs(value=literal) accepts a discovered string unchanged and returns checked const-string/jumbo sites, global pagination and explicit case mode. Legacy find_refs retains its regex semantics. get_string_constants provides class-scoped use sites; pool search alone is not a use-site claim. Development change, pending the next increment's complete release gate. | tests/test_string_refs.py; tests/test_structure.py; tests/test_integration.py; scripts/verify_string_references.py |
+| tool | `apk_find_string_references` | `analysis_id,value,cursor,limit` | find_string_refs(value=literal) accepts a discovered string unchanged and returns checked const-string/jumbo sites, global pagination and explicit case mode. Legacy find_refs retains its regex semantics. get_string_constants provides class-scoped use sites; pool search alone is not a use-site claim. Released in v0.2.4 after full cross-platform/package and independent accuracy gates. | tests/test_string_refs.py; tests/test_structure.py; tests/test_integration.py; scripts/verify_string_references.py |
 | tool | `apk_search_members` | `analysis_id,kind,query,cursor,limit` | search_members(kind=method/field,value=query,member_match=name,case_sensitive=false). Includes declaring class, name, flags and full identity. Descriptor matching remains the backward-compatible default, explicitly distinct. | tests/test_structure.py; tests/test_xref_index.py; tests/test_integration.py |
 | tool | `apk_search_strings` | `analysis_id,query,cursor,limit` | search_strings(value=query,case_sensitive=false), with original DEX entry/string index. Case-sensitive default remains available. | tests/test_structure.py; tests/test_xref_index.py; tests/test_integration.py |
 | tool | `apk_get_string_constants` | `analysis_id,class_name` | get_string_constants exact class, all const-string/jumbo instructions and decoded Unicode/empty values, method identity and code-unit offsets. | tests/test_structure.py; tests/test_dex_container.py; tests/test_integration.py |
@@ -86,7 +86,10 @@ class/manifest resources, native inventory, asset reads, signing, redacted secre
 comparison, prompts, missing-method recovery and session/resource cleanup. Both transports
 passed locally on 2026-10-22 with Java deliberately invalid and JADX/dexlib configuration unset.
 The fixtures are assembled before disabling Java; fixture generation is not a runtime dependency.
-This targeted receipt does not approve the candidate's pending cross-platform release gate.
+That targeted receipt alone was not release approval. v0.2.4 subsequently passed all 17 CI
+jobs on commit 29475d9f58edc09969ee08bd6491bd515752a41a, including both transports,
+1075 tests per OS/Python cell without skips, and canonical-package acceptance. The next
+preparation increment requires its own final-commit gates.
 
 This matrix describes implemented equivalents and intentional interface differences. The release
 authority is a fresh feature-frozen Linux/Windows matrix, real stdio/HTTP tests, independent signing

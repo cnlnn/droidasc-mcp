@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.5
+
+- Avoid constructing discarded ZIP member metadata during validated DEX preparation.
+  Resource names, duplicates, special file modes, directory/member bounds and extraction
+  versions remain checked. Common timestamp extra fields keep their structural validation;
+  ZIP64, Unicode paths and unknown extensions retain the standard ZipInfo decoder.
+- Add independent retained-metadata/extra-field regressions and large-APK before/after
+  diagnostics. Directory-only CPU reductions do not establish universal startup, retained
+  storage or total-memory improvements. Complete release acceptance is still required.
+
 ## 0.2.4
 
 - Add native literal `find_string_refs` navigation from discovered string values to

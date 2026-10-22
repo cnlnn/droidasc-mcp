@@ -60,9 +60,8 @@ all 18 tools over stdio/HTTP against a source-built
 and package installation. macOS remains unverified.
 
 Versions 0.3.0 through 0.5.0 have been withdrawn. Accepted updates use increasing 0.2.x
-versions without rolling back the native implementation. These commands target 0.2.4;
-before its accepted release, use the published
-[0.2.3 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3).
+versions without rolling back the native implementation. These commands install the published
+[0.2.4 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.4).
 Install the version-pinned x86-64 Linux wheel:
 
 ```bash

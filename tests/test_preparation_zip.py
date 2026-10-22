@@ -197,6 +197,94 @@ def test_resource_inventory_memory_is_not_full_zipinfo_retention():
         assert all(info is None for info in archive.inventory.values())
 
 
+@pytest.mark.parametrize(
+    "extra", [b"", b"\x55\x54\x05\0\x07\x01\x02\x03\x04", b"\x0a\0\x20\0" + bytes(32)]
+)
+def test_plain_resource_inventory_does_not_allocate_discarded_zipinfos(monkeypatch, extra):
+    names = [f"res/raw/{number}.bin" for number in range(2000)]
+    names += ["assets/\u4e2d\u6587.txt", "res/", "classes.dex"]
+    members = []
+    for name in names:
+        info = zipfile.ZipInfo(name)
+        info.extra = extra
+        members.append((info, b"payload"))
+    data = archive_bytes(entries=members)
+    initialized = []
+    original = zipfile.ZipInfo.__init__
+
+    def track(info, name="NoName", *args, **kwargs):
+        initialized.append(name)
+        original(info, name, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipInfo, "__init__", track)
+    with PreparationZipFile(io.BytesIO(data)) as archive:
+        assert set(archive.inventory) == set(names)
+        assert archive.read("classes.dex") == b"payload"
+        assert initialized == ["classes.dex"]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        b"",
+        b"\0",
+        b"\0\0",
+        b"\0\0\0",
+        struct.pack("<HH", 0x5455, 0),
+        struct.pack("<HH", 0x5455, 2) + b"a",
+        struct.pack("<HH", 0x5455, 0) + b"abc",
+        struct.pack("<HH", 0x5455, 1) + b"x" + struct.pack("<HH", 0x000A, 2) + b"ab",
+        struct.pack("<HH", 0x5455, 0) + struct.pack("<HH", 0x000A, 2) + b"a",
+        struct.pack("<HH", 0x0001, 0),
+        struct.pack("<HH", 0x0001, 4) + bytes(4),
+        struct.pack("<HH", 0x7075, 0),
+        struct.pack("<HH", 0x7075, 5) + bytes(5),
+        struct.pack("<HH", 0x7075, 5) + bytes(5) + struct.pack("<HH", 0x5455, 1),
+    ],
+)
+def test_omitted_extra_field_validation_matches_stdlib(extra):
+    member = zipfile.ZipInfo("assets/value.bin")
+    member.extra = extra
+    data = archive_bytes(entries=[(member, b"payload"), ("classes.dex", b"dex")])
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as baseline:
+            expected = set(_entries(baseline))
+    except zipfile.BadZipFile:
+        with pytest.raises(zipfile.BadZipFile):
+            PreparationZipFile(io.BytesIO(data))
+    else:
+        with PreparationZipFile(io.BytesIO(data)) as compact:
+            assert set(compact.inventory) == expected
+            assert compact.read("classes.dex") == b"dex"
+
+
+@pytest.mark.parametrize("kind", [0x0001, 0x7075, 0xCAFE])
+def test_other_extra_fields_use_stdlib_decoder(kind, monkeypatch):
+    payload = bytes(5) if kind == 0x7075 else b""
+    member = zipfile.ZipInfo("assets/value.bin")
+    member.extra = struct.pack("<HH", kind, len(payload)) + payload
+    data = archive_bytes(entries=[(member, b"payload")])
+    decoded = []
+    original = zipfile.ZipInfo._decodeExtra
+
+    def track(info, *args, **kwargs):
+        decoded.append(info.filename)
+        return original(info, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipInfo, "_decodeExtra", track)
+    with PreparationZipFile(io.BytesIO(data)) as archive:
+        assert archive.inventory == {"assets/value.bin": None}
+        assert decoded == ["assets/value.bin"]
+
+
+def test_omitted_resource_extract_version_is_still_checked():
+    data = bytearray(archive_bytes(entries=[("assets/value.bin", b"payload")]))
+    start = data.index(zipfile.stringCentralDir)
+    data[start + 6] = zipfile.MAX_EXTRACT_VERSION + 1
+    with pytest.raises(NotImplementedError, match="zip file version"):
+        PreparationZipFile(io.BytesIO(data))
+
+
 def test_directory_reads_do_not_materialize_the_whole_central_directory():
     data = archive_bytes(
         entries=[(f"res/raw/{number}/" + "a" * 100 + ".bin", b"") for number in range(10000)]

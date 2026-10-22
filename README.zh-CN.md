@@ -52,8 +52,8 @@ Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fi
 验收 stdio/HTTP 全部 18 个工具及发布包安装；macOS 尚未验证。
 
 0.3.0 至 0.5.0 已撤回，后续每批改动验收通过后按 0.2.x 递增发布，不回退原生实现。
-下列命令固定安装 0.2.4；该增量验收发布前，使用已发布的
-[0.2.3 发布包](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3)。
+下列命令固定安装已验收发布的
+[0.2.4 发布包](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.4)。
 x86-64 Linux 安装固定版本的原生 wheel：
 
 ```bash

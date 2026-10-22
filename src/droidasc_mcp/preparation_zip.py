@@ -8,6 +8,7 @@ the same safety, duplicate, inventory and next-local-header checks.
 from __future__ import annotations
 
 import bisect
+import stat
 import struct
 import zipfile
 from itertools import pairwise
@@ -17,12 +18,26 @@ from .archive_errors import ArchiveError
 from .archive_worker import MAX_ENTRIES, safe_name, validate_entry
 
 _HEADER = struct.Struct(zipfile.structCentralDir)
+_EXTRA_HEADER = struct.Struct("<HH")
 _KEEP = (".dex", ".class", ".jar", ".apk")
 # Security fixes were backported at different patch versions. Detect capabilities,
 # not Python minor versions; no zipfile module/class is monkeypatched.
 _EXTRA_CRC = zipfile.ZipInfo._decodeExtra.__code__.co_argcount > 1
 _ZIP64_LOCATION = "_ECD_LOCATION" in zipfile._EndRecData64.__code__.co_names
 _MEMBER_BOUNDS = "_end_offset" in zipfile.ZipInfo.__slots__
+
+
+def plain_extra(extra):
+    """Check ignored timestamp fields; defer other extensions to ZipInfo."""
+    position = 0
+    while len(extra) - position >= _EXTRA_HEADER.size:
+        kind, size = _EXTRA_HEADER.unpack_from(extra, position)
+        if size + _EXTRA_HEADER.size > len(extra) - position:
+            raise zipfile.BadZipFile(f"Corrupt extra field {kind:04x} (size={size})")
+        if kind not in {0x000A, 0x5455}:
+            return False
+        position += size + _EXTRA_HEADER.size
+    return True
 
 
 class PreparationZipFile(zipfile.ZipFile):
@@ -109,51 +124,60 @@ class PreparationZipFile(zipfile.ZipFile):
             if "\0" in decoded_name:
                 raise ArchiveError("unsafe_entry", "Archive entry name contains a NUL byte")
             # ZipInfo normalizes backslashes on Windows; validate original wire names.
-            info = zipfile.ZipInfo(safe_name(decoded_name))
-            info.extra = raw[name_size : name_size + extra_size]
-            info.comment = raw[name_size + extra_size :]
-            info.header_offset = row[18]
-            (
-                info.create_version,
-                info.create_system,
-                info.extract_version,
-                info.reserved,
-                info.flag_bits,
-                info.compress_type,
-                time,
-                date,
-                info.CRC,
-                info.compress_size,
-                info.file_size,
-            ) = row[1:12]
-            if info.extract_version > zipfile.MAX_EXTRACT_VERSION:
-                raise NotImplementedError(f"zip file version {info.extract_version / 10:.1f}")
-            info.volume, info.internal_attr, info.external_attr = row[15:18]
-            info._raw_time = time
-            info.date_time = (
-                (date >> 9) + 1980,
-                (date >> 5) & 15,
-                date & 31,
-                time >> 11,
-                (time >> 5) & 63,
-                (time & 31) * 2,
-            )
-            if _EXTRA_CRC:
-                info._decodeExtra(crc32(name))
+            safe_name(decoded_name)
+            if row[3] > zipfile.MAX_EXTRACT_VERSION:
+                raise NotImplementedError(f"zip file version {row[3] / 10:.1f}")
+            extra = raw[name_size : name_size + extra_size]
+            keep = decoded_name.lower().endswith(_KEEP)
+            if not keep and plain_extra(extra):
+                mode = stat.S_IFMT(row[17] >> 16)
+                if mode not in {0, stat.S_IFREG, stat.S_IFDIR}:
+                    raise ArchiveError("special_entry", "Archive contains a non-regular entry")
+                filename, header_offset, info = decoded_name, row[18] + concat, None
             else:
-                info._decodeExtra()
-            validate_entry(info)
-            if info.filename in self.inventory:
+                info = zipfile.ZipInfo(decoded_name)
+                info.extra = extra
+                info.comment = raw[name_size + extra_size :]
+                info.header_offset = row[18]
+                (
+                    info.create_version,
+                    info.create_system,
+                    info.extract_version,
+                    info.reserved,
+                    info.flag_bits,
+                    info.compress_type,
+                    time,
+                    date,
+                    info.CRC,
+                    info.compress_size,
+                    info.file_size,
+                ) = row[1:12]
+                info.volume, info.internal_attr, info.external_attr = row[15:18]
+                info._raw_time = time
+                info.date_time = (
+                    (date >> 9) + 1980,
+                    (date >> 5) & 15,
+                    date & 31,
+                    time >> 11,
+                    (time >> 5) & 63,
+                    (time & 31) * 2,
+                )
+                if _EXTRA_CRC:
+                    info._decodeExtra(crc32(name))
+                else:
+                    info._decodeExtra()
+                validate_entry(info)
+                info.header_offset += concat
+                filename, header_offset = info.filename, info.header_offset
+            if filename in self.inventory:
                 raise ArchiveError("duplicate_entry", "Archive contains duplicate entry names")
-            info.header_offset += concat
-            if not 0 <= info.header_offset < self.start_dir:
+            if not 0 <= header_offset < self.start_dir:
                 raise zipfile.BadZipFile("Local header is outside member bounds")
-            local_offsets.append(info.header_offset)
-            keep = info.filename.lower().endswith(_KEEP)
-            self.inventory[info.filename] = info if keep else None
+            local_offsets.append(header_offset)
+            self.inventory[filename] = info if keep else None
             if keep:
                 self.filelist.append(info)
-                self.NameToInfo[info.filename] = info
+                self.NameToInfo[filename] = info
         local_offsets.sort()
         if any(left == right for left, right in pairwise(local_offsets)):
             raise zipfile.BadZipFile("Overlapped local headers")

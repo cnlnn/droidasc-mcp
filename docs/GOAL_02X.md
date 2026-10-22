@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 is published; 0.2.4 is the current acceptance candidate. Remaining deficits stay explicit
+  v0.2.3 and v0.2.4 are published; 0.2.5 is in development. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.3 is now latest.
+  Completed 2026-10-23; readback confirms the four tags are absent. v0.2.4 is now latest.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -79,6 +79,30 @@ all-gap completion goal stays active after an intermediate patch is published.
 
 Update, 2026-10-23:
 
+- The 0.2.5 preparation increment avoids allocating discarded ZipInfo objects for ordinary
+  omitted resources. Timestamp extra-field bounds, all original name/mode/version/offset and
+  duplicate checks remain active; other extensions use the unchanged stdlib decoder. Five-round
+  alternating directory diagnostics compare all inventory names and every retained ZipInfo slot
+  against independent stdlib results on three original APKs. Median directory CPU seconds decrease
+  from 0.08159/0.26339/0.87671 to 0.04712/0.13073/0.56246 (Taobao/WeChat/Douyin).
+  Receipt: artifacts/release-renumber-20261022/increment025-directory-before-after.json.
+  A separate complete preparation diagnostic preserves identical full metadata, ownership
+  directories, retained bytes and field pages, but noisy wall time is mixed and Douyin's median
+  regresses. It is not evidence of an end-to-end improvement. Receipt:
+  increment025-preparation-before-after.json in the same directory. Startup/storage goals remain
+  open. Fresh final-runtime independent ownership, real MCP, Linux/Windows and clean-package
+  gates remain required; this increment is not approved for publication.
+- Published increment: v0.2.4, main/tag target
+  29475d9f58edc09969ee08bd6491bd515752a41a. CI 39836635008 passes all 17 jobs;
+  the eight Linux/Windows Python 3.10-3.13 cells each pass 1075 tests, zero skips/errors/failures.
+  Both clean-distribution jobs pass canonical-sdist and native-wheel acceptance. Fresh independent
+  string oracles match all 7679 selected use sites across 86,473,182 instructions in the three
+  original APKs; fuzzy matching verifies 28,110 Taobao sites. The exact Linux CI wheel verifies
+  2163 string sites and all 2,914,002 persisted call sites. All four published assets were
+  downloaded again and matched to local and GitHub SHA-256 digests. Evidence:
+  artifacts/acceptance-0.2.4-ci-39836635008/{acceptance-summary,published-readback}.json.
+  This closes the literal-string increment only. Startup/storage and the full workflow/performance
+  closure remain active; the following pre-release entries retain their original chronology.
 - Published increment: v0.2.3, main/tag target
   4c28572935eda91bd8250c54d1663526d532a858. CI 39826824176 passes all 17 jobs;
   each of the eight Linux/Windows Python 3.10-3.13 cells passes 1019 tests without
