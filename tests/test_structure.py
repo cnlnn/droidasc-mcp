@@ -166,6 +166,11 @@ def test_case_and_member_name_scope_before_and_after_index(structure_service):
         structure_service, "search_classes", value="base", prefix="structure.", case_sensitive=False
     )
     assert [row["class_name"] for row in result["items"]] == ["Lstructure/Base;"]
+    for value in ("structure.Base", "Lstructure/Base;", "structure.Ba", "STRUCTURE.BASE"):
+        found = query(structure_service, "search_classes", value=value, case_sensitive=False)
+        assert found["items"] == result["items"]
+        assert found["match_semantics"].endswith("class_descriptor_or_dotted_name")
+    assert query(structure_service, "search_classes", value="STRUCTURE.BASE")["total"] == 0
     for indexed in (False, True):
         if indexed:
             query(structure_service, "build_xref_index")

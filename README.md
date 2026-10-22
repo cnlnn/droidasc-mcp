@@ -36,7 +36,7 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Version 0.3.0 provides checked native DEX references, discovery, structural views and lazy
+Version 0.2.3 provides checked native DEX references, discovery, structural views and lazy
 indexes without Java or JADX. An optional stable-ABI C accelerator has an independent Python
 fallback; ASC remains the public Smali engine. Only explicit Java source requests use optional
 JADX. The [native-query validation](docs/NATIVE_QUERY_VALIDATION.md) records accuracy,
@@ -59,24 +59,28 @@ all 18 tools over stdio/HTTP against a source-built
 [acceptance APK](tests/fixtures/android/README.md)
 and package installation. macOS remains unverified.
 
-Install the version-pinned GitHub release on Linux:
+Versions 0.3.0 through 0.5.0 have been withdrawn. Accepted updates use increasing 0.2.x
+versions without rolling back the native implementation. The following 0.2.3 assets become
+available only after its acceptance release; until then use the retained
+[0.2.2 release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.2), which lacks these
+native-query enhancements. Install the version-pinned x86-64 Linux wheel:
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
 ```
 
 Windows (PowerShell):
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-win_amd64.whl
 ```
 
-These wheels target x86-64 CPython 3.10+. Other environments can build from the release's
-`droidasc_mcp-0.3.0.tar.gz`; macOS remains unverified.
-The old 0.3.0 through 0.5.0 releases were withdrawn. `--force-reinstall` replaces any
-previous installation of the original 0.3.0 rather than keeping its different same-version code.
+The native stable-ABI wheels support CPython 3.10 and newer; the canonical source archive is
+`droidasc_mcp-0.2.3.tar.gz`. Source installation retains the Python fallback if no compiler is
+available. macOS remains unverified. `--force-reinstall` also permits replacing an installed withdrawn
+version with the current stable version; no previously published version number will be reused.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 
@@ -188,7 +192,7 @@ content-addressed evidence store. Do not modify APK files between pages.
 
 ## Bare DEX analysis
 
-Available in v0.3.0 and newer.
+Available in v0.2.3.
 It accepts 1-64 explicit `.dex` paths under the allowed roots, with a combined size bounded by
 `DROIDASC_MCP_MAX_APK_BYTES`. Directories, APKs, CompactDex and DEX 041 containers are not accepted.
 
@@ -325,8 +329,13 @@ responses fail explicitly. The API currently takes DEX inputs/sessions, not an A
 `operation="get_call_graph"` explores an exact `method_descriptor` with
 `direction="incoming"|"outgoing"|"both"` (default both), `depth=1..5` (default 2),
 `max_nodes=1..500` (default 200) and `max_edges=1..1000` (default 500).
-It builds/reuses a calls-only static index, or an existing complete xref index. No field/type
-index is built just for a graph. This still has a cold construction cost; sessions retain it.
+Without an existing session index it scans bounded BFS frontiers, validating every instruction
+without first materializing all APK call sites (`backend="native-dex-frontier"`, no `index`
+field). Exact-page reuse is reported by `query_cache.hit`, not by a fabricated index flag.
+Existing calls-only or complete xref indexes remain reusable. Explicitly configuring the durable
+xref cache opts into the original calls-only build/restore path. Unusually dense frontiers fall
+back to an atomic disk-bounded calls-only index; no field/type index is built just for a graph.
+Preparation and either scan/index cost are included in cold measurements, not hidden in readiness.
 Nodes retain minimum hop distance and definition DEX; edges retain **individual call sites**
 including repeated calls, original opcode, offset and target provenance. Cycles and recursive
 calls terminate without duplicate call sites. External method operands can be roots too.
@@ -501,7 +510,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.3.tar.gz dist/*.whl
 ```
 
 ## License

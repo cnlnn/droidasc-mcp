@@ -11,6 +11,8 @@ import time
 import zipfile
 from pathlib import Path
 
+from verify_fuzzy_references import runtime_identity
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -36,6 +38,7 @@ def main():
     if args.native:
         sources["candidate"] = Path(droidasc_mcp.__file__).with_name("native_dex.py").resolve()
     report = {
+        "runtime_sha256": runtime_identity(),
         "apk_sha256": hashlib.sha256(args.apk.read_bytes()).hexdigest(),
         "source_sha256": {
             k: hashlib.sha256(v.read_bytes()).hexdigest() for k, v in sources.items()
@@ -141,6 +144,8 @@ def main():
     assert report["source_sha256"] == {
         k: hashlib.sha256(v.read_bytes()).hexdigest() for k, v in sources.items()
     }
+    assert report["runtime_sha256"] == runtime_identity(), "Runtime changed during parity checks"
+    report["runtime_unchanged"] = True
     report["input_and_sources_unchanged"] = True
     report["status"] = "all_full_results_equal"
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

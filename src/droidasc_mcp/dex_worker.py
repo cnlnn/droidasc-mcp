@@ -5,18 +5,16 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import runpy
 import struct
 import sys
 import zipfile
 import zlib
-from contextlib import redirect_stderr, redirect_stdout
-from importlib.metadata import version
+from contextlib import ExitStack
 from pathlib import Path
 
 from .archive_errors import ArchiveError
-from .config import Settings
-from .runner import DroidAscError, DroidAscRunner, _clean_error
+from .worker_errors import DroidAscError
+from .worker_runtime import WorkerRuntime, WorkerSettings
 
 
 class DexInputError(ValueError):
@@ -25,11 +23,70 @@ class DexInputError(ValueError):
         self.code = code
 
 
+OWNER_OPERATIONS = {
+    "get_class_source_metadata",
+    "get_method_source",
+    "list_classes",
+    "get_class_source",
+}
+
+
+def write_json_bounded(path, value, budget):
+    """Serialize large directories without allocating full JSON and encoded copies."""
+    used, buffered = 0, 0
+    chunks = []
+    with path.open("wb") as output:
+        for chunk in json.JSONEncoder().iterencode(value):
+            # The default encoder escapes non-ASCII, including unpaired DEX surrogates.
+            used += len(chunk)
+            if used > budget:
+                raise DexInputError("metadata_limit", "Prepared DEX metadata exceeds budget")
+            chunks.append(chunk)
+            buffered += len(chunk)
+            if buffered >= 65536:
+                output.write("".join(chunks).encode("ascii"))
+                chunks.clear()
+                buffered = 0
+        if chunks:
+            output.write("".join(chunks).encode("ascii"))
+    return used
+
+
 def preparation_progress(root, completed, total, message):
     # Append instead of replacing a file that a Windows reader may have open.
     encoded = json.dumps({"completed": completed, "total": total, "message": message}).encode()
     with (root / "progress.jsonl").open("ab") as stream:
         stream.write(encoded + b"\n")
+
+
+def build_class_directory(bundle, records, root, settings, progress):
+    from .class_directory import ClassDirectory
+    from .native_dex import InvalidDex
+    from .native_directory import class_entries
+
+    duplicates = []
+    try:
+        with ClassDirectory(root / "owners.sqlite", budget=settings.max_output_bytes) as owners:
+            for index, (entry, names) in enumerate(class_entries(bundle)):
+                record = records[entry]
+                record["class_count"] = len(names)
+                if len(names) != record["declared_class_count"]:
+                    raise DexInputError(
+                        "class_count_mismatch",
+                        f"Engine class count differs from DEX header: {record['path']}",
+                    )
+                duplicates.extend(owners.add(names, entry)[: max(0, 20 - len(duplicates))])
+                del names
+                if progress:
+                    preparation_progress(
+                        root,
+                        len(records) + index + 1,
+                        len(records) * 2,
+                        "Validated class directory",
+                    )
+            return len(owners), duplicates, owners.metadata_bytes
+    except InvalidDex as exc:
+        raise DexInputError("invalid_dex", str(exc)) from exc
 
 
 class BoundedText(io.StringIO):
@@ -45,27 +102,25 @@ class BoundedText(io.StringIO):
         return super().write(value)
 
 
-class PublicCliRunner(DroidAscRunner):
-    """The outer supervisor already enforces process, memory, time and output limits."""
+def __getattr__(name):
+    # Preserve existing internal imports without loading the CLI into native workers.
+    if name == "PublicCliRunner":
+        from .cli_worker import PublicCliRunner
 
-    def _execute(self, args: list[str], *, module_name: str | None = None) -> bytes:
-        assert module_name is None
-        argv = sys.argv
-        with (
-            BoundedText(self.settings.max_output_bytes) as output,
-            BoundedText(65536) as errors,
-            redirect_stdout(output),
-            redirect_stderr(errors),
-        ):
-            sys.argv = ["droidasc", *args]
-            try:
-                runpy.run_module("droidasc", run_name="__main__")
-            except SystemExit as exc:
-                if exc.code:
-                    raise DroidAscError(_clean_error(errors.getvalue()) or "ASC failed") from None
-            finally:
-                sys.argv = argv
-            return output.getvalue().encode("utf-8", errors="replace")
+        return PublicCliRunner
+    raise AttributeError(name)
+
+
+def engine_version(request=None):
+    if request is not None and "engine_version" in request:
+        value = request["engine_version"]
+        if not isinstance(value, str) or not value:
+            raise DexInputError("invalid_query", "Invalid host engine version")
+        return value
+    # Compatibility for direct library callers predating host-bound requests.
+    from importlib.metadata import version
+
+    return version("droidasc")
 
 
 def _identity(stat):
@@ -73,57 +128,61 @@ def _identity(stat):
 
 
 def copy_dex(source: Path, archive: zipfile.ZipFile, entry: str, budget: int) -> dict:
-    """Stream-copy exact bytes, validating the standard header and integrity fields."""
     before = source.stat()
-    if before.st_size > budget:
-        raise DexInputError("input_limit", "Combined DEX size exceeds configured size limit")
     with source.open("rb") as handle:
-        header = handle.read(112)
-        if len(header) < 112:
-            raise DexInputError("truncated_dex", f"DEX header is truncated: {source.name}")
-        if header[:4] != b"dex\n" or header[7] != 0:
-            raise DexInputError("invalid_magic", f"Expected a standard DEX header: {source.name}")
-        version = header[4:7].decode("ascii", errors="replace")
-        if version not in {"035", "037", "038", "039", "040"}:
-            raise DexInputError("unsupported_dex", f"Unsupported DEX version: {version}")
-        size, header_size, endian = struct.unpack_from("<III", header, 32)
-        if header_size != 112 or endian != 0x12345678:
-            raise DexInputError("unsupported_dex", "Expected a 112-byte little-endian DEX header")
-        if size != before.st_size:
-            raise DexInputError(
-                "size_mismatch", "DEX file_size differs from the supplied file size"
-            )
-        # Standard fixed-width ID tables must fit before passing data to the engine.
-        for start, width in ((56, 4), (64, 4), (72, 12), (80, 8), (88, 8), (96, 32)):
-            count, offset = struct.unpack_from("<II", header, start)
-            if (count and (offset < 112 or offset % 4 or offset + count * width > size)) or (
-                not count and offset
-            ):
-                raise DexInputError("invalid_table", "DEX ID table is outside the file bounds")
-        digest = hashlib.sha256(header)
-        signature = hashlib.sha1(header[32:])
-        checksum = zlib.adler32(header[12:])
-        copied = len(header)
-        with archive.open(entry, "w") as target:
-            target.write(header)
-            while block := handle.read(1024 * 1024):
-                copied += len(block)
-                if copied > size or copied > budget:
-                    raise DexInputError(
-                        "input_changed", "DEX grew during import; retry with stable files"
-                    )
-                digest.update(block)
-                signature.update(block)
-                checksum = zlib.adler32(block, checksum)
-                target.write(block)
-    if copied != size or _identity(before) != _identity(source.stat()):
+        record = copy_dex_stream(handle, before.st_size, str(source), archive, entry, budget)
+    if _identity(before) != _identity(source.stat()):
+        raise DexInputError("input_changed", "DEX changed during import; retry with stable files")
+    return record
+
+
+def copy_dex_stream(handle, supplied_size, source, archive, entry, budget, header=None):
+    """Validate and snapshot one standard DEX without an intermediate raw file."""
+    if supplied_size > budget:
+        raise DexInputError("input_limit", "Combined DEX size exceeds configured size limit")
+    header = handle.read(112) if header is None else header
+    if len(header) < 112:
+        raise DexInputError("truncated_dex", f"DEX header is truncated: {source}")
+    if header[:4] != b"dex\n" or header[7] != 0:
+        raise DexInputError("invalid_magic", f"Expected a standard DEX header: {source}")
+    version = header[4:7].decode("ascii", errors="replace")
+    if version not in {"035", "037", "038", "039", "040"}:
+        raise DexInputError("unsupported_dex", f"Unsupported DEX version: {version}")
+    size, header_size, endian = struct.unpack_from("<III", header, 32)
+    if header_size != 112 or endian != 0x12345678:
+        raise DexInputError("unsupported_dex", "Expected a 112-byte little-endian DEX header")
+    if size != supplied_size:
+        raise DexInputError("size_mismatch", "DEX file_size differs from the supplied file size")
+    for start, width in ((56, 4), (64, 4), (72, 12), (80, 8), (88, 8), (96, 32)):
+        count, offset = struct.unpack_from("<II", header, start)
+        if (count and (offset < 112 or offset % 4 or offset + count * width > size)) or (
+            not count and offset
+        ):
+            raise DexInputError("invalid_table", "DEX ID table is outside the file bounds")
+    digest = hashlib.sha256(header)
+    signature = hashlib.sha1(header[32:])
+    checksum = zlib.adler32(header[12:])
+    copied = len(header)
+    with archive.open(entry, "w") as target:
+        target.write(header)
+        while block := handle.read(min(256 * 1024, size - copied + 1)):
+            copied += len(block)
+            if copied > size:
+                raise DexInputError(
+                    "input_changed", "DEX grew during import; retry with stable files"
+                )
+            digest.update(block)
+            signature.update(block)
+            checksum = zlib.adler32(block, checksum)
+            target.write(block)
+    if copied != size:
         raise DexInputError("input_changed", "DEX changed during import; retry with stable files")
     if signature.digest() != header[12:32] or checksum != struct.unpack_from("<I", header, 8)[0]:
         raise DexInputError(
             "integrity_mismatch", "DEX checksum/signature mismatch; input was not repaired"
         )
     return {
-        "path": str(source),
+        "path": source,
         "dex_entry": entry,
         "size_bytes": size,
         "sha256": digest.hexdigest(),
@@ -132,22 +191,98 @@ def copy_dex(source: Path, archive: zipfile.ZipFile, entry: str, budget: int) ->
     }
 
 
+def prepare_bundle(settings, request, root, common, directory=None):
+    import shutil
+
+    from .dex_container import expand
+
+    remaining, count = settings.max_apk_bytes, 0
+    artifact = None
+
+    def next_entry():
+        if count >= 64:
+            raise DexInputError("dex_count_limit", "Select at most 64 logical DEX files")
+        return "classes.dex" if count == 0 else f"classes{count + 1}.dex"
+
+    def append(record, origin=None):
+        nonlocal count, remaining
+        if artifact is not None:
+            record.update(path=str(artifact), container_entry=origin)
+        common["sources"].append(record)
+        if directory is not None:
+            directory.accept(archive, record)
+        count += 1
+        remaining -= record["size_bytes"]
+        if request.get("prepare"):
+            preparation_progress(root, count, None, "Validated DEX snapshot")
+
+    def consume_file(original, index, origin=None):
+        workspace = root / f"dex-container-{index}"
+        workspace.mkdir()
+        for source, provenance in expand(settings, original, workspace):
+            try:
+                record = copy_dex(source, archive, next_entry(), remaining)
+            except DexInputError as exc:
+                exc.source_path = str(source)
+                raise
+            if provenance:
+                record.update(provenance, path=str(original))
+            append(record, origin)
+        shutil.rmtree(workspace)
+
+    with ExitStack() as stack:
+        if request.get("artifact_path"):
+            from .containers import prefetched_entries, selected_dex, validate_budget
+
+            artifact = settings.validate_artifact(request["artifact_path"])
+            budget = validate_budget(request["max_uncompressed_bytes"], settings)
+            inputs, metadata = stack.enter_context(
+                selected_dex(settings, artifact, budget, request.get("module"))
+            )
+            inputs = stack.enter_context(prefetched_entries(inputs))
+            common.update(metadata, input_kind="container", has_manifest=False)
+        else:
+            inputs = settings.validate_dex_paths(request["paths"])
+        archive = stack.enter_context(
+            zipfile.ZipFile(root / "analysis.apk", "w", compression=zipfile.ZIP_STORED)
+        )
+        for index, item in enumerate(inputs):
+            if artifact is None:
+                consume_file(item, index)
+                continue
+            source, info, origin = item
+            header = source.read(112)
+            if header[:8] != b"dex\n041\0":
+                try:
+                    record = copy_dex_stream(
+                        source, info.file_size, origin, archive, next_entry(), remaining, header
+                    )
+                except DexInputError as exc:
+                    exc.source_path = origin
+                    raise
+                append(record, origin)
+                continue
+            # Only 041 requires a seekable private input for strict normalization.
+            original = root / f"import-{index}.dex"
+            copied = len(header)
+            with original.open("wb") as output:
+                output.write(header)
+                while block := source.read(min(256 * 1024, info.file_size - copied + 1)):
+                    copied += len(block)
+                    if copied > info.file_size:
+                        raise ArchiveError("container_limit", "Expanded DEX exceeds declared size")
+                    output.write(block)
+            if copied != info.file_size:
+                raise ArchiveError("invalid_entry", "DEX size differs from its declaration")
+            consume_file(original, index, origin)
+            original.unlink()
+    return count
+
+
 def analyze(request: dict, root: Path) -> dict:
-    settings = Settings(
-        allowed_roots=tuple(Path(p) for p in request["allowed_roots"]),
-        max_apk_bytes=request["max_input_bytes"],
-        max_output_bytes=request["max_output_bytes"],
-        max_page_size=request["max_page_size"],
-        jadx_home=Path(request["jadx_home"]) if request.get("jadx_home") else None,
-        dexlib_home=Path(request["dexlib_home"]) if request.get("dexlib_home") else None,
-        java_executable=request.get("java_executable"),
-        max_xref_index_bytes=request.get("max_xref_index_bytes", 256 * 1024**2),
-        xref_cache_dir=Path(request["xref_cache_dir"]) if request.get("xref_cache_dir") else None,
-        max_xref_cache_bytes=request.get("max_xref_cache_bytes", 1024**3),
-        xref_cache_ttl_seconds=request.get("xref_cache_ttl_seconds", 7 * 86400),
-    )
+    settings = WorkerSettings(request)
     query = request["query"]
-    runner = PublicCliRunner(settings)
+    runner = WorkerRuntime(settings)
     page = {"offset": query["offset"], "limit": query["limit"]}
     common = {
         "input_kind": "dex_set",
@@ -162,106 +297,17 @@ def analyze(request: dict, root: Path) -> dict:
             prepared = Path(request["prepared_root"])
             metadata = json.loads((prepared / "prepared.json").read_text(encoding="utf-8"))
             common = metadata["common"]
-            if common["engine_version"] != version("droidasc"):
+            if common["engine_version"] != engine_version(request):
                 raise DexInputError("engine_changed", "Reopen the session with the current engine")
-            return query_prepared(
-                runner, prepared / "analysis.apk", common, metadata["owners"], query, root
-            )
+            return query_prepared(runner, prepared / "analysis.apk", common, query, root)
         if request.get("prepare"):
             preparation_progress(root, 0, None, "Validating and snapshotting input")
-        origins, artifact_metadata = [], None
-        if request.get("artifact_path"):
-            from .containers import snapshot, validate_budget
+        from .preparation_directory import PreparationDirectory
 
-            artifact = settings.validate_artifact(request["artifact_path"])
-            budget = validate_budget(request["max_uncompressed_bytes"], settings)
-            paths, origins, artifact_metadata = snapshot(
-                settings, artifact, root, budget, request.get("module")
-            )
-            common.update(artifact_metadata, input_kind="container", has_manifest=False)
-        else:
-            paths = settings.validate_dex_paths(request["paths"])
+        with PreparationDirectory(root, settings.max_output_bytes) as directory:
+            logical_count = prepare_bundle(settings, request, root, common, directory)
         bundle = root / "analysis.apk"
-        remaining = settings.max_apk_bytes
-        expanded = []
-        from .dex_container import expand
-
-        for index, source in enumerate(paths):
-            workspace = root / f"dex-container-{index}"
-            workspace.mkdir()
-            for logical, provenance in expand(settings, source, workspace):
-                expanded.append((logical, source, origins[index] if origins else None, provenance))
-        if len(expanded) > 64:
-            raise DexInputError("dex_count_limit", "Select at most 64 logical DEX files")
-        # Temporary copies use the existing uncompressed-byte storage reservation.
-        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_STORED) as archive:
-            for index, (source, original, origin, provenance) in enumerate(expanded):
-                entry = "classes.dex" if index == 0 else f"classes{index + 1}.dex"
-                try:
-                    record = copy_dex(source, archive, entry, remaining)
-                except DexInputError as exc:
-                    return {
-                        **common,
-                        "status": "error",
-                        "code": exc.code,
-                        "message": str(exc),
-                        "source_path": str(source),
-                    }
-                common["sources"].append(record)
-                if request.get("prepare"):
-                    preparation_progress(
-                        root, index + 1, len(expanded) * 2, "Validated DEX snapshot"
-                    )
-                if provenance:
-                    record.update(provenance, path=str(original))
-                if artifact_metadata is not None:
-                    record["path"] = str(artifact)
-                    record["container_entry"] = origin
-                remaining -= record["size_bytes"]
-        # Only the immutable bundle is retained; normalization inputs are transient.
-        import shutil
-
-        for index in range(len(paths)):
-            shutil.rmtree(root / f"dex-container-{index}")
-        if artifact_metadata is not None:
-            for source in paths:
-                source.unlink()
-        # Read the validated snapshot directly; never repackage each DEX or import ASC.
-        from .native_dex import InvalidDex, dex_entries
-
-        owners = {}
-        duplicates = []
-        records = {record["dex_entry"]: record for record in common["sources"]}
-        try:
-            for directory_index, (entry, dex) in enumerate(dex_entries(bundle)):
-                record = records[entry]
-                names = [name for name, _ in dex.classes()]
-                record["class_count"] = len(names)
-                if len(names) != record["declared_class_count"]:
-                    raise DexInputError(
-                        "class_count_mismatch",
-                        f"Engine class count differs from DEX header: {record['path']}",
-                    )
-                for name in names:
-                    if name in owners:
-                        if len(duplicates) < 20:
-                            duplicates.append(
-                                {
-                                    "class_name": name,
-                                    "dex_entries": [owners[name], record["dex_entry"]],
-                                }
-                            )
-                    else:
-                        owners[name] = record["dex_entry"]
-                if request.get("prepare"):
-                    preparation_progress(
-                        root,
-                        len(expanded) + directory_index + 1,
-                        len(expanded) * 2,
-                        "Validated class directory",
-                    )
-        except InvalidDex as exc:
-            raise DexInputError("invalid_dex", str(exc)) from exc
+        count, duplicates, directory_bytes = directory.result
         if duplicates:
             return {
                 **common,
@@ -270,8 +316,8 @@ def analyze(request: dict, root: Path) -> dict:
                 "message": "Duplicate class definitions; select an unambiguous DEX set",
                 "duplicates": duplicates,
             }
-        common["class_count"] = len(owners)
-        common["engine_version"] = version("droidasc")
+        common["class_count"] = count
+        common["engine_version"] = engine_version(request)
         identity = {
             "schema": 1,
             "engine": common["engine_version"],
@@ -281,20 +327,27 @@ def analyze(request: dict, root: Path) -> dict:
             json.dumps(identity, sort_keys=True).encode()
         ).hexdigest()
         if request.get("prepare"):
-            metadata = json.dumps({"common": common, "owners": owners})
-            if len(metadata.encode("utf-8")) > settings.max_output_bytes:
+            used = write_json_bounded(
+                root / "prepared.json", {"common": common}, settings.max_output_bytes
+            )
+            if directory_bytes + used > settings.max_output_bytes:
                 raise DexInputError("metadata_limit", "Prepared DEX metadata exceeds budget")
-            (root / "prepared.json").write_text(metadata, encoding="utf-8")
             preparation_progress(
                 root,
-                len(expanded) * 2,
-                len(expanded) * 2,
+                logical_count * 2,
+                logical_count * 2,
                 "Validated session ready; indexes remain on demand",
             )
             return {**common, "status": "ok"}
-        return query_prepared(runner, bundle, common, owners, query, root)
+        return query_prepared(runner, bundle, common, query, root)
     except (DexInputError, ArchiveError) as exc:
-        return {**common, "status": "error", "code": exc.code, "message": str(exc)}
+        return {
+            **common,
+            "status": "error",
+            "code": exc.code,
+            "message": str(exc),
+            **({"source_path": exc.source_path} if hasattr(exc, "source_path") else {}),
+        }
     except DroidAscError as exc:
         return {**common, "status": "error", "code": "engine_error", "message": str(exc)}
     except ValueError as exc:
@@ -303,7 +356,16 @@ def analyze(request: dict, root: Path) -> dict:
         return {**common, "status": "error", "code": "invalid_container", "message": str(exc)}
 
 
-def query_prepared(runner, bundle, common, owners, query, workspace):
+def query_prepared(runner, bundle, common, query, workspace):
+    if query["operation"] in OWNER_OPERATIONS:
+        from .class_directory import ClassDirectory
+
+        with ClassDirectory(bundle.parent / "owners.sqlite") as owners:
+            return _query_prepared(runner, bundle, common, owners, query, workspace)
+    return _query_prepared(runner, bundle, common, {}, query, workspace)
+
+
+def _query_prepared(runner, bundle, common, owners, query, workspace):
     from .xref_index import (
         DISCOVERY_OPERATIONS,
         INDEX_OPERATIONS,
@@ -374,25 +436,12 @@ def query_prepared(runner, bundle, common, owners, query, workspace):
             "message": "DEX files do not contain AndroidManifest.xml",
         }
     if operation == "list_classes":
-        from .native_dex import page_result, utf16_key
+        from .native_dex import page_result
 
-        names = sorted(
-            (
-                name
-                for name in owners
-                if not query.get("prefix") or name.startswith(query["prefix"])
-            ),
-            key=utf16_key,
-        )
         offset, limit = query["offset"], min(query["limit"], runner.settings.max_page_size)
+        total, items = owners.page(query.get("prefix"), offset, limit)
         result = page_result(
-            {
-                "total": len(names),
-                "items": [
-                    {"class_name": name, "dex_entry": owners[name]}
-                    for name in names[offset : offset + limit]
-                ],
-            },
+            {"total": total, "items": items},
             query,
             runner.settings,
         )
@@ -450,7 +499,7 @@ def asc_method_smali(runner, bundle, entry, query):
         "class_name": owner,
         "dex_entry": entry,
         "backend": "droidasc",
-        "backend_version": version("droidasc"),
+        "backend_version": engine_version(),
         "format": "smali",
         "debug_info": bool(query.get("debug_info")),
         "fell_back": False,

@@ -15,13 +15,13 @@ import zipfile
 from pathlib import Path
 
 from .archive_errors import ArchiveError
-from .config import Settings
 
 MAX_ENTRIES = 100_000
 MAX_READ_BYTES = 128 * 1024
 MAX_XML_BYTES = 4 * 1024 * 1024
 MAX_RESPONSE_BYTES = 256 * 1024
 KINDS = {"manifest", "resource", "asset", "native", "dex", "metadata", "other"}
+UNSAFE_PATH_CHARACTER = re.compile(r"[\x00-\x1f\\]")
 
 
 class _DecoderWarnings(logging.Handler):
@@ -37,8 +37,7 @@ def safe_name(name):
     parts = name.removesuffix("/").split("/")
     if (
         not name
-        or "\\" in name
-        or any(ord(char) < 32 for char in name)
+        or UNSAFE_PATH_CHARACTER.search(name)
         or any(part in {"", ".", ".."} for part in parts)
         or re.match(r"^[A-Za-z]:", name)
     ):
@@ -89,7 +88,7 @@ def page(rows, offset, limit):
 def _digest(handle):
     handle.seek(0)
     digest = hashlib.sha256()
-    for block in iter(lambda: handle.read(1024 * 1024), b""):
+    for block in iter(lambda: handle.read(256 * 1024), b""):
         digest.update(block)
     return digest.hexdigest()
 
@@ -98,20 +97,24 @@ def _identity(info):
     return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
 
 
+def validate_entry(info):
+    safe_name(info.filename)
+    if info.orig_filename != info.filename:
+        raise ArchiveError("unsafe_entry", "Archive entry name contains a NUL byte")
+    mode = stat.S_IFMT(info.external_attr >> 16)
+    if mode not in {0, stat.S_IFREG, stat.S_IFDIR}:
+        raise ArchiveError("special_entry", "Archive contains a non-regular entry")
+
+
 def _entries(archive):
     infos = archive.infolist()
     if len(infos) > MAX_ENTRIES:
         raise ArchiveError("entry_limit", "Archive has too many entries")
     entries = {}
     for info in infos:
-        safe_name(info.filename)
-        if info.orig_filename != info.filename:
-            raise ArchiveError("unsafe_entry", "Archive entry name contains a NUL byte")
+        validate_entry(info)
         if info.filename in entries:
             raise ArchiveError("duplicate_entry", "Archive contains duplicate entry names")
-        mode = stat.S_IFMT(info.external_attr >> 16)
-        if mode not in {0, stat.S_IFREG, stat.S_IFDIR}:
-            raise ArchiveError("special_entry", "Archive contains a non-regular entry")
         entries[info.filename] = info
     return entries
 
@@ -363,6 +366,8 @@ def _query(archive, entries, query, max_page_size):
 
 
 def analyze(request):
+    from .config import Settings
+
     try:
         settings = Settings(
             allowed_roots=tuple(Path(p) for p in request["allowed_roots"]),

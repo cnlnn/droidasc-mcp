@@ -118,6 +118,170 @@ def test_allocation_free_selector_matches_independent_cursor(
         dex.close()
 
 
+def test_unsorted_class_directory_preserves_validation(smali_dex_files):
+    for path in smali_dex_files:
+        dex = Dex(path.read_bytes())
+        try:
+            unordered = dex.classes(ordered=False)
+            assert sorted(unordered) == sorted(dex.classes())
+            assert unordered == dex.classes(accelerator=False, ordered=False)
+        finally:
+            dex.close()
+
+
+def test_fused_class_selection_matches_independent_cursor(
+    smali_dex_files, boundary_dex_file, graph_dex_files
+):
+    from droidasc_mcp.native_dex import METHOD_NAMES
+    from droidasc_mcp.native_scan import class_selector
+
+    for path in [*smali_dex_files, boundary_dex_file, *graph_dex_files]:
+        dex = Dex(path.read_bytes())
+        try:
+            for fields in (False, True):
+                targets = set(range(0, dex.tables[3 if fields else 4][0], 2))
+                for access in ("all", "read", "write"):
+                    select = class_selector(dex, targets, fields, access)
+                    assert select is not None
+                    for _, cls in dex.classes():
+                        field_defs, methods = dex.raw_members(cls, accelerator=False)
+                        expected = []
+                        definitions = [
+                            item[0]
+                            for item in (field_defs if fields else methods)
+                            if item[0] in targets
+                        ]
+                        instructions = dynamic = without = 0
+                        for method in methods:
+                            _, _, code = method
+                            without += not code
+                            wanted = False
+                            for position, _, op in dex.instructions(code) if code else ():
+                                instructions += 1
+                                dynamic += op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE}
+                                wanted |= op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE}
+                                if 0x52 <= op <= 0x6D if fields else op in METHOD_NAMES:
+                                    read = 0x52 <= op <= 0x58 or 0x60 <= op <= 0x66
+                                    wanted |= dex.u16(position + 2) in targets and (
+                                        not fields
+                                        or access == "all"
+                                        or access == ("read" if read else "write")
+                                    )
+                            if wanted:
+                                expected.append(method)
+                        assert select(cls) == (
+                            expected,
+                            definitions,
+                            len(methods),
+                            instructions,
+                            dynamic,
+                            without,
+                        )
+        finally:
+            dex.close()
+
+
+def test_directory_selection_batches_the_same_checked_class_cursor(
+    smali_dex_files, boundary_dex_file, graph_dex_files
+):
+    from droidasc_mcp.native_dex import utf16_key
+    from droidasc_mcp.native_scan import class_selector, select_directory
+
+    for path in [*smali_dex_files, boundary_dex_file, *graph_dex_files]:
+        dex = Dex(path.read_bytes())
+        try:
+            for fields in (False, True):
+                targets = set(range(0, dex.tables[3 if fields else 4][0], 2))
+                for access in ("all", "read", "write"):
+                    select = class_selector(dex, targets, fields, access)
+                    assert callable(getattr(select, "directory", None))
+                    selected, declared, counts = [], [], [0, 0, 0, 0]
+                    for owner, cls in dex.classes(ordered=False):
+                        matches, definitions, *metrics = select(cls)
+                        declared.extend(definitions)
+                        counts = [a + b for a, b in zip(counts, metrics, strict=True)]
+                        if matches:
+                            selected.append((owner, matches))
+                    selected.sort(key=lambda row: utf16_key(row[0]))
+                    assert select_directory(dex, select) == (selected, declared, *counts)
+        finally:
+            dex.close()
+
+
+@pytest.mark.parametrize("fields", [False, True])
+@pytest.mark.parametrize("index", [0, 65535])
+@pytest.mark.parametrize(
+    "damage", [None, "field_within", "field_cross", "method_within", "method_cross"]
+)
+def test_directory_duplicate_stamps_are_class_local_and_cover_both_member_groups(
+    fields, index, damage
+):
+    import struct
+
+    from droidasc_mcp import _dexscan
+    from droidasc_mcp.native_dex import WIDTHS
+
+    encoded = b"\x00" if index == 0 else b"\xff\xff\x03"
+    field, method = encoded + b"\x00", encoded + b"\x00\x00"
+    payload = {
+        None: b"\x01\x00\x01\x00" + field + method,
+        "field_within": b"\x02\x00\x00\x00" + field + b"\x00\x00",
+        "field_cross": b"\x01\x01\x00\x00" + field + field,
+        "method_within": b"\x00\x00\x02\x00" + method + b"\x00\x00\x00",
+        "method_cross": b"\x00\x00\x01\x01" + method + method,
+    }[damage]
+    # A low-level cursor fixture: repeat a class's member data at two directory
+    # positions to ensure the bulk duplicate table resets its logical generation.
+    cls = (index + 1) * 8 + 32
+    data = bytearray(cls + 64)
+    for offset in (cls, cls + 32):
+        struct.pack_into("<I", data, offset + 24, len(data))
+    data.extend(payload)
+    mask = bytearray(65536)
+    mask[index] = 1
+    arguments = (39, WIDTHS, bytes(mask), int(fields), index + 1, index + 1, 0, 1, 1, 0)
+
+    def single():
+        return _dexscan.select_class(bytes(data), cls, *arguments)
+
+    def bulk():
+        return _dexscan.select_classes(
+            bytes(data), [("La/A;", cls), ("Lb/B;", cls + 32)], *arguments
+        )
+
+    if damage:
+        for call in (single, bulk):
+            with pytest.raises(ValueError, match="Invalid DEX class data"):
+                call()
+    else:
+        assert single() == ([], [index], 1, 0, 0, 1)
+        assert bulk() == ([], [index, index], 2, 0, 0, 2)
+        assert bulk() == bulk(), "No duplicate-stamp state may survive a native call"
+
+
+def test_directory_selection_checks_nonmatching_corrupt_code(smali_dex_files):
+    from droidasc_mcp.native_scan import class_selector, select_directory
+
+    original = Dex(smali_dex_files[0].read_bytes())
+    try:
+        for _, cls in original.classes():
+            for _, _, code in original.raw_members(cls)[1]:
+                if not code:
+                    continue
+                data = bytearray(original.data)
+                data[code + 16] = 0x3E  # Reserved opcode, even when no IDs match.
+                dex = Dex(bytes(data))
+                try:
+                    with pytest.raises(InvalidDex, match="instruction"):
+                        select_directory(dex, class_selector(dex, set(), False, "all"))
+                finally:
+                    dex.close()
+                return
+        pytest.fail("Fixture has no code")
+    finally:
+        original.close()
+
+
 def test_native_rejects_truncated_payload(boundary_dex_file):
     dex = Dex(boundary_dex_file.read_bytes())
     for _, cls in dex.classes():
@@ -275,6 +439,7 @@ def test_query_without_native_extension_matches_accelerated(
     original_scan, original_classes = scan.scanner, Dex.classes
     monkeypatch.setattr(native, "_native_members", None)
     monkeypatch.setattr(scan, "method_selector", lambda *args: None)
+    monkeypatch.setattr(scan, "class_selector", lambda *args: None)
     monkeypatch.setattr(scan, "scanner", lambda *args: original_scan(*args, accelerator=False))
     monkeypatch.setattr(Dex, "classes", lambda self: original_classes(self, accelerator=False))
     assert query_references(Settings.from_env(), bundle, query) == expected
@@ -401,6 +566,7 @@ def test_fuzzy_reference_entry_matches_exact_unions(tmp_path, smali_dex_files):
 )
 def test_member_decoders_reject_malformed_class_data(stream):
     from droidasc_mcp.native_dex import _native_members
+    from droidasc_mcp.native_scan import class_selector
 
     dex = code_dex(b"\x00\x00")
     data = bytearray(dex.data)
@@ -413,3 +579,5 @@ def test_member_decoders_reject_malformed_class_data(stream):
     if _native_members is not None:
         with pytest.raises(InvalidDex):
             dex.raw_members(0)
+        with pytest.raises(InvalidDex):
+            class_selector(dex, set(), False, "all")(0)

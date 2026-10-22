@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import threading
 import zipfile
 from dataclasses import replace
 
@@ -17,6 +18,313 @@ def zip_bytes(entries):
         for name, data in entries:
             archive.writestr(name, data)
     return stream.getvalue()
+
+
+@pytest.mark.parametrize("kind", ["apk", "aar"])
+def test_preparation_releases_validated_resource_inventory_before_dex_reads(
+    settings, tmp_path, monkeypatch, kind
+):
+    from droidasc_mcp.containers import selected_dex
+    from droidasc_mcp.preparation_zip import PreparationZipFile
+
+    observed = []
+    initialize = PreparationZipFile.__init__
+
+    def capture(self, *args):
+        initialize(self, *args)
+        observed.append(self)
+
+    monkeypatch.setattr(PreparationZipFile, "__init__", capture)
+    dex = b"unchanged DEX bytes"
+    code = (
+        ("classes.dex", dex)
+        if kind == "apk"
+        else ("classes.jar", zip_bytes([("classes.dex", dex)]))
+    )
+    path = tmp_path / f"resources.{kind}"
+    path.write_bytes(zip_bytes([code, *[(f"res/raw/{i}.bin", b"resource") for i in range(5000)]]))
+    with selected_dex(settings, path, 1024**2, None) as (inputs, metadata):
+        root = observed[0]
+        assert root.inventory == {}, (
+            "Validated resource names must not overlap live DEX/class buffers"
+        )
+        selected = list(inputs)
+        assert len(selected) == 1 and metadata["dex_analysis"]
+        reader, info, origin = selected[0]
+        assert origin == ("classes.dex" if kind == "apk" else "classes.jar!/classes.dex")
+        with reader.open(info) as stream:
+            assert stream.read() == dex
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_snapshot_decompresses_two_entries_concurrently_with_exact_bytes(
+    settings, tmp_path, monkeypatch, streaming
+):
+    from droidasc_mcp.containers import prefetched_entries, selected_dex, snapshot
+
+    originals = {"classes.dex": b"first" * 200000, "classes2.dex": b"second" * 200000}
+    data = zip_bytes(list(originals.items()))
+    path = tmp_path / "parallel.apk"
+    path.write_bytes(data)
+    root = tmp_path / "snapshot"
+    root.mkdir()
+    rendezvous = threading.Barrier(2, timeout=3)
+    lock = threading.Lock()
+    started = set()
+    original_read = zipfile.ZipExtFile.read
+
+    def read(stream, count=-1):
+        assert 0 < count <= 256 * 1024, "Concurrent extraction buffers must be bounded"
+        with lock:
+            first = stream.name in originals and stream.name not in started
+            started.add(stream.name)
+        if first:
+            rendezvous.wait()
+        return original_read(stream, count)
+
+    monkeypatch.setattr(zipfile.ZipExtFile, "read", read)
+    if streaming:
+        actual = {}
+        with (
+            selected_dex(settings, path, 4 * 1024**2, None) as (inputs, metadata),
+            prefetched_entries(inputs) as streams,
+        ):
+            for source, _, name in streams:
+                chunks = []
+                while block := source.read(256 * 1024):
+                    chunks.append(block)
+                actual[name] = b"".join(chunks)
+        assert actual == originals
+    else:
+        paths, origins, metadata = snapshot(settings, path, root, 4 * 1024**2, None)
+        assert dict(zip(origins, (item.read_bytes() for item in paths), strict=True)) == originals
+    assert metadata["artifact_sha256"] == hashlib.sha256(data).hexdigest()
+    assert path.read_bytes() == data
+
+
+def test_preparation_validates_first_entry_before_remaining_decompression_finishes(
+    settings, tmp_path, monkeypatch
+):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    dex = bytes(empty_dex())
+    data = zip_bytes([("classes.dex", dex), ("classes2.dex", dex)])
+    artifact = tmp_path / "pipeline.apk"
+    artifact.write_bytes(data)
+    root = tmp_path / "preparation"
+    root.mkdir()
+    first_validated = threading.Event()
+    original_read, original_copy = zipfile.ZipExtFile.read, dex_worker.copy_dex_stream
+
+    def read(stream, count=-1):
+        if stream.name == "classes2.dex":
+            assert first_validated.wait(3), "Validate each DEX before advancing to the next entry"
+        return original_read(stream, count)
+
+    def copy(source, *args):
+        result = original_copy(source, *args)
+        if source.name == "classes.dex":
+            first_validated.set()
+        return result
+
+    monkeypatch.setattr(zipfile.ZipExtFile, "read", read)
+    monkeypatch.setattr(dex_worker, "copy_dex_stream", copy)
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 10})
+    request.update(artifact_path=str(artifact), max_uncompressed_bytes=1024**2, prepare=True)
+    result = dex_worker.analyze(request, root)
+    assert result["status"] == "ok", result
+    assert result["artifact_sha256"] == hashlib.sha256(data).hexdigest()
+    assert [row["container_entry"] for row in result["sources"]] == ["classes.dex", "classes2.dex"]
+    assert all(row["sha256"] == hashlib.sha256(dex).hexdigest() for row in result["sources"])
+    assert not list(root.glob("import-*.dex"))
+    assert not list(root.glob("dex-container-*"))
+    assert artifact.read_bytes() == data
+
+
+def test_standard_container_preparation_never_materializes_raw_dex(settings, tmp_path, monkeypatch):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    artifact = tmp_path / "streamed.apk"
+    dex = bytes(empty_dex())
+    artifact.write_bytes(zip_bytes([("classes.dex", dex)]))
+    root = tmp_path / "streamed"
+    root.mkdir()
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Standard archive DEX must be validated directly from the entry stream")
+
+    monkeypatch.setattr(dex_worker, "copy_dex", forbidden)
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 10})
+    request.update(artifact_path=str(artifact), max_uncompressed_bytes=1024**2, prepare=True)
+    result = dex_worker.analyze(request, root)
+    assert result["status"] == "ok", result
+    assert result["sources"][0]["sha256"] == hashlib.sha256(dex).hexdigest()
+    assert not list(root.glob("import-*.dex"))
+    assert not list(root.glob("dex-container-*"))
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_preparation_never_constructs_full_resource_zipinfo_inventory(
+    settings, tmp_path, monkeypatch, nested
+):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import containers, dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    data = zip_bytes(
+        [("classes.dex", bytes(empty_dex()))]
+        + [(f"res/raw/{number}.bin", b"resource") for number in range(100)]
+    )
+    path = tmp_path / ("compact.aar" if nested else "compact.apk")
+    path.write_bytes(zip_bytes([("classes.jar", data)]) if nested else data)
+    root = tmp_path / "compact-preparation"
+    root.mkdir()
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Preparation must use checked compact inventories, including nested JARs")
+
+    monkeypatch.setattr(containers, "_entries", forbidden)
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 10})
+    request.update(artifact_path=str(path), max_uncompressed_bytes=1024**2, prepare=True)
+    result = dex_worker.analyze(request, root)
+    assert result["status"] == "ok", result
+    assert result["class_count"] == 0
+    assert result["artifact_sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert result["sources"][0]["container_entry"] == (
+        "classes.jar!/classes.dex" if nested else "classes.dex"
+    )
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_prefetch_preserves_bytes_and_late_error_without_leaking_threads(failure):
+    from droidasc_mcp.containers import prefetched
+
+    data = b"0123456789" * 90000
+
+    class Source(io.BytesIO):
+        name = "bounded.dex"
+
+        def read(self, count):
+            assert count == 256 * 1024
+            block = super().read(count)
+            if not block and failure:
+                raise zipfile.BadZipFile("late CRC failure")
+            return block
+
+    with Source(data) as source, prefetched(source) as stream:
+        result = stream.read(112)
+        while len(result) < len(data):
+            result += stream.read(min(256 * 1024, len(data) - len(result)))
+        assert result == data
+        if failure:
+            with pytest.raises(zipfile.BadZipFile, match="late CRC"):
+                stream.read(1)
+        else:
+            assert stream.read(1) == b""
+    assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
+def test_prefetch_consumer_failure_stops_a_full_queue():
+    from droidasc_mcp.containers import prefetched
+
+    class Source(io.BytesIO):
+        name = "abandoned.dex"
+
+    with (
+        pytest.raises(RuntimeError, match="stop consumer"),
+        Source(b"x" * 1024**2) as source,
+        prefetched(source),
+    ):
+        raise RuntimeError("stop consumer")
+    assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
+def test_prefetch_full_chunks_are_transferred_without_copying():
+    from droidasc_mcp.containers import prefetched
+
+    block = b"x" * (256 * 1024)
+
+    class Source:
+        name = "owned.dex"
+        emitted = False
+
+        def read(self, count):
+            if self.emitted:
+                return b""
+            self.emitted = True
+            return block
+
+    with prefetched(Source()) as stream:
+        assert stream.read(len(block)) is block
+        assert stream.read(1) == b""
+
+
+def test_capability_routes_do_not_duplicate_resource_inventory():
+    from droidasc_mcp.containers import capabilities
+
+    data = zip_bytes([("classes.dex", b"dex"), ("res/large.bin", b"resource")])
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        entries = {info.filename: info for info in archive.infolist()}
+        metadata, _, nested, active, _, _ = capabilities(archive, entries, "apk", None, 1024)
+        try:
+            assert set(active) == {"classes.dex"}
+            assert metadata["dex_entries"] == ["classes.dex"]
+        finally:
+            nested.close()
+
+
+def test_nested_resource_entries_still_count_toward_inventory_limit():
+    from droidasc_mcp.archive_errors import ArchiveError
+    from droidasc_mcp.containers import capabilities
+
+    data = zip_bytes([("classes.jar", zip_bytes([("resource.txt", b"x")]))])
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        info = archive.getinfo("classes.jar")
+        entries = dict.fromkeys((f"res/{index}" for index in range(99999)), info)
+        entries["classes.jar"] = info
+        with pytest.raises(ArchiveError, match="inventory exceeds"):
+            capabilities(archive, entries, "aar", None, 1024)
+
+
+@pytest.mark.parametrize("failure", ["input_changed", "invalid_container"])
+def test_pipelined_failure_never_reports_ready(settings, tmp_path, monkeypatch, failure):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    artifact = tmp_path / "failed-pipeline.apk"
+    artifact.write_bytes(zip_bytes([("classes.dex", bytes(empty_dex()))]))
+    root = tmp_path / "failed"
+    root.mkdir()
+    original_copy = dex_worker.copy_dex_stream
+    progress = []
+
+    def copy(*args):
+        record = original_copy(*args)
+        if failure == "input_changed":
+            with artifact.open("ab") as output:
+                output.write(b"changed-after-copy")
+        else:
+            raise zipfile.BadZipFile("injected archive failure after first copy")
+        return record
+
+    monkeypatch.setattr(dex_worker, "copy_dex_stream", copy)
+    monkeypatch.setattr(dex_worker, "preparation_progress", lambda *args: progress.append(args))
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 10})
+    request.update(artifact_path=str(artifact), max_uncompressed_bytes=1024**2, prepare=True)
+    result = dex_worker.analyze(request, root)
+    assert result["status"] == "error" and result["code"] == failure, result
+    assert not any("ready" in row[-1] for row in progress)
+    assert not (root / "prepared.json").exists()
+    assert not (root / "owners.sqlite").exists()
 
 
 @pytest.fixture

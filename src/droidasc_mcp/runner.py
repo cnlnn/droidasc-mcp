@@ -23,10 +23,9 @@ from functools import partial
 from pathlib import Path
 from typing import Literal
 
-import psutil
-from anyio import from_thread
-
 from .config import Settings
+from .worker_errors import DroidAscError as DroidAscError
+from .worker_errors import page_bounds
 
 ReferenceKind = Literal["string", "type", "method", "field", "extends", "impl"]
 PREPARATION_PROGRESS = ContextVar("droidasc_preparation_progress", default=None)
@@ -45,10 +44,6 @@ def _read_preparation_progress(path):
         return update["completed"], update["total"], update["message"]
     except (OSError, ValueError, KeyError, TypeError):
         return None
-
-
-class DroidAscError(RuntimeError):
-    """Raised when Droid ASC fails or violates an adapter limit."""
 
 
 @dataclass(frozen=True)
@@ -184,7 +179,12 @@ class DroidAscRunner:
             return self._run_dex_request(request, Path(temporary))
 
     def _dex_request(self, paths: list[Path], query: dict) -> dict:
+        from importlib.metadata import version
+
         return {
+            # Resolve afresh at the trusted host boundary, not in every native
+            # worker. A package upgrade still invalidates existing preparations.
+            "engine_version": version("droidasc"),
             "paths": [str(path) for path in paths],
             "allowed_roots": [str(path) for path in self.settings.allowed_roots],
             "max_input_bytes": self.settings.max_apk_bytes,
@@ -413,11 +413,7 @@ class DroidAscRunner:
                     self._inflight.pop(key)
 
     def _page_bounds(self, offset: int, limit: int) -> tuple[int, int]:
-        if offset < 0:
-            raise ValueError("offset must be zero or greater")
-        if limit <= 0:
-            raise ValueError("limit must be greater than zero")
-        return offset, min(limit, self.settings.max_page_size)
+        return page_bounds(offset, limit, self.settings.max_page_size)
 
     def _command(self, args: list[str], module_name: str | None) -> list[str]:
         return [self.python_executable, "-m", module_name or self.module_name, *args]
@@ -589,12 +585,16 @@ def _clean_error(value: str | None) -> str:
 
 
 def _check_cancelled() -> None:
+    from anyio import from_thread
+
     # Direct library callers are not necessarily running in an AnyIO worker thread.
     with suppress(RuntimeError):
         from_thread.check_cancelled()
 
 
 def _process_tree_rss(pid: int) -> int:
+    import psutil
+
     if os.name != "nt":
         total = 0
         for process in psutil.process_iter():

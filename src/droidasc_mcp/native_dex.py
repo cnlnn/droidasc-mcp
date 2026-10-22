@@ -10,7 +10,7 @@ import zipfile
 from collections import Counter
 from functools import lru_cache
 
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 try:
     from ._dexscan import members as _native_members
@@ -24,6 +24,20 @@ class InvalidDex(ValueError):
 
 def utf16_key(text):
     return text.encode("utf-16-be", "surrogatepass")
+
+
+def decode_mutf8(raw, length):
+    raw = raw.replace(b"\xc0\x80", b"\0")
+    try:
+        text = raw.decode("utf-8", "surrogatepass")
+        if len(text) == length and max(text, default="\0") < "\ud800":
+            return text
+        units = text.encode("utf-16-le", "surrogatepass")
+        if len(units) != length * 2 or re.search(b"[\xf0-\xff]", raw):
+            raise InvalidDex("Invalid DEX modified UTF-8 length")
+        return units.decode("utf-16-le", "surrogatepass")
+    except UnicodeError as exc:
+        raise InvalidDex("Invalid DEX modified UTF-8") from exc
 
 
 # Standard (not quickened/odex) opcode widths, in 16-bit code units.
@@ -153,17 +167,7 @@ class Dex:
         end = self.data.find(b"\0", offset)
         if end < 0:
             raise InvalidDex("Unterminated DEX string")
-        raw = self.data[offset:end].replace(b"\xc0\x80", b"\0")
-        try:
-            text = raw.decode("utf-8", "surrogatepass")
-            if len(text) == length and max(text, default="\0") < "\ud800":
-                return text
-            units = text.encode("utf-16-le", "surrogatepass")
-            if len(units) != length * 2 or re.search(b"[\xf0-\xff]", raw):
-                raise InvalidDex("Invalid DEX modified UTF-8 length")
-            return units.decode("utf-16-le", "surrogatepass")
-        except UnicodeError as exc:
-            raise InvalidDex("Invalid DEX modified UTF-8") from exc
+        return decode_mutf8(self.data[offset:end], length)
 
     def _type(self, index):
         return self.string(self.u32(self.item(1, index)))
@@ -201,14 +205,17 @@ class Dex:
             + self.type(self.u16(offset + 2))
         )
 
-    def classes(self, *, accelerator=True):
+    def classes(self, *, accelerator=True, ordered=True):
         raw = None
+        checked = False
         if accelerator:
             try:
-                from ._dexscan import classes as native_classes
+                from . import _dexscan
             except ImportError:
                 pass
             else:
+                checked = hasattr(_dexscan, "checked_classes")
+                native_classes = _dexscan.checked_classes if checked else _dexscan.classes
                 try:
                     raw = native_classes(
                         self.data,
@@ -221,6 +228,18 @@ class Dex:
                     )
                 except ValueError as exc:
                     raise InvalidDex(str(exc)) from exc
+        if checked:
+            result, deferred, seen = raw
+            # The native cursor has already checked every ASCII identity and
+            # duplicate. Only Unicode rows need the strict independent decoder.
+            for index in deferred:
+                _, offset = result[index]
+                name = self.type(self.u32(offset))
+                if name in seen:
+                    raise InvalidDex("Duplicate class definition")
+                seen.add(name)
+                result[index] = name, offset
+            return sorted(result, key=lambda row: utf16_key(row[0])) if ordered else result
         if raw is None:
             raw = [(None, self.item(5, i)) for i in range(self.tables[5][0])]
         result = []
@@ -232,7 +251,7 @@ class Dex:
                 raise InvalidDex("Duplicate class definition")
             seen.add(name)
             result.append((name, offset))
-        return sorted(result, key=lambda row: utf16_key(row[0]))
+        return sorted(result, key=lambda row: utf16_key(row[0])) if ordered else result
 
     def members(self, cls):
         fields, methods = self.raw_members(cls)
@@ -511,12 +530,29 @@ def _references(bundle, query, settings):
         elif incoming:
             # Resolve IDs once, then compare integers at exact instruction boundaries.
             targets = dex.matching_ids(requested, fields)
-        from .native_scan import method_selector, scanner
+        from .native_scan import class_selector, method_selector, scanner, select_directory
 
         scan = scanner(dex, targets, fields, incoming)
-        select = method_selector(dex, targets, fields, access) if incoming else None
-        for owner, cls in dex.classes():
-            if incoming:
+        fused = class_selector(dex, targets, fields, access) if incoming else None
+        select = (
+            method_selector(dex, targets, fields, access) if incoming and fused is None else None
+        )
+        if fused is not None:
+            directory, declared, count, decoded, dynamic_sites, without = select_directory(
+                dex, fused
+            )
+            methods += count
+            instructions += decoded
+            dynamic_count += dynamic_sites
+            without_code += without
+            for index in declared:
+                definitions[member(index)] = entry
+        else:
+            directory = dex.classes()
+        for owner, cls in directory:
+            if fused is not None:
+                method_defs = dex.ordered_methods(cls)
+            elif incoming:
                 field_defs, raw_methods = dex.raw_members(cls)
                 if fields:
                     for index, _ in field_defs:

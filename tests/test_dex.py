@@ -4,6 +4,8 @@ import hashlib
 import json
 import shutil
 import struct
+import subprocess
+import sys
 import zipfile
 import zlib
 from dataclasses import replace
@@ -73,6 +75,189 @@ def test_preparation_stores_exact_dex_without_recompression(settings, tmp_path, 
     assert result["class_count"] == 0
     assert not list(root.glob("single-*"))
     assert path.read_bytes() == data
+
+
+def test_native_worker_import_does_not_load_host_runtime():
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; import droidasc_mcp.dex_worker; "
+            "assert not ({'anyio', 'psutil', 'mcp', 'droidasc', 'inspect', "
+            "'droidasc_mcp.config', 'droidasc_mcp.runner', 'importlib.metadata'} "
+            "& sys.modules.keys())",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+
+
+def test_native_preparation_does_not_construct_cli_or_host_configuration(settings, tmp_path):
+    path = tmp_path / "minimal.dex"
+    path.write_bytes(empty_dex())
+    root = tmp_path / "prepared"
+    root.mkdir()
+    request = DroidAscRunner(settings)._dex_request([path], {"offset": 0, "limit": 1})
+    request["prepare"] = True
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys,json; from pathlib import Path; "
+            "from droidasc_mcp.dex_worker import analyze; "
+            "result=analyze(json.loads(sys.argv[1]),Path(sys.argv[2])); "
+            "assert result['status']=='ok', result; "
+            "assert not ({'droidasc_mcp.runner','droidasc_mcp.config',"
+            "'droidasc_mcp.cli_worker','droidasc_mcp.method_backend','droidasc','mcp',"
+            "'importlib.metadata'} "
+            "& sys.modules.keys()); print(json.dumps(result))",
+            json.dumps(request),
+            str(root),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert json.loads(completed.stdout)["class_count"] == 0
+
+
+def test_host_resolves_engine_version_for_each_worker_and_rejects_changed_engine(
+    settings, tmp_path, monkeypatch
+):
+    import importlib.metadata
+
+    source = tmp_path / "minimal.dex"
+    source.write_bytes(empty_dex())
+    prepared = tmp_path / "prepared"
+    prepared.mkdir()
+    runner = DroidAscRunner(settings)
+    original = importlib.metadata.version("droidasc")
+    assert runner._dex_request([], {})["engine_version"] == original
+    result = runner.prepare_dex([source], prepared, source.stat().st_size)
+    assert result["status"] == "ok", result
+    assert result["engine_version"] == original
+    monkeypatch.setattr(importlib.metadata, "version", lambda name: "changed-for-regression")
+    result = runner.query_dex_session(prepared, {"operation": "info", "offset": 0, "limit": 1})
+    assert result["status"] == "error" and result["code"] == "engine_changed"
+
+
+@pytest.mark.parametrize("value", [None, 1, "", [], {}])
+def test_invalid_host_engine_identity_is_rejected(value):
+    from droidasc_mcp.dex_worker import engine_version
+
+    with pytest.raises(DexInputError, match="Invalid host engine version"):
+        engine_version({"engine_version": value})
+
+
+def test_prepared_directory_is_streamed_with_a_combined_byte_budget(tmp_path, monkeypatch):
+    from droidasc_mcp.dex_worker import write_json_bounded
+
+    owners = {f"Lfixture/Type{i};": "classes.dex" for i in range(10000)}
+    owners["Lfixture/\U0001f600\ud800;"] = "classes2.dex"
+    expected = json.dumps(owners).encode("ascii")
+
+    def no_bulk_encode(*args, **kwargs):
+        pytest.fail("The large owner directory must not be materialized as another full string")
+
+    monkeypatch.setattr(json, "dumps", no_bulk_encode)
+    target = tmp_path / "owners.json"
+    used = write_json_bounded(target, owners, len(expected))
+    assert used == len(expected) and target.read_bytes() == expected
+    with pytest.raises(DexInputError, match="metadata exceeds budget") as error:
+        write_json_bounded(target, owners, len(expected) - 1)
+    assert error.value.code == "metadata_limit"
+    assert target.stat().st_size <= len(expected) - 1
+
+
+def test_prepared_native_query_does_not_read_class_directory(settings, tmp_path):
+    path = tmp_path / "input.dex"
+    path.write_bytes(empty_dex())
+    root = tmp_path / "prepared"
+    root.mkdir()
+    runner = DroidAscRunner(settings)
+    request = runner._dex_request([path], {"offset": 0, "limit": 10})
+    request["prepare"] = True
+    assert analyze(request, root)["status"] == "ok"
+    owners = root / "owners.sqlite"
+    assert owners.is_file(), "Store the large class directory separately from common metadata"
+    original = owners.read_bytes()
+    owners.write_bytes(b"not a database")
+    request = runner._dex_request(
+        [],
+        {
+            "operation": "find_field_refs",
+            "field_descriptor": "Lmissing/C;->value:I",
+            "offset": 0,
+            "limit": 10,
+        },
+    )
+    request["prepared_root"] = str(root)
+    result = analyze(request, tmp_path)
+    assert result["status"] == "ok" and result["total"] == 0, result
+    request["query"]["operation"] = "list_classes"
+    assert analyze(request, tmp_path)["code"] == "invalid_query"
+    owners.write_bytes(original)
+    assert analyze(request, tmp_path)["status"] == "ok"
+
+
+def test_class_directory_and_envelope_share_budget_without_publishing(
+    settings, tmp_path, monkeypatch
+):
+    from droidasc_mcp import sessions
+    from droidasc_mcp.service import DroidAscService
+
+    roots = []
+    original = sessions.tempfile.TemporaryDirectory
+
+    def temporary(*args, **kwargs):
+        directory = original(*args, **kwargs)
+        if kwargs.get("prefix") == "droidasc-session-":
+            roots.append(Path(directory.name))
+        return directory
+
+    monkeypatch.setattr(sessions.tempfile, "TemporaryDirectory", temporary)
+    path = tmp_path / "input.dex"
+    path.write_bytes(empty_dex())
+    probe = tmp_path / "budget-probe"
+    probe.mkdir()
+    request = DroidAscRunner(settings)._dex_request([path], {"offset": 0, "limit": 1})
+    request["prepare"] = True
+    assert analyze(request, probe)["status"] == "ok"
+    budget = len((probe / "prepared.json").read_bytes()) + 1
+    service = DroidAscService(replace(settings, max_output_bytes=budget))
+
+    def prepare(paths, root, input_bytes):
+        query = service.runner._dex_request(paths, {"offset": 0, "limit": 1})
+        query["prepare"] = True
+        return analyze(query, root)
+
+    # Exercise real preparation and session publication; the deliberately tiny
+    # metadata cap is not an adequate transport stream budget for its error envelope.
+    monkeypatch.setattr(service.runner, "prepare_dex", prepare)
+    try:
+        result = service.open_dex_session([str(path)])
+        assert result["code"] == "metadata_limit", result
+        assert not service.sessions.entries
+        assert service.sessions.reserved == service.sessions.opening == 0
+        assert roots and all(not root.exists() for root in roots)
+    finally:
+        service.close()
+
+
+def test_small_metadata_budget_still_accepts_empty_dex(settings, tmp_path):
+    path = tmp_path / "small.dex"
+    path.write_bytes(empty_dex())
+    root = tmp_path / "small-budget"
+    root.mkdir()
+    request = DroidAscRunner(replace(settings, max_output_bytes=4096))._dex_request(
+        [path], {"offset": 0, "limit": 10}
+    )
+    request["prepare"] = True
+    result = analyze(request, root)
+    assert result["status"] == "ok" and result["class_count"] == 0, result
 
 
 @pytest.mark.parametrize(

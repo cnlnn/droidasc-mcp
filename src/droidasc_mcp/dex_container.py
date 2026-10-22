@@ -7,12 +7,11 @@ import struct
 import zlib
 
 from .archive_errors import ArchiveError as DexInputError
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 
 def expand(settings, source, workspace):
     from .dex_worker import _identity
-    from .method_backend import _execute_java
 
     before = source.stat()
     if before.st_size > settings.max_apk_bytes:
@@ -21,7 +20,7 @@ def expand(settings, source, workspace):
         if stream.read(8) != b"dex\n041\0":
             return [(source, None)]
         stream.seek(0)
-        data = stream.read(settings.max_apk_bytes + 1)
+        data = stream.read(before.st_size + 1)
     if len(data) != before.st_size or _identity(before) != _identity(source.stat()):
         raise DexInputError("input_changed", "DEX container changed during import")
     offsets, cursor = [], 0
@@ -60,6 +59,8 @@ def expand(settings, source, workspace):
     digest = hashlib.sha256(data).hexdigest()
     snapshot = workspace / "container.dex"
     snapshot.write_bytes(data)
+    from .method_backend import _execute_java
+
     paths = []
     normalized_bytes = 0
     normalization_budget = min(settings.max_apk_bytes, len(data) * 2)

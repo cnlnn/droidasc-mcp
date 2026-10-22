@@ -32,32 +32,42 @@ discover declarations across supplied files without building a full index. searc
 literal DEX string-pool values, not instruction use sites. Identical discovery and non-indexed
 reference pages reuse a bounded session cache.
 Discovery supports case_sensitive=false; search_members member_match=name matches only names.
-search_classes uses a literal value plus an optional dotted/Dalvik prefix. get_class_outline
+search_classes matches literal Dalvik or dotted names, including names returned by the manifest,
+plus an optional dotted/Dalvik prefix. It returns exact Dalvik identities for later queries.
+get_class_outline
 pages interfaces, typed fields and complete method signatures in a unified view.
 get_class_hierarchy pages superclass chains, direct interfaces, subclasses and implementors;
 external definitions and cycles are explicit. get_string_constants returns class const-string
-and jumbo use sites (not all pool strings). search_method_bodies matches decoded Baksmali
+and jumbo use sites (not all pool strings). search_method_bodies matches decoded DAD
 instruction/operand text, including registers, literals and payloads; it is not source search.
-All these operations use optional JADX 1.5.5/JDK 17+, without a full instruction index.
+Core DEX operations need neither Java nor JADX. Discovery and structural views do not
+implicitly build a full instruction index. Secret candidates and revision inventories also
+use native DEX pools/declarations, not a Java backend.
 disassemble_method returns paged structured instructions for a full exact method descriptor.
 get_class_source_metadata returns decompiler token links with Unicode code-point spans; those
 links are source-navigation metadata, not instruction xrefs. DEX 041 logical containers are
-normalized within explicit byte limits; original container hashes and header offsets survive.
+normalized with standalone dexlib2/JDK 17+ (DROIDASC_MCP_DEXLIB_HOME), never a JADX distribution,
+within explicit byte limits; original container hashes and header offsets survive.
 asc_inspect_artifact class_query/class_prefix filter first-level JVM class inventory;
 compare_to compares JVM identities only. Use asc_diff_dex_sessions for DEX identity differences.
 Read per-artifact manifest and per-session class resource templates with offset/limit; their
 JSON envelopes preserve page/provenance fields. URI query values must be percent-encoded.
 Use the returned full descriptors unchanged; never guess an overload. Exact references
-use find_method_refs/get_method_calls/find_field_refs. find_type_refs distinguishes instruction,
+use find_method_refs/get_method_calls/find_field_refs. For fuzzy owners, partial or omitted
+member names, use search_refs(kind=method/field, class_name, fuzzy_class, value,
+member_match, target_descriptor) in one pass; do not enumerate overloads and scan each separately.
+find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;
-get_call_graph builds/reuses that full index for incoming/outgoing/both multi-hop exploration.
+get_call_graph builds/reuses a call-only index for incoming/outgoing/both multi-hop exploration,
+or reuses an existing full index. Index creation time and disk usage remain explicit.
 It preserves individual call sites and reports depth/node/edge/byte truncation explicitly.
 Inspect returned nodes' unresolved dynamic sites; expand a boundary method as a new root or
 raise graph budgets within their limits. Graph limits are separate from ordinary page limits.
 The index working copy lasts until that session closes/expires or the server stops. An explicitly
 configured durable index cache can restore matching indexes across sessions and restarts;
 asc_ping reports its budget and retention, and index.durable_cache reports reuse status.
-Explicit Smali needs no Java; exact references and Java require the optional configured backend.
+source_format=auto/smali uses ASC exact-method Smali without Java. Only explicit
+source_format=java opts into the optional JADX 1.5.5/JDK 17+ compatibility backend.
 Follow has_more/next_offset before claiming complete results. Empty rows are limited to the stated
 scope, not absence of behavior. Offsets are 16-bit code units, not byte/file offsets. Runtime
 dispatch, reflection, JNI and missing/runtime-only DEX are not resolved. Decompiled text and

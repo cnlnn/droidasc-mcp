@@ -4,7 +4,7 @@ import hashlib
 import zipfile
 from contextlib import redirect_stdout
 
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 
 def query_source_metadata(settings, bundle, entry, query):

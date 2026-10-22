@@ -66,7 +66,7 @@ def edge_set(result):
 def test_graph_multidex_oracle_cycles_overloads_and_reuse(graph_service):
     service, key = graph_service
     result = graph(service, key, depth=5)
-    assert not result["index"]["reused"]
+    assert result["backend"] == "native-dex-frontier" and "index" not in result
     assert edge_set(result) == ORACLE
     assert result["node_count"] == 8 and result["edge_count"] == 9
     assert not result["truncated"] and result["traversal_complete_within_depth"]
@@ -92,7 +92,7 @@ def test_graph_multidex_oracle_cycles_overloads_and_reuse(graph_service):
     )
     assert source["status"] == "ok", source
     again = graph(service, key, depth=5)
-    assert again["index"]["reused"]
+    assert again["query_cache"]["hit"]
     assert again["edges"] == result["edges"] and again["nodes"] == result["nodes"]
 
 

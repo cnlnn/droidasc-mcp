@@ -60,6 +60,74 @@ def method_selector(dex, targets, fields, access):
     return select
 
 
+def class_selector(dex, targets, fields, access, *, callers=None):
+    try:
+        from . import _dexscan
+    except ImportError:
+        return None
+    mask = bytearray(65536)
+    for index in targets:
+        mask[index] = 1
+    mask = bytes(mask)
+    arguments = (
+        dex.version,
+        WIDTHS,
+        mask,
+        int(fields),
+        dex.tables[3][0],
+        dex.tables[4][0],
+        dex.tables[4][1],
+        dex.tables[0][0],
+        dex.tables[2][0],
+        {"all": 0, "read": 1, "write": 2}[access],
+    )
+    if callers is not None:
+        caller_mask = bytearray(65536)
+        for index in callers:
+            caller_mask[index] = 1
+        arguments += (bytes(caller_mask),)
+
+    def select(cls):
+        try:
+            return _dexscan.select_class(dex.data, cls, *arguments)
+        except ValueError as exc:
+            raise InvalidDex(str(exc)) from exc
+
+    if hasattr(_dexscan, "select_classes"):
+
+        def directory(classes):
+            try:
+                return _dexscan.select_classes(dex.data, classes, *arguments)
+            except ValueError as exc:
+                raise InvalidDex(str(exc)) from exc
+
+        select.directory = directory
+
+    return select
+
+
+def select_directory(dex, select):
+    from .native_dex import utf16_key
+
+    if (bulk := getattr(select, "directory", None)) is not None:
+        selected, *metrics = bulk(dex.classes(ordered=False))
+        selected.sort(key=lambda row: utf16_key(row[0]))
+        return selected, *metrics
+    selected, declared = [], []
+    methods = instructions = dynamic = without = 0
+    for owner, cls in dex.classes(ordered=False):
+        matches, definitions, count, decoded, unresolved, absent = select(cls)
+        methods += count
+        instructions += decoded
+        dynamic += unresolved
+        without += absent
+        declared.extend(definitions)
+        if matches:
+            selected.append((owner, matches))
+    selected.sort(key=lambda row: utf16_key(row[0]))
+    return selected, declared, methods, instructions, dynamic, without
+
+
 def scanner(dex, targets, fields, incoming, *, accelerator=True):
     if accelerator:
         try:

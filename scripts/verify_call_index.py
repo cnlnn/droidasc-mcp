@@ -11,7 +11,7 @@ import zipfile
 from contextlib import closing
 from pathlib import Path
 
-from verify_fuzzy_references import digest
+from verify_fuzzy_references import digest, method_reference_index, runtime_identity
 
 
 def site(entry, caller, callee, offset, opcode, prototype=""):
@@ -29,6 +29,9 @@ def main(args):
     from droidasc_mcp.xref_index import _unpack_edge
 
     logger.remove()
+    runtime_before = runtime_identity()
+    verifier_paths = (Path(__file__), Path(__file__).with_name("verify_fuzzy_references.py"))
+    verifier_before = {path.name: digest(path) for path in verifier_paths}
     original = digest(args.apk)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     # This is an acceptance-side oracle, not a resident runtime graph/cache.
@@ -101,11 +104,13 @@ def main(args):
                                     0x6E <= op <= 0x72 or 0x74 <= op <= 0x78 or op in {0xFA, 0xFB}
                                 ):
                                     continue
-                                owner, name, proto = dex.get_cm_method(instruction.get_ref_kind())
+                                owner, name, proto = dex.get_cm_method(
+                                    method_reference_index(instruction)
+                                )
                                 callee = owner + "->" + name + "".join("".join(proto).split())
                                 prototype = ""
                                 if op in {0xFA, 0xFB}:
-                                    proto_id = struct.unpack_from("<H", instruction.get_raw(), 6)[0]
+                                    proto_id = instruction.HHHH
                                     prototype = "".join("".join(dex.CM.get_proto(proto_id)).split())
                                 key = site(
                                     entry,
@@ -139,6 +144,11 @@ def main(args):
                 multiset.update(struct.pack("<II", len(key), count))
                 multiset.update(key)
             report = {
+                "verifier_sha256": verifier_before,
+                "verifier_unchanged": verifier_before
+                == {path.name: digest(path) for path in verifier_paths},
+                "runtime_sha256": runtime_before,
+                "runtime_unchanged": runtime_before == runtime_identity(),
                 "status": "all_persisted_call_sites_equal",
                 "apk_sha256": original,
                 "index_bytes": index.stat().st_size,
@@ -153,6 +163,8 @@ def main(args):
                 "original_unchanged": original == digest(args.apk),
             }
             assert report["original_unchanged"]
+            assert report["runtime_unchanged"], "Runtime changed during call-index parity checks"
+            assert report["verifier_unchanged"], "Verifier changed during call-index parity checks"
             args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(report), flush=True)
 

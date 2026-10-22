@@ -34,7 +34,7 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.3.0 的核心 DEX 引用、发现、结构视图及惰性索引不依赖 Java 或 JADX；可选 stable-ABI C
+0.2.3 中，核心 DEX 引用、发现、结构视图及惰性索引不依赖 Java 或 JADX；可选 stable-ABI C
 加速器保留独立 Python 回退，Smali 仍使用 ASC 官方 CLI。只有显式请求 Java 源码才使用可选
 JADX。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
 冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
@@ -51,25 +51,27 @@ JADX。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量�
 Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fixtures/android/README.md)
 验收 stdio/HTTP 全部 18 个工具及发布包安装；macOS 尚未验证。
 
-Linux 安装固定版本的 GitHub 发布包：
+0.3.0 至 0.5.0 已撤回，后续每批改动验收通过后按 0.2.x 递增发布，不回退原生实现。
+下列 0.2.3 资产仅在验收发布后可用；发布前使用保留的
+[0.2.2 发布包](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.2)，该版本不含上述原生查询增强。
+x86-64 Linux 安装固定版本的原生 wheel：
 
 ```bash
 python -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-manylinux1_x86_64.manylinux_2_5_x86_64.whl
 ```
 
 Windows（PowerShell）：
 
 ```powershell
 py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.3.0/droidasc_mcp-0.3.0-cp310-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp310-abi3-win_amd64.whl
 ```
 
-以上 wheel 面向 x86-64 CPython 3.10+；其他环境可从发布页的 `droidasc_mcp-0.3.0.tar.gz`
-构建，macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
+原生 stable-ABI wheel 支持 CPython 3.10 及以上，canonical 源码包为 `droidasc_mcp-0.2.3.tar.gz`；
+源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
-旧的 0.3.0 至 0.5.0 发布已撤回；`--force-reinstall` 确保曾安装原始 0.3.0 的用户也会替换为
-本次重新发布的代码，而不是保留同版本号的旧实现。
+`--force-reinstall` 也可将已安装的撤回版本替换为当前正式版；后续不复用已发布过的版本号。
 
 ## 接入 Codex
 
@@ -160,7 +162,7 @@ URI 授权规则，并标明权限来源。显式空权限清除继承要求；a
 
 ## 裸 DEX 分析
 
-自 v0.3.0 提供。输入为允许目录内的 1-64 个 `.dex`
+v0.2.3 提供。输入为允许目录内的 1-64 个 `.dex`
 文件路径，总大小受 `DROIDASC_MCP_MAX_APK_BYTES` 限制。不接收目录、APK、CompactDex
 或 DEX 041 容器。
 
@@ -268,8 +270,12 @@ asc_query_dex_session(session_id="...", operation="get_method_calls", method_des
 `operation="get_call_graph"` 根据完整 `method_descriptor` 探索多跳静态调用图。
 `direction=incoming|outgoing|both`，默认双向；`depth=1..5`，默认 2；
 `max_nodes=1..500`，默认 200；`max_edges=1..1000`，默认 500。
-首次调用仅构建调用关系索引，或复用已有完整索引，不额外构建字段和类型索引。
-仍有冷建库时间和磁盘成本；会话内后续调用复用索引。
+没有已有会话索引时，按有界 BFS 前沿扫描，同时完整校验指令，不再先物化整包调用点。
+该路径返回 `backend="native-dex-frontier"`，不返回 `index`；精确结果页复用由
+`query_cache.hit` 标识，不伪称创建或复用了索引。已有调用关系或完整索引仍可复用。
+显式配置持久化 xref 缓存时，保留原有调用索引构建及跨会话恢复路径。
+前沿过密时回退到原子发布的有界磁盘调用索引，不额外构建字段和类型索引。
+准备、扫描或建库成本均计入冷查询，不隐藏在就绪信号之后。
 节点保留最短跳数及定义 DEX；边保留每个独立调用点，重复调用、opcode、偏移及目标来源均保留。
 循环和递归不会无限展开，外部方法操作数也可以作为根节点。
 图内容另有 128 KiB 预算，`truncation_reasons` 分别报告深度、节点、边及输出字节边界。
@@ -396,7 +402,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.3.0.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.3.tar.gz dist/*.whl
 ```
 
 ## 许可证

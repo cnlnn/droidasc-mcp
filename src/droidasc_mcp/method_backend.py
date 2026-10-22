@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 
 def java_command(settings, workspace, source="MethodBridge.java"):

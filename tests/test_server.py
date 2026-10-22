@@ -105,6 +105,14 @@ async def test_workflow_prompts_and_resource(settings):
         }
         guide = await client.read_resource("droidasc://analysis-guide")
         assert "16-bit code units" in guide.contents[0].text
+        assert "Core DEX operations need neither Java nor JADX" in guide.contents[0].text
+        assert "search_refs" in guide.contents[0].text
+        assert "call-only index" in guide.contents[0].text
+        assert "exact references and Java require" not in guide.contents[0].text
+        tools = await client.list_tools()
+        secrets = next(tool for tool in tools.tools if tool.name == "asc_secret_candidates")
+        assert "native DEX string pools" in secrets.description
+        assert "Uses optional JADX" not in secrets.description
         result = await client.get_prompt("triage_apk", {"apk_path": '/samples/name".apk'})
         text = result.messages[0].content.text
         assert 'name\\".apk' in text and "not instructions" in text

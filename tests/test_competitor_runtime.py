@@ -1,0 +1,267 @@
+"""Receipt persistence must not contaminate MCP response and concurrent timings."""
+
+import asyncio
+import importlib.util
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+
+@pytest.fixture
+def benchmark(monkeypatch):
+    scripts = Path(__file__).resolve().parents[1] / "scripts"
+    monkeypatch.syspath_prepend(str(scripts))
+    spec = importlib.util.spec_from_file_location(
+        "matched_runtime", scripts / "benchmark_competitor_runtime.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module.psutil, "Process", lambda: SimpleNamespace(children=lambda **kw: []))
+    return module
+
+
+def test_temporary_usage_counts_regular_files_and_not_external_symlinks(benchmark, tmp_path):
+    root = tmp_path / "owned"
+    root.mkdir()
+    nested = root / "nested"
+    nested.mkdir()
+    first, second = root / "snapshot.apk", nested / "index.sqlite"
+    first.write_bytes(b"x" * 1025)
+    second.write_bytes(b"y" * 513)
+    logical, allocated, count = benchmark.temporary_usage(root)
+    assert logical == 1538 and count == 2
+    if hasattr(first.stat(), "st_blocks"):
+        assert allocated == (first.stat().st_blocks + second.stat().st_blocks) * 512
+    else:
+        assert allocated is None
+    outside = tmp_path / "external"
+    outside.mkdir()
+    (outside / "unrelated.bin").write_bytes(b"private" * 100)
+    try:
+        (root / "file-link").symlink_to(outside / "unrelated.bin")
+        (root / "directory-link").symlink_to(outside, target_is_directory=True)
+    except OSError:
+        # Windows may not grant symlink privileges; regular-file accounting above
+        # remains required rather than skipping the whole cross-platform test.
+        return
+    assert benchmark.temporary_usage(root) == (logical, allocated, count)
+
+
+@pytest.mark.parametrize("damage", [None, "missing", "changed", "extra", "absent"])
+def test_competitor_installed_sources_must_match_pinned_checkout(
+    benchmark, tmp_path, monkeypatch, damage
+):
+    checkout, installed = tmp_path / "checkout", tmp_path / "installed"
+    for root in (checkout / "asc_mcp", installed):
+        (root / "analysis").mkdir(parents=True)
+        (root / "__init__.py").write_text("", encoding="utf-8")
+        (root / "analysis" / "scan.py").write_text("value = 1\n", encoding="utf-8")
+    if damage == "missing":
+        (installed / "analysis" / "scan.py").unlink()
+    elif damage == "changed":
+        (installed / "analysis" / "scan.py").write_text("value = 2\n", encoding="utf-8")
+    elif damage == "extra":
+        (installed / "extra.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        benchmark.importlib.util,
+        "find_spec",
+        lambda _: None if damage == "absent" else SimpleNamespace(origin=installed / "__init__.py"),
+    )
+    if damage:
+        with pytest.raises(RuntimeError, match="pinned checkout|uv run --with"):
+            benchmark.competitor_runtime_identity(checkout)
+    else:
+        result = benchmark.competitor_runtime_identity(checkout)
+        assert set(result["python_sources_sha256"]) == {"__init__.py", "analysis/scan.py"}
+
+
+@pytest.mark.parametrize(
+    "field", ["total", "nodes", "truncation_reasons", "scan_errors", "instruction_scan_complete"]
+)
+def test_warm_consistency_includes_counts_nodes_truncation_and_diagnostics(benchmark, field):
+    original = {"status": "ok", "items": [], "edges": [], field: "original"}
+    changed = {**original, field: "changed"}
+    assert benchmark.query_content(original) != benchmark.query_content(changed)
+
+
+def test_warm_consistency_only_ignores_cache_lifecycle_not_index_identity(benchmark):
+    original = {"items": [], "index": {"input_id": "one", "reused": False}}
+    warm = {
+        "items": [],
+        "query_cache": {"hit": True},
+        "index": {"input_id": "one", "reused": True, "durable_cache": "restored"},
+    }
+    assert benchmark.query_content(original) == benchmark.query_content(warm)
+    warm["index"]["input_id"] = "different"
+    assert benchmark.query_content(original) != benchmark.query_content(warm)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
+@pytest.mark.parametrize("scenario", ["method", "concurrent"])
+@pytest.mark.parametrize("disk_limited", [False, True])
+async def test_full_receipt_only_saved_after_measured_responses(
+    benchmark, implementation, scenario, disk_limited, tmp_path, monkeypatch
+):
+    calls, persisted = [], []
+
+    class Client:
+        def __init__(self, endpoint):
+            self.file = Path(endpoint.env["TMPDIR"]) / "owned-snapshot.apk"
+            assert endpoint.args[-1] == ("droidasc_mcp" if implementation == "ours" else "asc_mcp")
+            assert endpoint.args[-3:-1] == ["--cpus", "0,1"]
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def call_tool(self, name, params, **kwargs):
+            await asyncio.sleep(0)
+            calls.append(name)
+            result = {"status": "ok", "items": []}
+            if name in {"load_artifact", "asc_open_artifact_session"}:
+                self.file.write_bytes(b"x" * 1025)
+                await asyncio.sleep(0.25)
+                result.update(session_id="key", analysis_id="key")
+            elif name in {"close_artifact", "asc_close_dex_session"}:
+                self.file.unlink()
+            return SimpleNamespace(is_error=False, structured_content=result)
+
+    monkeypatch.setattr(benchmark, "Client", Client)
+    if disk_limited:
+        monkeypatch.setattr(benchmark, "temporary_usage", lambda root: (2 * 1024**2, None, 1))
+    report = {"trials": []}
+    args = SimpleNamespace(
+        cpu_affinity=[0, 1],
+        workers=2,
+        apk=tmp_path / "fixture.apk",
+        timeout=5,
+        session_disk_mib=1 if disk_limited else 8192,
+        expanded_mib=128,
+        memory_mib=4096,
+        graph_root=benchmark.GRAPH_ROOT,
+        graph_depth=3,
+    )
+    close_tool = "asc_close_dex_session" if implementation == "ours" else "close_artifact"
+
+    def save():
+        assert calls[-1] == close_tool, "No full report writes within the measured path"
+        persisted.append(list(calls))
+
+    await benchmark.trial(args, implementation, scenario, 0, report, save)
+    metric = report["trials"][0]
+    assert metric["status"] == ("failed" if disk_limited else "passed"), metric
+    if disk_limited:
+        assert metric["safety_stop"] == "temporary_logical_bytes"
+    assert len(persisted) == 1
+    assert len(metric["batch_seconds"]) == 3
+    assert metric["sampled_peak_temporary_logical_bytes"] == (2 * 1024**2 if disk_limited else 1025)
+    assert metric["sampled_peak_temporary_file_count"] == 1
+    assert metric["temporary_usage_samples"] > 0
+    assert metric["temporary_usage_errors"] == 0
+    first_responses = [
+        operation["response_from_process_start_seconds"]
+        for operation in metric["operations"]
+        if operation["label"].startswith("query:0:")
+    ]
+    assert metric["first_result_from_process_start_seconds"] == max(first_responses)
+    assert (
+        metric["ready_from_process_start_seconds"]
+        == metric["operations"][0]["response_from_process_start_seconds"]
+    )
+    assert (
+        metric["first_result_from_process_start_seconds"]
+        >= metric["ready_from_process_start_seconds"]
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "condition", ["valid", "escaped", "empty", "denied", "unsupported", "exited"]
+)
+async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
+    benchmark, tmp_path, monkeypatch, condition
+):
+    state = {"inventory_calls": 0, "affinity_calls": 0, "killed": False, "closed": False}
+
+    class Child:
+        pid = 12345
+
+        def memory_info(self):
+            return SimpleNamespace(rss=0)
+
+        def cpu_affinity(self):
+            state["affinity_calls"] += 1
+            if condition == "denied":
+                raise benchmark.psutil.AccessDenied(self.pid)
+            if condition == "unsupported":
+                raise NotImplementedError("No affinity readback")
+            if condition == "exited":
+                raise benchmark.psutil.NoSuchProcess(self.pid)
+            return {"valid": [1], "escaped": [0, 2], "empty": []}[condition]
+
+        def kill(self):
+            state["killed"] = True
+
+    child = Child()
+
+    def inventory(**kwargs):
+        state["inventory_calls"] += 1
+        return [] if state["inventory_calls"] == 1 else [child]
+
+    monkeypatch.setattr(benchmark.psutil, "Process", lambda: SimpleNamespace(children=inventory))
+
+    class Client:
+        def __init__(self, endpoint):
+            pass
+
+        async def __aenter__(self):
+            assert state["affinity_calls"] == 0
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def call_tool(self, name, params, **kwargs):
+            if name == "asc_open_artifact_session":
+                # Let the actual monitor sample after the transport handshake.
+                await asyncio.sleep(0.3)
+            if state["killed"]:
+                raise RuntimeError("Owned trial process was stopped")
+            if name == "asc_close_dex_session":
+                state["closed"] = True
+            return SimpleNamespace(
+                is_error=False, structured_content={"status": "ok", "session_id": "key"}
+            )
+
+    monkeypatch.setattr(benchmark, "Client", Client)
+    args = SimpleNamespace(
+        cpu_affinity=[0, 1],
+        workers=2,
+        apk=tmp_path / "fixture.apk",
+        timeout=5,
+        session_disk_mib=8192,
+        expanded_mib=128,
+        memory_mib=4096,
+        graph_root=benchmark.GRAPH_ROOT,
+        graph_depth=3,
+    )
+    report, persisted = {"trials": []}, []
+    await benchmark.trial(args, "ours", "field", 0, report, lambda: persisted.append(True))
+    metric = report["trials"][0]
+    assert persisted == [True] and state["affinity_calls"] > 0
+    assert state["killed"], "Even successful trials must clean only their owned descendants"
+    if condition in {"valid", "exited"}:
+        assert metric["status"] == "passed" and state["closed"], metric
+        assert "safety_stop" not in metric
+        assert bool(metric["cpu_affinity_samples"]) == (condition == "valid")
+    else:
+        assert metric["status"] == "failed" and not state["closed"], metric
+        assert metric["safety_stop"] == (
+            "descendant_cpu_affinity"
+            if condition in {"escaped", "empty"}
+            else "unverifiable_cpu_affinity"
+        )

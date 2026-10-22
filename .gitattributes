@@ -1,0 +1,2 @@
+# Keep release source bytes identical in Linux and Windows checkouts.
+* text=auto eol=lf

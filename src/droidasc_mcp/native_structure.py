@@ -5,7 +5,7 @@ import struct
 from .native_dex import dex_entries, page_result, utf16_key
 from .native_index import split_types
 from .native_page import SortedPage
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 
 def method_row(descriptor, flags, code):

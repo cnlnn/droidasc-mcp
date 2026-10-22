@@ -217,6 +217,23 @@ def test_unsafe_entries_rejected_before_selection(tmp_path, name):
     assert result["code"] == "unsafe_entry" and "content" not in result
 
 
+@pytest.mark.parametrize("codepoint", range(32))
+def test_safe_name_rejects_every_c0_control(codepoint):
+    from droidasc_mcp.archive_worker import safe_name
+
+    with pytest.raises(ValueError, match="safe relative ZIP path"):
+        safe_name("resource/part" + chr(codepoint) + "end")
+
+
+@pytest.mark.parametrize(
+    "name", ["res/\u4e2d\u6587.xml", "res/\x7f\x80\uffff", "assets/a:b/", "x/\ud800"]
+)
+def test_safe_name_preserves_other_unicode_and_relative_names(name):
+    from droidasc_mcp.archive_worker import safe_name
+
+    assert safe_name(name) == name
+
+
 def test_duplicates_and_special_files(tmp_path):
     path = tmp_path / "duplicate.apk"
     with zipfile.ZipFile(path, "w") as archive:

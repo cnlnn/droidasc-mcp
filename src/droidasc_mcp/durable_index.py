@@ -9,7 +9,7 @@ import stat
 import time
 from contextlib import contextmanager
 
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 _KEY = re.compile(r"[0-9a-f]{64}")
 _MANIFEST_LIMIT = 4096

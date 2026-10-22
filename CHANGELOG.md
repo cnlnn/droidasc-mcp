@@ -1,11 +1,12 @@
 # Changelog
 
-## 0.3.0
+## 0.2.3
 
-This release consolidates the implementation formerly published as 0.5.0. The original
-0.3.0, 0.4.0, 0.4.1 and 0.5.0 releases and tags are withdrawn at the maintainer's request.
-Git commit history and historical validation evidence are retained. Packages are rebuilt
-and accepted under the 0.3.0 version; this is not a runtime rollback.
+The maintainer switched to accepted 0.2.x increments. The original 0.3.0, 0.4.0, 0.4.1
+and 0.5.0 releases and remote tags were backed up, verified and withdrawn on 2026-10-23;
+0.2.2 and earlier releases were retained. Git history and historical evidence are preserved.
+This candidate keeps the native implementation and adds bounded-frontier/preparation work;
+it is not a runtime rollback or a claim that all competitor gaps have been closed.
 
 - Move core DEX references, discovery, structure and streaming indexes to checked native
   decoding. Core queries require neither JADX nor Java; ASC remains the public Smali engine.
@@ -23,13 +24,19 @@ and accepted under the 0.3.0 version; this is not a runtime rollback.
   exact prototype/type filters, read/write selection and global pagination.
 - Add literal declaration/string discovery, class search, typed outlines, hierarchy/cycle
   diagnostics, string use sites, decoded instruction search/disassembly and source-token links.
-- Build call-only SQLite graph indexes on demand, with incoming/outgoing/both traversal,
+- Traverse bounded incoming/outgoing/both call-graph frontiers without a mandatory full
+  index, filtering incoming operands before they cross into Python. Retain call-only SQLite
+  indexes for dense-frontier fallback or explicit durable reuse, with
   bounded depth/nodes/sites/output, explicit truncation and unresolved dynamic diagnostics.
 - Allow independent immutable-session queries to run concurrently. Keep completed-page
   caching bounded without resident analysis workers; add optional hash-bound durable xref
   caching with independent budgets, process locks, checksums and TTL/LRU eviction.
 - Report actual snapshot/class-directory preparation progress while preserving integrity and
   duplicate-class validation. Keep startup and first-query costs separate in comparisons.
+- Stream and prefetch at most two DEX entries into validated immutable snapshots, with bounded
+  queues, short-lived mapped directories and disk-backed UTF-16-ordered ownership metadata.
+  Compile source/version-bound MCP schemas and defer CLI infrastructure until requested;
+  strict SDK validation and independent Python decoding remain active.
 - Add signing-container/certificate inventories with malformed/unsupported diagnostics,
   separately from cryptographic signature validity.
 - Inventory APK/JAR/ZIP/AAR/AAB/APKS/XAPK capabilities, direct DEX artifacts and first-level
@@ -47,9 +54,13 @@ and accepted under the 0.3.0 version; this is not a runtime rollback.
 - Add independent full method/field/fuzzy/call-index accuracy oracles, malformed-input,
   Unicode, payload, native/fallback and no-Java regressions, plus matched large-APK cold,
   warm, concurrent and bounded-graph comparisons. Workload-specific wins do not establish
-  universal superiority; startup-to-first-result remains slower than the measured competitor.
+  universal superiority. Verify actual inherited CPU masks despite the competitor's nested
+  pools; retain failed graph operations without inventing speedup ratios. Startup-to-first-result
+  and retained snapshot storage remain open deficits on measured workloads.
 - Require full Linux/Windows Python 3.10-3.13, clean canonical-sdist/native-wheel, independent
   signing and stability acceptance before publishing the exact successful CI artifacts.
+  Compare canonical source/data and metadata with each wheel, then verify the installed
+  package bytes against that exact wheel. Pin LF source bytes across platform checkouts.
 
 ## 0.2.2
 

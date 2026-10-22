@@ -128,6 +128,160 @@ def process_runner(settings, monkeypatch):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_complete_investigation_handoffs_without_java(
+    transport, tmp_path, smali_dex_files, review_dex_files, request, monkeypatch
+):
+    apk = tmp_path / "investigation + handoff.apk"
+    manifest = (
+        '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="fixture">'
+        '<application><activity android:name=".Caller" android:exported="true"/>'
+        "</application></manifest>"
+    )
+    with zipfile.ZipFile(apk, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("AndroidManifest.xml", manifest)
+        for i, dex in enumerate([*smali_dex_files, review_dex_files[0]]):
+            archive.writestr("classes.dex" if i == 0 else f"classes{i + 1}.dex", dex.read_bytes())
+        archive.writestr("assets/config.txt", b"fixture-only\n")
+        archive.writestr("lib/arm64-v8a/libfixture.so", b"not-executable-fixture")
+    original_hash = hashlib.sha256(apk.read_bytes()).hexdigest()
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_JAVA", "java-must-not-run")
+    monkeypatch.delenv("DROIDASC_MCP_JADX_HOME", raising=False)
+    monkeypatch.delenv("DROIDASC_MCP_DEXLIB_HOME", raising=False)
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+
+        async def call(tool, **args):
+            reply = await client.call_tool(tool, args)
+            assert not reply.is_error, reply
+            result = reply.structured_content
+            assert result["status"] == "ok", result
+            return result
+
+        capabilities = await call("asc_inspect_artifact", artifact_path=str(apk))
+        assert capabilities["dex_analysis"] and not capabilities["jvm_decompilation"]
+        triage = await client.get_prompt("triage_apk", {"apk_path": str(apk)})
+        assert "Core DEX operations need neither Java nor JADX" in triage.messages[0].content.text
+        summary = await call("asc_manifest_summary", apk_path=str(apk))
+        assert summary["apk_sha256"] == original_hash
+        component = summary["items"][0]["name"]
+        key = (await call("asc_open_artifact_session", artifact_path=str(apk)))["session_id"]
+
+        async def query(operation, **args):
+            return await call("asc_query_dex_session", session_id=key, operation=operation, **args)
+
+        async def pages(operation, **args):
+            rows, offset = [], 0
+            while True:
+                page = await query(operation, offset=offset, limit=1, **args)
+                rows += page["items"]
+                if not page["has_more"]:
+                    assert len(rows) == page["total"]
+                    return rows
+                assert page["next_offset"] > offset
+                offset = page["next_offset"]
+
+        try:
+            classes = await pages("search_classes", value=component, case_sensitive=False)
+            owner = classes[0]["class_name"]
+            outline = await pages("get_class_outline", class_name=owner)
+            method = next(row["descriptor"] for row in outline if row.get("name") == "run")
+            trace = await client.get_prompt(
+                "trace_exact_method", {"session_id": key, "method_descriptor": method}
+            )
+            assert method in trace.messages[0].content.text
+            disassembly = await pages("disassemble_method", method_descriptor=method)
+            assert len(disassembly) == 6
+            source = await query("get_method_source", method_descriptor=method)
+            assert source["format"] == "smali"
+            outgoing = await pages("get_method_calls", method_descriptor=method)
+            assert len(outgoing) == 3
+            target = next(row["callee"] for row in outgoing if "->pick(I)" in row["callee"])
+            incoming = await pages("find_method_refs", method_descriptor=target)
+            assert any(row["caller"] == method for row in incoming)
+            fuzzy = await pages(
+                "search_refs",
+                kind="method",
+                class_name=target.split(";", 1)[0] + ";",
+                value="pick",
+                target_descriptor="(I)V",
+                member_match="exact_name",
+            )
+            assert fuzzy == incoming
+            fields = await pages("search_members", kind="field", value="value", member_match="name")
+            field = next(row["descriptor"] for row in fields if row["descriptor"].endswith(":I"))
+            assert len(await pages("find_field_refs", field_descriptor=field)) == 2
+            constants = await pages("get_string_constants", class_name=owner)
+            value = constants[0]["value"]
+            assert (await query("search_strings", value=value))["total"] > 0
+            assert (await query("find_refs", kind="string", value=re.escape(value)))["total"] > 0
+            assert (await query("search_method_bodies", value="const/4"))["total"] > 0
+            assert (await query("get_class_hierarchy", class_name=owner))["items"]
+            graph = await query("get_call_graph", method_descriptor=method, depth=3, max_edges=1)
+            assert graph["edge_count"] == 1 and "max_edges" in graph["truncation_reasons"]
+            expanded = await query("get_call_graph", method_descriptor=method, depth=3)
+            assert not expanded["truncated"] and expanded["backend"] == "native-dex-frontier"
+            uri = f"droidasc://session/{key}/class?" + urlencode(
+                {"class_name": owner, "limit": 1}, quote_via=quote
+            )
+            resource = json.loads((await client.read_resource(uri)).contents[0].text)
+            assert resource["has_more"] and resource["input_id"] == expanded["input_id"]
+            manifest_uri = "droidasc://artifact/manifest?" + urlencode(
+                {"apk_path": str(apk)}, quote_via=quote
+            )
+            resource = json.loads((await client.read_resource(manifest_uri)).contents[0].text)
+            assert resource["apk_sha256"] == original_hash
+            native = await call("asc_list_apk_entries", apk_path=str(apk), kind="native")
+            assert native["items"][0]["abi"] == "arm64-v8a"
+            content = await call(
+                "asc_read_apk_entry", apk_path=str(apk), entry_path="assets/config.txt"
+            )
+            assert content["apk_sha256"] == original_hash
+            signing = await call("asc_signing_inventory", apk_path=str(apk))
+            assert signing["cryptographic_verification"] == "not_performed"
+            secrets = await call("asc_secret_candidates", session_id=key)
+            assert secrets["total"] == 3 and all("value" not in row for row in secrets["items"])
+            missing = await client.call_tool(
+                "asc_query_dex_session",
+                {
+                    "session_id": key,
+                    "operation": "disassemble_method",
+                    "method_descriptor": owner + "->absent()V",
+                },
+            )
+            assert missing.structured_content["code"] == "method_not_found"
+            assert (await query("get_method_calls", method_descriptor=method))["total"] == 3
+            other = await call("asc_open_artifact_session", artifact_path=str(apk))
+            try:
+                compared = await call(
+                    "asc_diff_dex_sessions", old_session_id=key, new_session_id=other["session_id"]
+                )
+                assert compared["total"] == 0
+                prompt = await client.get_prompt(
+                    "compare_versions",
+                    {"old_session_id": key, "new_session_id": other["session_id"]},
+                )
+                assert "Unchanged identifiers" in prompt.messages[0].content.text
+            finally:
+                await call("asc_close_dex_session", session_id=other["session_id"])
+        finally:
+            await call("asc_close_dex_session", session_id=key)
+        closed = json.loads((await client.read_resource(uri)).contents[0].text)
+        assert closed["code"] == "session_not_found"
+        assert (await call("asc_ping"))["dex_sessions"]["open_count"] == 0
+    assert hashlib.sha256(apk.read_bytes()).hexdigest() == original_hash
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_remaining_reverse_workflow_over_transport(
     transport, tmp_path, review_dex_files, request, monkeypatch
 ):
@@ -513,7 +667,7 @@ async def test_bounded_call_graph_transport(
         assert result["input_id"] == opened["input_id"]
         assert result["sources"] == opened["sources"]
         again = await call("asc_query_dex_session", session_id=key, **args)
-        assert again["index"]["reused"] and result["edges"] == again["edges"]
+        assert again["query_cache"]["hit"] and result["edges"] == again["edges"]
         bounded = await call("asc_query_dex_session", session_id=key, max_edges=1, **args)
         assert bounded["edge_count"] == 1
         assert bounded["truncation_reasons"] == ["max_edges"]
@@ -1839,6 +1993,7 @@ async def test_durable_index_server_restart(transport, tmp_path, smali_dex_files
 async def test_persistent_index_transport(
     transport, tmp_path, smali_dex_files, request, monkeypatch
 ):
+    monkeypatch.delenv("DROIDASC_MCP_XREF_CACHE_DIR", raising=False)
     paths = [str(shutil.copy(p, tmp_path)) for p in smali_dex_files]
     hashes = [hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths]
     monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
@@ -1930,7 +2085,28 @@ async def test_persistent_index_transport(
             limit=2,
         )
         assert annotation["total"] == 5 and annotation["has_more"]
-        assert annotation["index"]["reused"] is False
+        # A complete atomic publication may beat cancellation of this tiny fixture.
+        # Reuse is valid only for that complete index; verify fresh-build semantics
+        # independently rather than assuming the cancellation won the race.
+        assert type(annotation["index"]["reused"]) is bool
+        fresh = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        fresh_key = fresh.structured_content["session_id"]
+        fresh_annotation = await client.call_tool(
+            "asc_query_dex_session",
+            {
+                "session_id": fresh_key,
+                "operation": "find_type_refs",
+                "type_descriptor": "Lfixture/Target;",
+                "type_relation": "annotation",
+                "limit": 2,
+            },
+        )
+        assert not fresh_annotation.is_error
+        fresh_result = fresh_annotation.structured_content
+        assert fresh_result["status"] == "ok" and fresh_result["total"] == 5
+        assert fresh_result["items"] == annotation["items"]
+        assert fresh_result["index"]["reused"] is False
+        await client.call_tool("asc_close_dex_session", {"session_id": fresh_key})
         assert (await query("build_xref_index"))["index"]["reused"] is True
         discovered = await query("search_members", kind="method", value="->pick(", limit=1)
         assert discovered["total"] == 2 and discovered["next_offset"] == 1

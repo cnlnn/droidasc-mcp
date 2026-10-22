@@ -1,0 +1,3330 @@
+{
+  "schema": 1,
+  "contracts_sha256": "a29aa1e618085590723989afdbab4a3a4d98687db09bed52c9118e21f76cbeae",
+  "pydantic_version": "2.13.5",
+  "schemas_sha256": "652de42399f7c03eeb8e033a13fbdd98c7813d4105c92e58959cb49643ef2f70",
+  "schemas": {
+    "ApkInfoResult": {
+      "additionalProperties": true,
+      "properties": {
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "size_bytes": {
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "dex_entries": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dex Entries",
+          "type": "array"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "apk_path",
+        "size_bytes",
+        "dex_entries",
+        "has_manifest"
+      ],
+      "title": "ApkInfoResult",
+      "type": "object"
+    },
+    "ArchiveResult": {
+      "$defs": {
+        "Entry": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "compressed_size_bytes": {
+              "title": "Compressed Size Bytes",
+              "type": "integer"
+            },
+            "crc32": {
+              "title": "Crc32",
+              "type": "string"
+            },
+            "encrypted": {
+              "title": "Encrypted",
+              "type": "boolean"
+            },
+            "abi": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Abi"
+            }
+          },
+          "required": [
+            "path",
+            "kind",
+            "size_bytes"
+          ],
+          "title": "Entry",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/Entry"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "entry": {
+          "$ref": "#/$defs/Entry"
+        },
+        "entry_path": {
+          "title": "Entry Path",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "encoding": {
+          "enum": [
+            "utf-8",
+            "base64"
+          ],
+          "title": "Encoding",
+          "type": "string"
+        },
+        "returned_bytes": {
+          "title": "Returned Bytes",
+          "type": "integer"
+        },
+        "byte_offset": {
+          "title": "Byte Offset",
+          "type": "integer"
+        },
+        "next_byte_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Byte Offset"
+        },
+        "content_complete": {
+          "title": "Content Complete",
+          "type": "boolean"
+        },
+        "crc_verified": {
+          "title": "Crc Verified",
+          "type": "boolean"
+        },
+        "decoded": {
+          "title": "Decoded",
+          "type": "boolean"
+        },
+        "decoding_status": {
+          "title": "Decoding Status",
+          "type": "string"
+        },
+        "decoding_warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decoding Warnings",
+          "type": "array"
+        },
+        "xml_format": {
+          "title": "Xml Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ArchiveResult",
+      "type": "object"
+    },
+    "ArtifactResult": {
+      "$defs": {
+        "ArtifactDifference": {
+          "additionalProperties": true,
+          "properties": {
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "change": {
+              "enum": [
+                "added",
+                "removed"
+              ],
+              "title": "Change",
+              "type": "string"
+            }
+          },
+          "required": [
+            "class_name",
+            "change"
+          ],
+          "title": "ArtifactDifference",
+          "type": "object"
+        },
+        "Entry": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "compressed_size_bytes": {
+              "title": "Compressed Size Bytes",
+              "type": "integer"
+            },
+            "crc32": {
+              "title": "Crc32",
+              "type": "string"
+            },
+            "encrypted": {
+              "title": "Encrypted",
+              "type": "boolean"
+            },
+            "abi": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Abi"
+            }
+          },
+          "required": [
+            "path",
+            "kind",
+            "size_bytes"
+          ],
+          "title": "Entry",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "artifact_kind": {
+          "enum": [
+            "apk",
+            "jar",
+            "aar",
+            "aab",
+            "apks",
+            "xapk",
+            "zip"
+          ],
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "selected_module": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Selected Module"
+        },
+        "modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Modules",
+          "type": "array"
+        },
+        "dex_entries": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dex Entries",
+          "type": "array"
+        },
+        "jvm_class_count": {
+          "title": "Jvm Class Count",
+          "type": "integer"
+        },
+        "nested_apk_count": {
+          "title": "Nested Apk Count",
+          "type": "integer"
+        },
+        "dex_analysis": {
+          "title": "Dex Analysis",
+          "type": "boolean"
+        },
+        "jvm_decompilation": {
+          "title": "Jvm Decompilation",
+          "type": "boolean"
+        },
+        "split_reconstruction": {
+          "title": "Split Reconstruction",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/Entry"
+              },
+              {
+                "$ref": "#/$defs/ArtifactDifference"
+              }
+            ]
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ArtifactResult",
+      "type": "object"
+    },
+    "DexResult": {
+      "$defs": {
+        "DexRow": {
+          "additionalProperties": true,
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "instruction": {
+              "title": "Instruction",
+              "type": "string"
+            },
+            "dispatch_kind": {
+              "title": "Dispatch Kind",
+              "type": "string"
+            },
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "callee": {
+              "title": "Callee",
+              "type": "string"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "type_descriptor": {
+              "title": "Type Descriptor",
+              "type": "string"
+            },
+            "field_descriptor": {
+              "title": "Field Descriptor",
+              "type": "string"
+            },
+            "instruction_offset": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instruction Offset"
+            },
+            "offset_unit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset Unit"
+            },
+            "opcode": {
+              "title": "Opcode",
+              "type": "string"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            },
+            "detail": {
+              "title": "Detail",
+              "type": "string"
+            },
+            "access": {
+              "enum": [
+                "read",
+                "write"
+              ],
+              "title": "Access",
+              "type": "string"
+            },
+            "storage": {
+              "enum": [
+                "static",
+                "instance"
+              ],
+              "title": "Storage",
+              "type": "string"
+            },
+            "target_resolution": {
+              "title": "Target Resolution",
+              "type": "string"
+            },
+            "target_dex_entry": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Dex Entry"
+            },
+            "parameter_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Parameter Types",
+              "type": "array"
+            },
+            "return_type": {
+              "title": "Return Type",
+              "type": "string"
+            },
+            "access_flags": {
+              "title": "Access Flags",
+              "type": "integer"
+            },
+            "has_code": {
+              "title": "Has Code",
+              "type": "boolean"
+            },
+            "string_index": {
+              "title": "String Index",
+              "type": "integer"
+            },
+            "string": {
+              "title": "String",
+              "type": "string"
+            },
+            "raw": {
+              "title": "Raw",
+              "type": "string"
+            },
+            "method": {
+              "title": "Method",
+              "type": "string"
+            },
+            "matched": {
+              "title": "Matched",
+              "type": "string"
+            },
+            "dex": {
+              "title": "Dex",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            },
+            "call_site_prototype": {
+              "title": "Call Site Prototype",
+              "type": "string"
+            }
+          },
+          "title": "DexRow",
+          "type": "object"
+        },
+        "GraphNode": {
+          "additionalProperties": true,
+          "properties": {
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "depth": {
+              "title": "Depth",
+              "type": "integer"
+            },
+            "definition_resolution": {
+              "title": "Definition Resolution",
+              "type": "string"
+            },
+            "dex_entry": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dex Entry"
+            },
+            "without_code": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Without Code"
+            },
+            "expansion_status": {
+              "title": "Expansion Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "method_descriptor",
+            "depth",
+            "definition_resolution",
+            "dex_entry",
+            "without_code",
+            "expansion_status"
+          ],
+          "title": "GraphNode",
+          "type": "object"
+        },
+        "Index": {
+          "additionalProperties": true,
+          "properties": {
+            "schema": {
+              "title": "Schema",
+              "type": "string"
+            },
+            "input_id": {
+              "title": "Input Id",
+              "type": "string"
+            },
+            "backend_id": {
+              "title": "Backend Id",
+              "type": "string"
+            },
+            "reused": {
+              "title": "Reused",
+              "type": "boolean"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            },
+            "persistence": {
+              "title": "Persistence",
+              "type": "string"
+            },
+            "durable_cache": {
+              "title": "Durable Cache",
+              "type": "string"
+            },
+            "format": {
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "input_id",
+            "backend_id",
+            "reused",
+            "stored_bytes"
+          ],
+          "title": "Index",
+          "type": "object"
+        },
+        "QueryCache": {
+          "additionalProperties": true,
+          "properties": {
+            "hit": {
+              "title": "Hit",
+              "type": "boolean"
+            },
+            "stored": {
+              "title": "Stored",
+              "type": "boolean"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          "required": [
+            "hit",
+            "scope"
+          ],
+          "title": "QueryCache",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        },
+        "SourceReference": {
+          "additionalProperties": true,
+          "properties": {
+            "start": {
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "title": "End",
+              "type": "integer"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "declaring_class": {
+              "title": "Declaring Class",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "declaration": {
+              "title": "Declaration",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "start",
+            "end",
+            "kind"
+          ],
+          "title": "SourceReference",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "member_references": {
+          "items": {
+            "$ref": "#/$defs/SourceReference"
+          },
+          "title": "Member References",
+          "type": "array"
+        },
+        "source_sha256": {
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "source_start": {
+          "title": "Source Start",
+          "type": "integer"
+        },
+        "source_end": {
+          "title": "Source End",
+          "type": "integer"
+        },
+        "span_unit": {
+          "title": "Span Unit",
+          "type": "string"
+        },
+        "superclass": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Superclass"
+        },
+        "access_flags": {
+          "title": "Access Flags",
+          "type": "integer"
+        },
+        "field_count": {
+          "title": "Field Count",
+          "type": "integer"
+        },
+        "method_count": {
+          "title": "Method Count",
+          "type": "integer"
+        },
+        "hierarchy_cycle_detected": {
+          "title": "Hierarchy Cycle Detected",
+          "type": "boolean"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "java",
+            "smali",
+            "cli-text-best-effort"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "method_descriptor": {
+          "title": "Method Descriptor",
+          "type": "string"
+        },
+        "field_descriptor": {
+          "title": "Field Descriptor",
+          "type": "string"
+        },
+        "type_descriptor": {
+          "title": "Type Descriptor",
+          "type": "string"
+        },
+        "dex_entry": {
+          "title": "Dex Entry",
+          "type": "string"
+        },
+        "scanned_methods": {
+          "title": "Scanned Methods",
+          "type": "integer"
+        },
+        "scanned_instructions": {
+          "title": "Scanned Instructions",
+          "type": "integer"
+        },
+        "methods_without_code": {
+          "title": "Methods Without Code",
+          "type": "integer"
+        },
+        "scan_errors": {
+          "title": "Scan Errors",
+          "type": "integer"
+        },
+        "unresolved_matches": {
+          "title": "Unresolved Matches",
+          "type": "integer"
+        },
+        "dynamic_sites": {
+          "title": "Dynamic Sites",
+          "type": "integer"
+        },
+        "unresolved_sites": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Unresolved Sites",
+          "type": "array"
+        },
+        "unresolved_sites_truncated": {
+          "title": "Unresolved Sites Truncated",
+          "type": "boolean"
+        },
+        "instruction_scan_complete": {
+          "title": "Instruction Scan Complete",
+          "type": "boolean"
+        },
+        "runtime_target_resolution": {
+          "title": "Runtime Target Resolution",
+          "type": "string"
+        },
+        "reference_semantics": {
+          "title": "Reference Semantics",
+          "type": "string"
+        },
+        "index": {
+          "$ref": "#/$defs/Index"
+        },
+        "query_cache": {
+          "$ref": "#/$defs/QueryCache"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/GraphNode"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "node_count": {
+          "title": "Node Count",
+          "type": "integer"
+        },
+        "edge_count": {
+          "title": "Edge Count",
+          "type": "integer"
+        },
+        "depth": {
+          "title": "Depth",
+          "type": "integer"
+        },
+        "max_nodes": {
+          "title": "Max Nodes",
+          "type": "integer"
+        },
+        "max_edges": {
+          "title": "Max Edges",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "incoming",
+            "outgoing",
+            "both"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "truncation_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Truncation Reasons",
+          "type": "array"
+        },
+        "traversal_complete_within_depth": {
+          "title": "Traversal Complete Within Depth",
+          "type": "boolean"
+        },
+        "edge_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Edge Counts",
+          "type": "object"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "cleanup_pending": {
+          "title": "Cleanup Pending",
+          "type": "boolean"
+        },
+        "stored_bytes": {
+          "title": "Stored Bytes",
+          "type": "integer"
+        },
+        "reserved_index_bytes": {
+          "title": "Reserved Index Bytes",
+          "type": "integer"
+        },
+        "idle_ttl_seconds": {
+          "title": "Idle Ttl Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexResult",
+      "type": "object"
+    },
+    "DiffResult": {
+      "$defs": {
+        "DiffRow": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "enum": [
+                "class",
+                "method",
+                "field"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "change": {
+              "enum": [
+                "added",
+                "removed"
+              ],
+              "title": "Change",
+              "type": "string"
+            },
+            "old_dex_entry": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Old Dex Entry"
+            },
+            "new_dex_entry": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "New Dex Entry"
+            }
+          },
+          "required": [
+            "kind",
+            "descriptor",
+            "change",
+            "old_dex_entry",
+            "new_dex_entry"
+          ],
+          "title": "DiffRow",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "old_session_id": {
+          "title": "Old Session Id",
+          "type": "string"
+        },
+        "new_session_id": {
+          "title": "New Session Id",
+          "type": "string"
+        },
+        "old_input_id": {
+          "title": "Old Input Id",
+          "type": "string"
+        },
+        "new_input_id": {
+          "title": "New Input Id",
+          "type": "string"
+        },
+        "old_sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Old Sources",
+          "type": "array"
+        },
+        "new_sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "New Sources",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DiffRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "scope": {
+          "title": "Scope",
+          "type": "string"
+        },
+        "behavior_comparison": {
+          "title": "Behavior Comparison",
+          "type": "string"
+        },
+        "declaration_attributes_comparison": {
+          "title": "Declaration Attributes Comparison",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DiffResult",
+      "type": "object"
+    },
+    "LegacyResult": {
+      "$defs": {
+        "DexRow": {
+          "additionalProperties": true,
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "instruction": {
+              "title": "Instruction",
+              "type": "string"
+            },
+            "dispatch_kind": {
+              "title": "Dispatch Kind",
+              "type": "string"
+            },
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "callee": {
+              "title": "Callee",
+              "type": "string"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "type_descriptor": {
+              "title": "Type Descriptor",
+              "type": "string"
+            },
+            "field_descriptor": {
+              "title": "Field Descriptor",
+              "type": "string"
+            },
+            "instruction_offset": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Instruction Offset"
+            },
+            "offset_unit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Offset Unit"
+            },
+            "opcode": {
+              "title": "Opcode",
+              "type": "string"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            },
+            "detail": {
+              "title": "Detail",
+              "type": "string"
+            },
+            "access": {
+              "enum": [
+                "read",
+                "write"
+              ],
+              "title": "Access",
+              "type": "string"
+            },
+            "storage": {
+              "enum": [
+                "static",
+                "instance"
+              ],
+              "title": "Storage",
+              "type": "string"
+            },
+            "target_resolution": {
+              "title": "Target Resolution",
+              "type": "string"
+            },
+            "target_dex_entry": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Dex Entry"
+            },
+            "parameter_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Parameter Types",
+              "type": "array"
+            },
+            "return_type": {
+              "title": "Return Type",
+              "type": "string"
+            },
+            "access_flags": {
+              "title": "Access Flags",
+              "type": "integer"
+            },
+            "has_code": {
+              "title": "Has Code",
+              "type": "boolean"
+            },
+            "string_index": {
+              "title": "String Index",
+              "type": "integer"
+            },
+            "string": {
+              "title": "String",
+              "type": "string"
+            },
+            "raw": {
+              "title": "Raw",
+              "type": "string"
+            },
+            "method": {
+              "title": "Method",
+              "type": "string"
+            },
+            "matched": {
+              "title": "Matched",
+              "type": "string"
+            },
+            "dex": {
+              "title": "Dex",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            },
+            "call_site_prototype": {
+              "title": "Call Site Prototype",
+              "type": "string"
+            }
+          },
+          "title": "DexRow",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/DexRow"
+              }
+            ]
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "xml": {
+          "title": "Xml",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "title": "LegacyResult",
+      "type": "object"
+    },
+    "ManifestResult": {
+      "$defs": {
+        "Component": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            },
+            "target_activity": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Activity"
+            },
+            "declarations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Declarations",
+              "type": "object"
+            },
+            "exported": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exported"
+            },
+            "exported_status": {
+              "title": "Exported Status",
+              "type": "string"
+            },
+            "enabled": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Enabled"
+            },
+            "effective_enabled": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Effective Enabled"
+            },
+            "effective_permission": {
+              "$ref": "#/$defs/Permission"
+            },
+            "effective_read_permission": {
+              "$ref": "#/$defs/Permission"
+            },
+            "effective_write_permission": {
+              "$ref": "#/$defs/Permission"
+            },
+            "intent_filters": {
+              "items": {
+                "$ref": "#/$defs/IntentFilter"
+              },
+              "title": "Intent Filters",
+              "type": "array"
+            },
+            "metadata": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Metadata",
+              "type": "array"
+            },
+            "path_permissions": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Path Permissions",
+              "type": "array"
+            },
+            "grant_uri_permissions": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Grant Uri Permissions",
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "title": "Component",
+          "type": "object"
+        },
+        "Entry": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "compressed_size_bytes": {
+              "title": "Compressed Size Bytes",
+              "type": "integer"
+            },
+            "crc32": {
+              "title": "Crc32",
+              "type": "string"
+            },
+            "encrypted": {
+              "title": "Encrypted",
+              "type": "boolean"
+            },
+            "abi": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Abi"
+            }
+          },
+          "required": [
+            "path",
+            "kind",
+            "size_bytes"
+          ],
+          "title": "Entry",
+          "type": "object"
+        },
+        "IntentFilter": {
+          "additionalProperties": true,
+          "properties": {
+            "declarations": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "title": "Declarations",
+              "type": "object"
+            },
+            "actions": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Actions",
+              "type": "array"
+            },
+            "categories": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Categories",
+              "type": "array"
+            },
+            "data": {
+              "items": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "title": "Data",
+              "type": "array"
+            }
+          },
+          "title": "IntentFilter",
+          "type": "object"
+        },
+        "Permission": {
+          "additionalProperties": true,
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Value"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "resolved": {
+              "title": "Resolved",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "value",
+            "source",
+            "resolved"
+          ],
+          "title": "Permission",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/Component"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "entry": {
+          "$ref": "#/$defs/Entry"
+        },
+        "package_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Package Name"
+        },
+        "declarations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Declarations",
+          "type": "object"
+        },
+        "sdk": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Sdk",
+          "type": "object"
+        },
+        "application": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Application",
+          "type": "object"
+        },
+        "declared_permissions": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Declared Permissions",
+          "type": "array"
+        },
+        "application_metadata": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Application Metadata",
+          "type": "array"
+        },
+        "resource_values_resolved": {
+          "title": "Resource Values Resolved",
+          "type": "boolean"
+        },
+        "exported_defaults_resolved": {
+          "title": "Exported Defaults Resolved",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ManifestResult",
+      "type": "object"
+    },
+    "PingResult": {
+      "$defs": {
+        "ArtifactInputs": {
+          "additionalProperties": true,
+          "properties": {
+            "dex_sessions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Dex Sessions",
+              "type": "array"
+            },
+            "inventory_only": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Inventory Only",
+              "type": "array"
+            },
+            "direct_dex_paths": {
+              "title": "Direct Dex Paths",
+              "type": "string"
+            },
+            "signing": {
+              "title": "Signing",
+              "type": "string"
+            },
+            "v31": {
+              "title": "V31",
+              "type": "string"
+            },
+            "revision_diff": {
+              "title": "Revision Diff",
+              "type": "string"
+            },
+            "secret_candidates": {
+              "title": "Secret Candidates",
+              "type": "string"
+            }
+          },
+          "title": "ArtifactInputs",
+          "type": "object"
+        },
+        "Capabilities": {
+          "additionalProperties": true,
+          "properties": {
+            "configured": {
+              "title": "Configured",
+              "type": "boolean"
+            },
+            "enabled": {
+              "title": "Enabled",
+              "type": "boolean"
+            },
+            "operations": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Operations",
+              "type": "array"
+            },
+            "reference_kinds": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Reference Kinds",
+              "type": "array"
+            },
+            "default": {
+              "type": "boolean",
+              "title": "Default"
+            },
+            "limitation": {
+              "title": "Limitation",
+              "type": "string"
+            },
+            "tested_commit": {
+              "title": "Tested Commit",
+              "type": "string"
+            },
+            "max_count": {
+              "title": "Max Count",
+              "type": "integer"
+            },
+            "idle_ttl_seconds": {
+              "title": "Idle Ttl Seconds",
+              "type": "integer"
+            },
+            "max_disk_bytes": {
+              "title": "Max Disk Bytes",
+              "type": "integer"
+            },
+            "max_index_bytes_per_session": {
+              "title": "Max Index Bytes Per Session",
+              "type": "integer"
+            },
+            "memory_page_cache_bytes_per_session": {
+              "title": "Memory Page Cache Bytes Per Session",
+              "type": "integer"
+            },
+            "memory_page_cache_max_entries": {
+              "title": "Memory Page Cache Max Entries",
+              "type": "integer"
+            },
+            "durable_index_cache": {
+              "$ref": "#/$defs/Capabilities"
+            },
+            "max_bytes": {
+              "title": "Max Bytes",
+              "type": "integer"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          "title": "Capabilities",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "server": {
+          "title": "Server",
+          "type": "string"
+        },
+        "server_version": {
+          "title": "Server Version",
+          "type": "string"
+        },
+        "droidasc_version": {
+          "title": "Droidasc Version",
+          "type": "string"
+        },
+        "allowed_roots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Roots",
+          "type": "array"
+        },
+        "timeout_seconds": {
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "max_worker_memory_bytes": {
+          "title": "Max Worker Memory Bytes",
+          "type": "integer"
+        },
+        "max_page_size": {
+          "title": "Max Page Size",
+          "type": "integer"
+        },
+        "artifact_inputs": {
+          "$ref": "#/$defs/ArtifactInputs"
+        },
+        "rust_backend": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "method_backend": {
+          "$ref": "#/$defs/Capabilities"
+        },
+        "dex_sessions": {
+          "$ref": "#/$defs/Capabilities"
+        }
+      },
+      "required": [
+        "status",
+        "server",
+        "server_version",
+        "droidasc_version",
+        "allowed_roots",
+        "timeout_seconds",
+        "max_worker_memory_bytes",
+        "max_page_size",
+        "artifact_inputs",
+        "rust_backend",
+        "method_backend",
+        "dex_sessions"
+      ],
+      "title": "PingResult",
+      "type": "object"
+    },
+    "SecretResult": {
+      "$defs": {
+        "SecretRow": {
+          "additionalProperties": true,
+          "properties": {
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "pattern": {
+              "title": "Pattern",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "string_index": {
+              "title": "String Index",
+              "type": "integer"
+            },
+            "candidate_sha256": {
+              "title": "Candidate Sha256",
+              "type": "string"
+            },
+            "redacted": {
+              "title": "Redacted",
+              "type": "string"
+            },
+            "utf16_offset": {
+              "title": "Utf16 Offset",
+              "type": "integer"
+            },
+            "length_utf16": {
+              "title": "Length Utf16",
+              "type": "integer"
+            },
+            "confidence": {
+              "title": "Confidence",
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern",
+            "dex_entry",
+            "string_index"
+          ],
+          "title": "SecretRow",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "values_included": {
+          "title": "Values Included",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/SecretRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "scanned_strings": {
+          "title": "Scanned Strings",
+          "type": "integer"
+        },
+        "scanned_utf8_bytes": {
+          "title": "Scanned Utf8 Bytes",
+          "type": "integer"
+        },
+        "skipped_oversize_strings": {
+          "title": "Skipped Oversize Strings",
+          "type": "integer"
+        },
+        "capped_pattern_string_pairs": {
+          "title": "Capped Pattern String Pairs",
+          "type": "integer"
+        },
+        "coverage_complete": {
+          "title": "Coverage Complete",
+          "type": "boolean"
+        },
+        "credential_validity": {
+          "title": "Credential Validity",
+          "type": "string"
+        },
+        "instruction_use_sites": {
+          "title": "Instruction Use Sites",
+          "type": "string"
+        },
+        "pattern_version": {
+          "title": "Pattern Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "SecretResult",
+      "type": "object"
+    },
+    "SigningResult": {
+      "$defs": {
+        "Certificate": {
+          "additionalProperties": true,
+          "properties": {
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "sha1": {
+              "title": "Sha1",
+              "type": "string"
+            },
+            "subject": {
+              "title": "Subject",
+              "type": "string"
+            },
+            "issuer": {
+              "title": "Issuer",
+              "type": "string"
+            },
+            "serial_hex": {
+              "title": "Serial Hex",
+              "type": "string"
+            },
+            "not_before_utc": {
+              "title": "Not Before Utc",
+              "type": "string"
+            },
+            "not_after_utc": {
+              "title": "Not After Utc",
+              "type": "string"
+            },
+            "public_key_algorithm": {
+              "title": "Public Key Algorithm",
+              "type": "string"
+            },
+            "public_key_bits": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Public Key Bits"
+            },
+            "public_key_sha256": {
+              "title": "Public Key Sha256",
+              "type": "string"
+            },
+            "certificate_signature_oid": {
+              "title": "Certificate Signature Oid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "sha256",
+            "sha1",
+            "subject",
+            "issuer"
+          ],
+          "title": "Certificate",
+          "type": "object"
+        },
+        "Diagnostic": {
+          "additionalProperties": true,
+          "properties": {
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "message": {
+              "title": "Message",
+              "type": "string"
+            },
+            "scheme": {
+              "title": "Scheme",
+              "type": "string"
+            },
+            "entry": {
+              "title": "Entry",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "title": "Diagnostic",
+          "type": "object"
+        },
+        "Signer": {
+          "additionalProperties": true,
+          "properties": {
+            "signer_index": {
+              "title": "Signer Index",
+              "type": "integer"
+            },
+            "certificates": {
+              "items": {
+                "$ref": "#/$defs/Certificate"
+              },
+              "title": "Certificates",
+              "type": "array"
+            },
+            "certificate_order": {
+              "title": "Certificate Order",
+              "type": "string"
+            },
+            "attribute_ids": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Attribute Ids",
+              "type": "array"
+            },
+            "rotation_lineage": {
+              "title": "Rotation Lineage",
+              "type": "string"
+            },
+            "min_sdk": {
+              "title": "Min Sdk",
+              "type": "integer"
+            },
+            "max_sdk": {
+              "title": "Max Sdk",
+              "type": "integer"
+            },
+            "entry": {
+              "title": "Entry",
+              "type": "string"
+            }
+          },
+          "required": [
+            "certificates"
+          ],
+          "title": "Signer",
+          "type": "object"
+        },
+        "SigningScheme": {
+          "additionalProperties": true,
+          "properties": {
+            "scheme": {
+              "enum": [
+                "v1",
+                "v2",
+                "v3",
+                "v3.1"
+              ],
+              "title": "Scheme",
+              "type": "string"
+            },
+            "container_present": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Container Present"
+            },
+            "signers": {
+              "items": {
+                "$ref": "#/$defs/Signer"
+              },
+              "title": "Signers",
+              "type": "array"
+            },
+            "containers": {
+              "items": {
+                "$ref": "#/$defs/Signer"
+              },
+              "title": "Containers",
+              "type": "array"
+            },
+            "certificate_role": {
+              "title": "Certificate Role",
+              "type": "string"
+            },
+            "certificate_extraction": {
+              "title": "Certificate Extraction",
+              "type": "string"
+            }
+          },
+          "required": [
+            "scheme",
+            "container_present"
+          ],
+          "title": "SigningScheme",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Next Offset"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "schemes": {
+          "items": {
+            "$ref": "#/$defs/SigningScheme"
+          },
+          "title": "Schemes",
+          "type": "array"
+        },
+        "unknown_signing_block_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unknown Signing Block Ids",
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/Diagnostic"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "cryptographic_verification": {
+          "const": "not_performed",
+          "title": "Cryptographic Verification",
+          "type": "string"
+        },
+        "apk_content_integrity": {
+          "const": "not_verified",
+          "title": "Apk Content Integrity",
+          "type": "string"
+        },
+        "certificate_trust": {
+          "const": "not_evaluated",
+          "title": "Certificate Trust",
+          "type": "string"
+        },
+        "v4_sidecar": {
+          "const": "not_inspected",
+          "title": "V4 Sidecar",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "SigningResult",
+      "type": "object"
+    }
+  }
+}

@@ -22,7 +22,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `server_status` | `` | asc_ping reports effective roots, process/session limits, open_count, active_queries and opening_count. Capacity is supervised fresh workers, not a resident process pool. | tests/test_server.py; tests/test_sessions.py; tests/test_integration.py |
 | tool | `apk_get_summary` | `analysis_id` | asc_apk_info for APK hash/size/DEX; asc_manifest_summary for package/version/SDK declarations; asc_inspect_artifact for generic capabilities; asc_list_apk_entries(kind=native) for ABI/size. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_get_manifest` | `analysis_id,include_xml` | asc_manifest_summary plus paged decoded manifest resource. Preserve declared versus effective permissions; XML is opt-in through resource/read tool rather than duplicating it in every summary. | tests/test_archive.py; tests/test_integration.py |
-| tool | `apk_list_classes` | `analysis_id,prefix,query,cursor,limit` | DEX list_classes or search_classes(value=query,case_sensitive=false,prefix=prefix); JVM inventory asc_inspect_artifact(class_query,class_prefix). Both dotted and Dalvik prefixes, literal substring, offset/limit pagination. | tests/test_structure.py; tests/test_containers.py; tests/test_integration.py |
+| tool | `apk_list_classes` | `analysis_id,prefix,query,cursor,limit` | DEX list_classes or search_classes(value=query,case_sensitive=false,prefix=prefix); JVM inventory asc_inspect_artifact(class_query,class_prefix). Both dotted and Dalvik class names/prefixes, literal substring, offset/limit pagination. Manifest component names can be passed directly; results keep exact Dalvik identities. | tests/test_structure.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_get_class_outline` | `analysis_id,class_name` | get_class_outline: flags/superclass, paged interfaces, fields with types/storage and methods with complete identities/flags/code/dispatch. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_get_class_source` | `analysis_id,class_name` | get_class_source; get_class_source_metadata adds original ASC token references with global code-point spans and a complete-source hash. Source links are not instruction xrefs. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_find_method_references` | `analysis_id,class_name,method_name,fuzzy_class,exact_name,descriptor,cursor,limit` | find_method_refs selects a full identity; search_refs(kind=method) scans a fuzzy owner/name union once, with optional exact prototype, omitted name, case mode and global pagination. | tests/test_native_dex.py; tests/test_methods.py; tests/test_integration.py |
@@ -35,7 +35,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `apk_search_method_bodies` | `analysis_id,query,cursor,limit` | search_method_bodies(value=query,case_sensitive=false) searches canonical DAD opcode/operand text, including registers, numeric literals, switch/array payloads. Not source search or symbolic reference resolution. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_disassemble_method` | `analysis_id,class_name,method_name,descriptor` | list_methods/get_class_outline to select a full descriptor, then disassemble_method. Exact overload identity is mandatory; paged structured opcode/operands/offsets. get_method_source(source_format=smali) also exposes complete targeted Smali. | tests/test_structure.py; tests/test_methods.py; tests/test_integration.py |
 | tool | `apk_get_class_hierarchy` | `analysis_id,class_name` | get_class_hierarchy reports superclass chain, direct interfaces/subclasses/implementors, external definitions and cycle diagnostics. | tests/test_structure.py; tests/test_integration.py |
-| tool | `apk_get_call_graph` | `analysis_id,class_name,method_name,descriptor,depth` | Resolve exact descriptor, then get_call_graph direction=both; depth 1-5 includes competitor's 1-3. Independent node/edge/output caps; preserve call-site offsets, external roots and unresolved dynamic sites. Full index cost remains explicit. | tests/test_call_graph.py; tests/test_integration.py |
+| tool | `apk_get_call_graph` | `analysis_id,class_name,method_name,descriptor,depth` | Resolve exact descriptor, then get_call_graph direction=both; depth 1-5 includes competitor's 1-3. Independent node/edge/output caps; preserve call-site offsets, external roots and unresolved dynamic sites. Candidate bounded frontiers avoid mandatory full-index materialization; existing-index and dense-frontier fallback costs remain explicit. | tests/test_call_graph.py; tests/test_native_graph.py; tests/test_integration.py |
 | tool | `apk_list_entries` | `analysis_id,kind,cursor,limit` | asc_list_apk_entries works for all supported archives, category/prefix/offset/limit. AndroidManifest.xml is our separate manifest category, not silently grouped under metadata. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_get_resource_content` | `analysis_id,path,max_bytes` | asc_read_apk_entry works for generic archives, bounded text/XML/base64. 128-KiB pages plus byte_offset/next_byte_offset reconstruct content larger than competitor's 1-MiB response cap; bounded XML decoding and CRC status remain explicit. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_list_native_libraries` | `analysis_id` | asc_list_apk_entries(kind=native), all pages, ABI/original and compressed sizes. Archive inventory, not native-code disassembly. | tests/test_archive.py; tests/test_integration.py |
@@ -76,6 +76,17 @@ check is not a substitute for the behavioral tests linked in each row.
 
 ## Acceptance Status
 
+`test_complete_investigation_handoffs_without_java[stdio/http]` exercises one connected
+investigation, rather than independent calls with every descriptor hard-coded: capability
+selection, manifest component to dotted class search, paginated outline to exact method,
+disassembly/default Smali, outgoing operands to incoming/fuzzy references, discovered field
+identity to field sites, constants/string/body search, hierarchy, bounded graph expansion,
+class/manifest resources, native inventory, asset reads, signing, redacted secrets, revision
+comparison, prompts, missing-method recovery and session/resource cleanup. Both transports
+passed locally on 2026-10-22 with Java deliberately invalid and JADX/dexlib configuration unset.
+The fixtures are assembled before disabling Java; fixture generation is not a runtime dependency.
+This targeted receipt does not approve the candidate's pending cross-platform release gate.
+
 This matrix describes implemented equivalents and intentional interface differences. The release
 authority is a fresh feature-frozen Linux/Windows matrix, real stdio/HTTP tests, independent signing
 variants, stability checks and clean sdist/wheel installations. Receipts for the withdrawn original v0.3.0 do not
@@ -83,3 +94,12 @@ approve this candidate. See VALIDATION.md for the final commit/run-specific gate
 Historical cold-reference timings do not describe this candidate's native scanner. Refresh the
 same-condition runtime and independent accuracy receipts before claiming a performance advantage;
 functional coverage must not be advertised as universal superiority.
+
+Performance attribution also requires reading the execution topology. The pinned runtime's
+outer ProcessPoolExecutor passes worker_count through server.py:_run to the artifact handler;
+_for_each_findrefs creates an additional ProcessPoolExecutor with the same max_workers.
+Matching the worker setting alone is not a total CPU ceiling. The current comparison harness
+applies the same inherited logical-CPU affinity before either server imports, then verifies
+owned descendants after transport startup. Old reports without cpu_budget_version=1 remain
+configuration-matched historical evidence, not strict aggregate CPU-budget evidence. This
+correction concerns benchmark resources, not a missing tool or a changed query contract.

@@ -18,6 +18,23 @@ def digest(path):
     return result.hexdigest()
 
 
+def runtime_identity():
+    import droidasc_mcp
+
+    return {
+        path.name: digest(path)
+        for path in sorted(Path(droidasc_mcp.__file__).parent.iterdir())
+        if path.suffix in {".py", ".java", ".c", ".so", ".pyd", ".json"}
+    }
+
+
+def method_reference_index(instruction):
+    # Androguard's 45cc/4rcc decoders expose BBBB but inherit an unimplemented get_ref_kind.
+    if instruction.get_op_value() in {0xFA, 0xFB}:
+        return instruction.BBBB
+    return instruction.get_ref_kind()
+
+
 def main(args):
     from androguard.core.dex import DEX
     from loguru import logger
@@ -26,6 +43,8 @@ def main(args):
     from droidasc_mcp.native_dex import query_references
 
     logger.remove()
+    runtime_before = runtime_identity()
+    verifier_before = digest(Path(__file__))
     original = digest(args.apk)
     expected = []
     target_names = set()
@@ -81,7 +100,7 @@ def main(args):
                             op = instruction.get_op_value()
                             if not (0x6E <= op <= 0x72 or 0x74 <= op <= 0x78 or op in {0xFA, 0xFB}):
                                 continue
-                            callee = targets.get(instruction.get_ref_kind())
+                            callee = targets.get(method_reference_index(instruction))
                             if callee is not None:
                                 target_names.add(callee)
                                 expected.append(
@@ -98,7 +117,13 @@ def main(args):
     assert result["matched_targets"] == len(target_names)
     assert result["scanned_instructions"] == scanned_instructions
     assert original == digest(args.apk)
+    assert runtime_before == runtime_identity(), "Runtime changed during fuzzy parity checks"
+    assert verifier_before == digest(Path(__file__)), "Verifier changed during fuzzy parity checks"
     report = {
+        "verifier_sha256": verifier_before,
+        "verifier_unchanged": True,
+        "runtime_sha256": runtime_before,
+        "runtime_unchanged": True,
         "status": "all_fuzzy_sites_equal",
         "apk_sha256": original,
         "scope": "complete fuzzy method union: owner contains java/lang, name contains equal",

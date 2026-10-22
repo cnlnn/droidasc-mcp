@@ -2,6 +2,7 @@
 
 import hashlib
 import struct
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -13,24 +14,36 @@ from droidasc_mcp.service import DroidAscService
 
 
 @pytest.mark.parametrize("names,shared", [(("A",), False), (("A", "B"), False), (("A", "B"), True)])
-def test_dex041_import_and_exact_instruction_views(tmp_path, names, shared):
-    path = tmp_path / "container.dex"
+@pytest.mark.parametrize("archived", [False, True])
+def test_dex041_import_and_exact_instruction_views(tmp_path, names, shared, archived):
+    path = tmp_path / ("container.apk" if archived else "container.dex")
     data = dex041_container(names, shared_strings=shared)
-    path.write_bytes(data)
+    if archived:
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("classes.dex", data)
+    else:
+        path.write_bytes(data)
     service = DroidAscService(
         replace(Settings.from_env(), allowed_roots=(tmp_path,), timeout_seconds=90, jadx_home=None)
     )
     try:
-        opened = service.open_dex_session([str(path)])
+        opened = (
+            service.open_artifact_session(str(path))
+            if archived
+            else service.open_dex_session([str(path)])
+        )
         assert opened["status"] == "ok", opened
         assert opened["class_count"] == len(names)
         retained = service.sessions.entries[opened["session_id"]]
         assert not list(Path(retained.storage.name).glob("dex-container-*"))
+        assert not list(Path(retained.storage.name).glob("import-*.dex"))
         assert len(opened["sources"]) == len(names)
         assert all(
             row["container_sha256"] == hashlib.sha256(data).hexdigest() for row in opened["sources"]
         )
         assert opened["sources"][0]["logical_header_offset"] == 0
+        if archived:
+            assert all(row["container_entry"] == "classes.dex" for row in opened["sources"])
         if len(names) == 2:
             assert opened["sources"][1]["logical_header_offset"] > 120
         path.unlink()

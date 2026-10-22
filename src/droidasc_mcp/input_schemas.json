@@ -1,0 +1,1311 @@
+{
+  "schema": 1,
+  "source_sha256": "ec192900758797701d3bf1cce5f2a447e16c2556d208300823b5d27625cd7a4a",
+  "pydantic_version": "2.13.5",
+  "mcp_version": "2.2.0",
+  "records_sha256": "80d07b310272d4c13d72d2e83f679e59b681b89f60ffdc7039659261d33d73a4",
+  "tools": {
+    "asc_ping": {
+      "description": "Report server, engine, path-scope, and pagination configuration.",
+      "parameters": {
+        "properties": {},
+        "title": "asc_pingArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_signing_inventory": {
+      "description": "Inventory v1/v2/v3 containers and certificate fingerprints; detect v3.1 block presence.\n\nContainer presence is independent of cryptographic validity. APK digests, signatures,\ntrust, rotation lineage and v4 sidecars remain unverified. Malformed containers produce\nexplicit diagnostics. v1 certificates are a PKCS7 bag, not resolved signer identities.\n",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_signing_inventoryArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_inspect_artifact": {
+      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.\n",
+      "parameters": {
+        "properties": {
+          "artifact_path": {
+            "description": "APK/JAR/AAR/AAB/APKS/XAPK/ZIP path within allowed roots",
+            "title": "Artifact Path",
+            "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact AAB module; omitted selects base, other formats omit",
+            "title": "Module"
+          },
+          "max_uncompressed_bytes": {
+            "default": 134217728,
+            "description": "Nested classes.jar byte budget; server input limit also applies",
+            "maximum": 2147483648,
+            "minimum": 1,
+            "title": "Max Uncompressed Bytes",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based offset in sorted capability entries",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Entry page size, server-capped",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "compare_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional newer artifact for JVM class inventory comparison",
+            "title": "Compare To"
+          },
+          "class_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Case-insensitive literal substring of JVM class names",
+            "title": "Class Query"
+          },
+          "class_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "JVM class prefix in dotted or Dalvik form",
+            "title": "Class Prefix"
+          }
+        },
+        "required": [
+          "artifact_path"
+        ],
+        "title": "asc_inspect_artifactArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_open_artifact_session": {
+      "description": "Snapshot selected direct DEX into an immutable reusable session with container hashes.\n\nDirect DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module\nare supported. Pure JVM\nclasses and nested split APKs stay inventory-only. Duplicate classes are rejected.\nQuery and close the resulting ID with the existing DEX session tools.\n",
+      "parameters": {
+        "properties": {
+          "artifact_path": {
+            "description": "APK/JAR/AAR/AAB/APKS/XAPK/ZIP input within allowed roots",
+            "title": "Artifact Path",
+            "type": "string"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact AAB module; omitted selects base",
+            "title": "Module"
+          },
+          "max_uncompressed_bytes": {
+            "default": 134217728,
+            "description": "Expanded JAR/DEX bytes; disk reservation scales with this budget",
+            "maximum": 2147483648,
+            "minimum": 1,
+            "title": "Max Uncompressed Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_path"
+        ],
+        "title": "asc_open_artifact_sessionArguments",
+        "type": "object"
+      },
+      "context_kwarg": "ctx",
+      "is_async": false
+    },
+    "asc_diff_dex_sessions": {
+      "description": "Compare class/member identities with full descriptors and old/new source hashes.\n\nUses native DEX declarations without Java or an instruction index. Unchanged\nidentities say nothing about changed behavior, access flags, annotations or bodies.\nInventory is bounded to 1M identities and 64 MiB of cumulative declaration records.\n",
+      "parameters": {
+        "properties": {
+          "old_session_id": {
+            "description": "Open immutable baseline session ID",
+            "title": "Old Session Id",
+            "type": "string"
+          },
+          "new_session_id": {
+            "description": "Open immutable candidate revision session ID",
+            "title": "New Session Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "all",
+            "description": "Declaration identity kind to compare",
+            "enum": [
+              "all",
+              "class",
+              "method",
+              "field"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "change": {
+            "default": "all",
+            "description": "Change filter applied before paging",
+            "enum": [
+              "all",
+              "added",
+              "removed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based offset in sorted changed descriptors",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Changed declaration page size, server-capped",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "old_session_id",
+          "new_session_id"
+        ],
+        "title": "asc_diff_dex_sessionsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_secret_candidates": {
+      "description": "Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.\n\nUses native DEX string pools without Java/JADX.\nValues are redacted unless include_values=true.\nCandidate validity and instruction use sites remain untested. Strings over 64K UTF-16\nunits are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.\nAssets, native code, runtime values and arbitrary encodings are outside this scan.\n",
+      "parameters": {
+        "properties": {
+          "session_id": {
+            "description": "Open immutable DEX or artifact session ID",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "pattern": {
+            "default": "all",
+            "description": "Fixed candidate pattern family, not arbitrary regex",
+            "enum": [
+              "all",
+              "aws_access_key_id",
+              "github_classic_token",
+              "google_api_key",
+              "private_key_marker",
+              "credential_assignment",
+              "jwt_like"
+            ],
+            "title": "Pattern",
+            "type": "string"
+          },
+          "include_values": {
+            "default": false,
+            "description": "Explicit opt-in to return sensitive matched candidate values",
+            "title": "Include Values",
+            "type": "boolean"
+          },
+          "max_scan_bytes": {
+            "default": 67108864,
+            "description": "Cumulative decoded UTF-8 string-pool byte budget",
+            "maximum": 268435456,
+            "minimum": 1,
+            "title": "Max Scan Bytes",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based candidate offset in DEX/string/pattern order",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Redacted candidate page size, server-capped",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "asc_secret_candidatesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_apk_info": {
+      "description": "Inspect APK size, SHA-256, manifest presence, and top-level DEX entries.",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK file path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "include_sha256": {
+            "default": true,
+            "description": "Compute a full input SHA-256 when true",
+            "title": "Include Sha256",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_apk_infoArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_list_apk_entries": {
+      "description": "List APK contents, sizes, CRC metadata and native ABIs without extracting files.\n\nSHA-256 binds this page to the APK. CRC values here are declarations, not verification.\nNative rows are an archive inventory, not ELF analysis. Follow next_offset for more.\n",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK path within the configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manifest",
+                  "resource",
+                  "asset",
+                  "native",
+                  "dex",
+                  "metadata",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Entry category; omit for all file entries",
+            "title": "Kind"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Case-sensitive literal ZIP path prefix",
+            "title": "Prefix"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based offset in sorted filtered entries",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Page size, capped by server limits",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_list_apk_entriesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_read_apk_entry": {
+      "description": "Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.\n\nBinary XML decoding and returned-content truncation are separate statuses. Partial raw\nreads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.\n",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK path within the configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "entry_path": {
+            "description": "Exact relative ZIP entry path from inventory",
+            "title": "Entry Path",
+            "type": "string"
+          },
+          "max_bytes": {
+            "default": 16384,
+            "description": "Maximum returned content bytes before encoding",
+            "maximum": 131072,
+            "minimum": 1,
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "decode_xml": {
+            "default": true,
+            "description": "Decode complete XML entries up to 4 MiB; false reads raw bytes",
+            "title": "Decode Xml",
+            "type": "boolean"
+          },
+          "byte_offset": {
+            "default": 0,
+            "description": "Byte offset in raw or fully decoded content; follow next_byte_offset",
+            "minimum": 0,
+            "title": "Byte Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "apk_path",
+          "entry_path"
+        ],
+        "title": "asc_read_apk_entryArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_manifest_summary": {
+      "description": "Read structured Manifest components, filters, metadata and permission inheritance.\n\nRaw declarations are preserved separately. Unspecified exported defaults and resource\nvalues remain unresolved. Provider path rules and URI grants need separate review;\npermission inheritance is static triage, not a runtime accessibility or vulnerability test.\n",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK path within the configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based component offset in manifest order",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Component page size, server-capped",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_manifest_summaryArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_get_manifest": {
+      "description": "Decode AndroidManifest.xml and return a bounded page of XML lines.",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK file path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 500,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "backend": {
+            "default": "droidasc",
+            "description": "Engine; rust_asc is opt-in and reports unverified coverage",
+            "enum": [
+              "droidasc",
+              "rust_asc"
+            ],
+            "title": "Backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_get_manifestArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_list_classes": {
+      "description": "List class descriptors, optionally filtered by package or class prefix.",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK file path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal class/package prefix, case-sensitive",
+            "title": "Prefix"
+          },
+          "threads": {
+            "default": 8,
+            "description": "Positive ASC worker count; requested values above 32 are capped",
+            "title": "Threads",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "backend": {
+            "default": "droidasc",
+            "description": "Engine; rust_asc is opt-in and reports unverified coverage",
+            "enum": [
+              "droidasc",
+              "rust_asc"
+            ],
+            "title": "Backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apk_path"
+        ],
+        "title": "asc_list_classesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_get_class_source": {
+      "description": "Locate and decompile one class, returning a bounded page of source lines.",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK file path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact class descriptor or Java dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "threads": {
+            "default": 8,
+            "description": "Positive ASC worker count; requested values above 32 are capped",
+            "title": "Threads",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 500,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "backend": {
+            "default": "droidasc",
+            "description": "Engine; rust_asc is opt-in and reports unverified coverage",
+            "enum": [
+              "droidasc",
+              "rust_asc"
+            ],
+            "title": "Backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apk_path",
+          "class_name"
+        ],
+        "title": "asc_get_class_sourceArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_find_refs": {
+      "description": "Find cross-DEX references or direct subclasses/interface implementors.\n\nextends/impl use an exact class in value and return direct declarations only.\nOptional rust_asc supports string/type/method/field only and has unverified coverage.\n",
+      "parameters": {
+        "properties": {
+          "apk_path": {
+            "description": "APK file path within configured allowed roots",
+            "title": "Apk Path",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Reference category; search_members accepts method or field only",
+            "enum": [
+              "string",
+              "type",
+              "method",
+              "field",
+              "extends",
+              "impl"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal value (classes: Dalvik or dotted); exact extends/impl parent",
+            "title": "Value"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class; for legacy fuzzy references, a literal owner substring",
+            "title": "Class Name"
+          },
+          "fuzzy_class": {
+            "default": false,
+            "description": "Legacy owner substring matching; exact member tools require false",
+            "title": "Fuzzy Class",
+            "type": "boolean"
+          },
+          "threads": {
+            "default": 8,
+            "description": "Positive ASC worker count; requested values above 32 are capped",
+            "title": "Threads",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "backend": {
+            "default": "droidasc",
+            "description": "Engine; rust_asc is opt-in and reports unverified coverage",
+            "enum": [
+              "droidasc",
+              "rust_asc"
+            ],
+            "title": "Backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apk_path",
+          "kind"
+        ],
+        "title": "asc_find_refsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_analyze_dex": {
+      "description": "Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.\n\nReturns status=ok, error, or not_applicable. Errors carry a diagnostic code;\nduplicate class definitions are rejected. Manifest is not applicable to DEX.\nCoverage is limited to supplied files; this tool does not unpack applications.\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nExplicit source_format=java alone selects the optional compatibility backend.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nUse a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nfind_type_refs reports exact type operands, declarations and annotation types/values.\nbuild_xref_index builds a bounded complete static index; one-shot indexes are temporary.\nget_call_graph builds/reuses the index for bounded multi-hop static exploration.\nGraph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.\nsearch_members scans declarations without building an index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nsource_format=auto uses ASC exact-method Smali without Java/JADX;\nsource_format=java explicitly opts into the optional JADX compatibility backend.\njava never silently falls back, smali always disassembles that exact method.\n",
+      "parameters": {
+        "properties": {
+          "dex_paths": {
+            "description": "Ordered standard DEX file paths; combined bytes are server-bounded",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Dex Paths",
+            "type": "array"
+          },
+          "operation": {
+            "default": "info",
+            "description": "Static DEX operation; exact member/graph tools need full descriptors",
+            "enum": [
+              "info",
+              "list_classes",
+              "get_class_source",
+              "find_refs",
+              "get_manifest",
+              "list_methods",
+              "get_method_source",
+              "find_method_refs",
+              "get_method_calls",
+              "get_call_graph",
+              "find_field_refs",
+              "search_refs",
+              "find_type_refs",
+              "build_xref_index",
+              "search_members",
+              "search_strings",
+              "search_classes",
+              "get_class_outline",
+              "get_class_hierarchy",
+              "get_string_constants",
+              "search_method_bodies",
+              "disassemble_method",
+              "get_class_source_metadata"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal class/package prefix, case-sensitive",
+            "title": "Prefix"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class; for legacy fuzzy references, a literal owner substring",
+            "title": "Class Name"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full method identity: Lpkg/C;->name(args)return; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "field_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full field identity: Lpkg/C;->name:type",
+            "title": "Field Descriptor"
+          },
+          "field_access": {
+            "default": "all",
+            "description": "Instruction field-access filter, for find_field_refs",
+            "enum": [
+              "all",
+              "read",
+              "write"
+            ],
+            "title": "Field Access",
+            "type": "string"
+          },
+          "type_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact DEX type including array dimensions, for find_type_refs",
+            "title": "Type Descriptor"
+          },
+          "type_relation": {
+            "default": "all",
+            "description": "Static type relation filter applied before pagination",
+            "enum": [
+              "all",
+              "instruction",
+              "declaration",
+              "annotation"
+            ],
+            "title": "Type Relation",
+            "type": "string"
+          },
+          "source_format": {
+            "default": "auto",
+            "description": "Exact method source; auto has explicit fallback diagnostics",
+            "enum": [
+              "auto",
+              "java",
+              "smali"
+            ],
+            "title": "Source Format",
+            "type": "string"
+          },
+          "debug_info": {
+            "default": false,
+            "description": "Include debug line/local metadata for explicit method Smali only",
+            "title": "Debug Info",
+            "type": "boolean"
+          },
+          "kind": {
+            "default": "string",
+            "description": "Reference category; search_members accepts method or field only",
+            "enum": [
+              "string",
+              "type",
+              "method",
+              "field",
+              "extends",
+              "impl"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal value (classes: Dalvik or dotted); exact extends/impl parent",
+            "title": "Value"
+          },
+          "case_sensitive": {
+            "default": true,
+            "description": "Literal discovery matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "member_match": {
+            "default": "descriptor",
+            "description": "Literal identity or name; search_refs also accepts exact_name and prototype",
+            "enum": [
+              "descriptor",
+              "name",
+              "exact_name",
+              "prototype"
+            ],
+            "title": "Member Match",
+            "type": "string"
+          },
+          "target_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "search_refs exact prototype or field-type filter",
+            "title": "Target Descriptor"
+          },
+          "fuzzy_class": {
+            "default": false,
+            "description": "Legacy owner substring matching; exact member tools require false",
+            "title": "Fuzzy Class",
+            "type": "boolean"
+          },
+          "threads": {
+            "default": 8,
+            "description": "Positive ASC worker count; requested values above 32 are capped",
+            "title": "Threads",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "direction": {
+            "default": "both",
+            "description": "Graph direction; edges retain caller-to-callee orientation.",
+            "enum": [
+              "incoming",
+              "outgoing",
+              "both"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "depth": {
+            "default": 2,
+            "description": "Graph hop bound; first use builds a calls-only index.",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "max_nodes": {
+            "default": 200,
+            "description": "Call-graph node budget including the root.",
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Max Nodes",
+            "type": "integer"
+          },
+          "max_edges": {
+            "default": 500,
+            "description": "Graph call-site budget; repeated calls remain separate edges.",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Max Edges",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dex_paths"
+        ],
+        "title": "asc_analyze_dexArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_open_dex_session": {
+      "description": "Validate and snapshot DEX inputs once; return an immutable hash-bound session.\n\nReuses the validated bundle, not a resident engine. Idle sessions expire and may\nbe evicted at capacity. Source file changes require opening a new session.\n",
+      "parameters": {
+        "properties": {
+          "dex_paths": {
+            "description": "Ordered standard DEX file paths; combined bytes are server-bounded",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Dex Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dex_paths"
+        ],
+        "title": "asc_open_dex_sessionArguments",
+        "type": "object"
+      },
+      "context_kwarg": "ctx",
+      "is_async": false
+    },
+    "asc_close_dex_session": {
+      "description": "Close a DEX session; active queries finish before its stored files are removed.",
+      "parameters": {
+        "properties": {
+          "session_id": {
+            "description": "Immutable open DEX session ID returned by an open tool",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "asc_close_dex_sessionArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "asc_query_dex_session": {
+      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph builds/reuses it for bounded multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.\n",
+      "parameters": {
+        "properties": {
+          "session_id": {
+            "description": "Immutable open DEX session ID returned by an open tool",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "operation": {
+            "default": "info",
+            "description": "Session operation; first indexed graph/type query builds the index",
+            "enum": [
+              "info",
+              "list_classes",
+              "get_class_source",
+              "find_refs",
+              "get_manifest",
+              "list_methods",
+              "get_method_source",
+              "find_method_refs",
+              "get_method_calls",
+              "get_call_graph",
+              "find_field_refs",
+              "search_refs",
+              "find_type_refs",
+              "build_xref_index",
+              "search_members",
+              "search_strings",
+              "search_classes",
+              "get_class_outline",
+              "get_class_hierarchy",
+              "get_string_constants",
+              "search_method_bodies",
+              "disassemble_method",
+              "get_class_source_metadata"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal class/package prefix, case-sensitive",
+            "title": "Prefix"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class; for legacy fuzzy references, a literal owner substring",
+            "title": "Class Name"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full method identity: Lpkg/C;->name(args)return; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "field_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full field identity: Lpkg/C;->name:type",
+            "title": "Field Descriptor"
+          },
+          "field_access": {
+            "default": "all",
+            "description": "Instruction field-access filter, for find_field_refs",
+            "enum": [
+              "all",
+              "read",
+              "write"
+            ],
+            "title": "Field Access",
+            "type": "string"
+          },
+          "type_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact DEX type including array dimensions, for find_type_refs",
+            "title": "Type Descriptor"
+          },
+          "type_relation": {
+            "default": "all",
+            "description": "Static type relation filter applied before pagination",
+            "enum": [
+              "all",
+              "instruction",
+              "declaration",
+              "annotation"
+            ],
+            "title": "Type Relation",
+            "type": "string"
+          },
+          "source_format": {
+            "default": "auto",
+            "description": "Exact method source; auto has explicit fallback diagnostics",
+            "enum": [
+              "auto",
+              "java",
+              "smali"
+            ],
+            "title": "Source Format",
+            "type": "string"
+          },
+          "debug_info": {
+            "default": false,
+            "description": "Include debug line/local metadata for explicit method Smali only",
+            "title": "Debug Info",
+            "type": "boolean"
+          },
+          "kind": {
+            "default": "string",
+            "description": "Reference category; search_members accepts method or field only",
+            "enum": [
+              "string",
+              "type",
+              "method",
+              "field",
+              "extends",
+              "impl"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal value (classes: Dalvik or dotted); exact extends/impl parent",
+            "title": "Value"
+          },
+          "case_sensitive": {
+            "default": true,
+            "description": "Literal discovery matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "member_match": {
+            "default": "descriptor",
+            "description": "Literal identity or name; search_refs also accepts exact_name and prototype",
+            "enum": [
+              "descriptor",
+              "name",
+              "exact_name",
+              "prototype"
+            ],
+            "title": "Member Match",
+            "type": "string"
+          },
+          "target_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "search_refs exact prototype or field-type filter",
+            "title": "Target Descriptor"
+          },
+          "fuzzy_class": {
+            "default": false,
+            "description": "Legacy owner substring matching; exact member tools require false",
+            "title": "Fuzzy Class",
+            "type": "boolean"
+          },
+          "threads": {
+            "default": 8,
+            "description": "Positive ASC worker count; requested values above 32 are capped",
+            "title": "Threads",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result offset; graph traversal requires zero",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Positive result page size in rows or source lines, server-capped",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "direction": {
+            "default": "both",
+            "description": "Graph direction; edges retain caller-to-callee orientation.",
+            "enum": [
+              "incoming",
+              "outgoing",
+              "both"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "depth": {
+            "default": 2,
+            "description": "Hop bound; first use builds a calls-only index, then reuses it.",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "max_nodes": {
+            "default": 200,
+            "description": "Call-graph node budget including the root.",
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Max Nodes",
+            "type": "integer"
+          },
+          "max_edges": {
+            "default": 500,
+            "description": "Graph call-site budget; repeated calls remain separate edges.",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Max Edges",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "asc_query_dex_sessionArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    }
+  }
+}

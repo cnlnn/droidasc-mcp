@@ -105,6 +105,8 @@ jobs:
       - run: uv run python scripts/setup_rust.py --existing artifacts/rust-bin
       - run: uv run ruff check .
       - run: uv run ruff format --check .
+      - run: uv run python scripts/compile_output_schemas.py --check
+      - run: uv run python scripts/compile_input_schemas.py --check
       - run: uv run pytest --cov --cov-report=term-missing --junitxml=test-results.xml
         env:
           ASC_TEST_APK: ${{ github.workspace }}/artifacts/fixture apk/app-debug.apk

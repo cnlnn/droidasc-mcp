@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from .method_backend import java_command
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 INDEX_OPERATIONS = {"build_xref_index", "find_type_refs", "get_call_graph"}
 DISCOVERY_OPERATIONS = {"search_members", "search_strings", "search_classes"}
@@ -35,6 +35,8 @@ def backend_identity(settings, sources=("IndexBridge.java", "xref_index.py")):
         "native_discovery.py",
         "native_structure.py",
         "native_page.py",
+        "native_graph.py",
+        "call_graph.py",
         "_dexscan.c",
     }
     for path in sorted(Path(__file__).with_name(name) for name in names):
@@ -189,6 +191,19 @@ def _unpack_edge(kind, payload, source, target, relation, entry):
 def query_index(settings, bundle, common, query, workspace):
     from .durable_index import DurableIndexes
 
+    if (
+        query["operation"] == "get_call_graph"
+        and not settings.xref_cache_dir
+        and not any((bundle.parent / name).is_file() for name in ("xrefs.sqlite", "calls.sqlite"))
+    ):
+        from .native_graph import FrontierBudgetExceeded, query_frontier
+
+        try:
+            return query_frontier(settings, bundle, query)
+        except FrontierBudgetExceeded:
+            # A dense frontier can spill to the original atomic, disk-bounded index.
+            # Never return an incomplete adjacency list as a complete graph.
+            pass
     calls_only = (
         query["operation"] == "get_call_graph" and not (bundle.parent / "xrefs.sqlite").is_file()
     )

@@ -6,7 +6,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from .runner import DroidAscError
+from .worker_errors import DroidAscError
 
 
 class ReverseKey:

@@ -27,6 +27,7 @@ from .contracts import (
 )
 from .runner import PREPARATION_PROGRESS, DroidAscRunner
 from .service import DroidAscService
+from .tool_registry import ToolRegistry
 from .workflows import INSTRUCTIONS, register_workflows
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
@@ -59,7 +60,8 @@ TypeId = Annotated[
     str | None, Field(description="Exact DEX type including array dimensions, for find_type_refs")
 ]
 Value = Annotated[
-    str | None, Field(description="Literal search value; exact parent descriptor for extends/impl")
+    str | None,
+    Field(description="Literal value (classes: Dalvik or dotted); exact extends/impl parent"),
 ]
 FuzzyClass = Annotated[
     bool, Field(description="Legacy owner substring matching; exact member tools require false")
@@ -108,7 +110,10 @@ MemberMatch = Annotated[
 
 
 def build_server(
-    settings: Settings | None = None, runner: DroidAscRunner | None = None
+    settings: Settings | None = None,
+    runner: DroidAscRunner | None = None,
+    *,
+    registry: ToolRegistry | None = None,
 ) -> MCPServer:
     settings = settings or Settings.from_env()
     service = DroidAscService(settings, runner)
@@ -121,15 +126,14 @@ def build_server(
             with anyio.CancelScope(shield=True):
                 await anyio.to_thread.run_sync(service.close)
 
-    mcp = MCPServer("droidasc-mcp", lifespan=lifespan, instructions=INSTRUCTIONS)
-    register_workflows(mcp, service)
+    registry = registry or ToolRegistry()
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_ping() -> PingResult:
         """Report server, engine, path-scope, and pagination configuration."""
         return service.ping()
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_signing_inventory(
         apk_path: Annotated[str, Field(description="APK path within configured allowed roots")],
     ) -> SigningResult:
@@ -141,7 +145,7 @@ def build_server(
         """
         return service.query_archive(apk_path, operation="signing_inventory")
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_inspect_artifact(
         artifact_path: Annotated[
             str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP path within allowed roots")
@@ -192,7 +196,7 @@ def build_server(
             class_prefix=class_prefix,
         )
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_open_artifact_session(
         artifact_path: Annotated[
             str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP input within allowed roots")
@@ -233,7 +237,7 @@ def build_server(
         finally:
             PREPARATION_PROGRESS.reset(token)
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_diff_dex_sessions(
         old_session_id: Annotated[str, Field(description="Open immutable baseline session ID")],
         new_session_id: Annotated[
@@ -264,7 +268,7 @@ def build_server(
             old_session_id, new_session_id, kind=kind, change=change, offset=offset, limit=limit
         )
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_secret_candidates(
         session_id: Annotated[str, Field(description="Open immutable DEX or artifact session ID")],
         pattern: Annotated[
@@ -297,7 +301,8 @@ def build_server(
     ) -> SecretResult:
         """Find redacted candidate secrets in DEX strings with exact pool indices and fingerprints.
 
-        Uses optional JADX 1.5.5/JDK 17+. Values are redacted unless include_values=true.
+        Uses native DEX string pools without Java/JADX.
+        Values are redacted unless include_values=true.
         Candidate validity and instruction use sites remain untested. Strings over 64K UTF-16
         units are skipped explicitly; per-pattern/string matches cap at 20, total strings at 2M.
         Assets, native code, runtime values and arbitrary encodings are outside this scan.
@@ -311,7 +316,7 @@ def build_server(
             include_values=include_values,
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_apk_info(
         apk_path: ApkPath,
         include_sha256: Annotated[
@@ -321,7 +326,7 @@ def build_server(
         """Inspect APK size, SHA-256, manifest presence, and top-level DEX entries."""
         return service.apk_info(apk_path, include_sha256=include_sha256)
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_list_apk_entries(
         apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
         kind: Annotated[
@@ -347,7 +352,7 @@ def build_server(
             apk_path, operation="list_entries", kind=kind, prefix=prefix, offset=offset, limit=limit
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_read_apk_entry(
         apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
         entry_path: Annotated[
@@ -383,7 +388,7 @@ def build_server(
             byte_offset=byte_offset,
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_manifest_summary(
         apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
         offset: Annotated[
@@ -403,7 +408,7 @@ def build_server(
             apk_path, operation="manifest_summary", offset=offset, limit=limit
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_get_manifest(
         apk_path: ApkPath,
         offset: Offset = 0,
@@ -413,7 +418,7 @@ def build_server(
         """Decode AndroidManifest.xml and return a bounded page of XML lines."""
         return service.get_manifest(apk_path, offset=offset, limit=limit, backend=backend)
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_list_classes(
         apk_path: ApkPath,
         prefix: Prefix = None,
@@ -432,7 +437,7 @@ def build_server(
             limit=limit,
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_get_class_source(
         apk_path: ApkPath,
         class_name: ClassName,
@@ -451,7 +456,7 @@ def build_server(
             limit=limit,
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_find_refs(
         apk_path: ApkPath,
         kind: ReferenceKind,
@@ -480,7 +485,7 @@ def build_server(
             limit=limit,
         )
 
-    @mcp.tool(annotations=READ_ONLY)
+    @registry.tool(annotations=READ_ONLY)
     def asc_analyze_dex(
         dex_paths: DexPaths,
         operation: Annotated[
@@ -607,7 +612,7 @@ def build_server(
             max_edges=max_edges,
         )
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_open_dex_session(dex_paths: DexPaths, ctx: Context = None) -> DexResult:
         """Validate and snapshot DEX inputs once; return an immutable hash-bound session.
 
@@ -628,12 +633,12 @@ def build_server(
         finally:
             PREPARATION_PROGRESS.reset(token)
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_close_dex_session(session_id: SessionId) -> DexResult:
         """Close a DEX session; active queries finish before its stored files are removed."""
         return service.sessions.close(session_id)
 
-    @mcp.tool(annotations=SESSION_STATE)
+    @registry.tool(annotations=SESSION_STATE)
     def asc_query_dex_session(
         session_id: SessionId,
         operation: Annotated[
@@ -758,6 +763,10 @@ def build_server(
             max_edges=max_edges,
         )
 
+    mcp = MCPServer(
+        "droidasc-mcp", lifespan=lifespan, instructions=INSTRUCTIONS, tools=registry.tools
+    )
+    register_workflows(mcp, service)
     return mcp
 
 

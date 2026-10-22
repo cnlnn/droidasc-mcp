@@ -1,17 +1,31 @@
 # Local acceptance checks
 
-## v0.3.0 native-query gate, 2026-10-22
+Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
+ergonomics, performance and independent accuracy remain the overall completion criteria.
 
-The maintainer requested republishing the former v0.5.0 implementation as v0.3.0 and
-withdrawing the old v0.3.0 through v0.5.0 releases/tags. Runtime code is unchanged.
-Rebuild package metadata and run the complete Linux/Windows and clean-sdist/native-wheel
-gates on the renumbered commit before publishing its exact CI artifacts. Release notes
-must identify that new commit, run and hashes. The older version labels in the historical
-sections below identify withdrawn releases and their original evidence, not current
-installation targets; the original receipts must not be renamed or retroactively relabeled.
+## v0.2.x native-query gate, updated 2026-10-23
 
-Release policy: main, tags and release assets must remain unchanged until the frozen
-Linux/Windows, installed sdist/wheel, signing, stability and accuracy gates pass.
+The maintainer superseded the replacement-v0.3.0 plan with accepted 0.2.x increments.
+Old v0.3.0/v0.4.0/v0.4.1/v0.5.0 releases and tags were withdrawn on 2026-10-23 after
+verifying their backup metadata, all 16 asset hashes and Git tag objects. v0.2.2 and
+earlier releases/tags remain unchanged; GitHub now reports v0.2.2 as latest.
+Runtime code has changed: preparation/storage and the checked native selector are being
+restructured. The next candidate is v0.2.3, not frozen or published. Rebuild package metadata
+and run the complete Linux/Windows and clean-sdist/native-wheel
+gates on the final commit before publishing its exact CI artifacts. Release notes must identify
+that commit, run and hashes. Older version labels below identify historical releases and their
+original evidence, not approval of this candidate; receipts must not be retroactively relabeled.
+
+The pre-freeze Linux source matrix passes 989 tests on each of Python 3.10-3.13, with zero
+failures/errors/skips and unchanged runtime hashes. Its supported-upgrade environments use
+Pydantic 2.14.1; all 23 schema-cache/fallback tests also pass on locked Pydantic 2.13.5. Ten
+new distribution-identity regressions additionally reject source/data, version and native
+accelerator drift. Final CI must run all 999 tests per OS/interpreter and both clean-package
+suites on the exact candidate commit; these local results do not replace that release gate.
+
+Release policy: the authorized withdrawal is complete. New main merges, release tags and
+assets must wait for that increment's frozen Linux/Windows, installed sdist/wheel, signing,
+stability and accuracy gates. An incremental release does not close remaining overall deficits.
 
 Core references, discovery, structure and streaming indexes now use checked native DEX
 boundaries, with an optional CPython stable-ABI C accelerator and an independent Python
@@ -29,6 +43,40 @@ Actual MCP progress reports snapshot/class-directory completion; heavy indexes r
 Do not compare this validated-ready contract to a competitor's path-registration time as if
 both performed the same work. Still report both measured end-to-end times without adjustment.
 
+Preparation now streams central-directory records instead of materializing a second complete
+directory byte buffer and retaining a ZipInfo for every resource. All names still participate
+in shared unsafe-name/NUL/duplicate/special-file validation, inventory limits, nested provenance
+collision checks and next-local-header bounds. Only DEX/class/JAR/APK metadata is retained.
+Resource browsing keeps ordinary full ZipFile inventories; it never sees a partial inventory
+disguised as complete. Original before/after archive hashing, selected-entry ZIP CRC and strict
+DEX checksum/signature validation remain unchanged. No new dependency or Java backend is added.
+
+The custom directory reader is isolated in preparation_zip.py and keeps stdlib member opening,
+decompression, local-name matching and CRC errors. Its private stdlib directory hooks require
+explicit compatibility tests: ZIP64 security-fix backports differ even within Python minor
+versions. Tests compare every available ZipInfo slot and member bytes with ordinary ZipFile,
+including prefixes, comments, descriptors, Unicode, malformed extras and omitted-resource
+safety/overlap/inventory checks. The 39-case reader suite passes separately on Linux Python
+3.10-3.13; 139 preparation/container/directory/real-transport cases pass without skips. These
+are development receipts, not final Windows or distribution acceptance.
+
+The host registers precompiled output schemas through the public MCP SDK 2.2 Tool/FuncMetadata
+interfaces. The package includes `output_schemas.json`, bound to contract source, exact Pydantic
+version and schema digest. Missing/stale assets regenerate current schemas; strict SDK output
+validation remains enabled and lazy. Check the generated asset with
+`uv run python scripts/compile_output_schemas.py --check` (regenerate without `--check` after
+contract changes). Installed distribution tests compare every schema to the current TypeAdapter.
+Input schemas are also packaged in `input_schemas.json`, bound to server/registration sources,
+exact SDK/Pydantic versions and a content digest. On a cache hit, public SDK Tool/FuncMetadata
+objects advertise the unchanged schema; their input-validation delegate constructs the original
+SDK model on first use and retains its JSON-string parsing, defaults, validation and Context
+injection. Unknown functions and stale/malformed caches use ordinary SDK registration instead.
+`uv run python scripts/compile_input_schemas.py --check` independently rebuilds all 18 original
+SDK registrations and compares them. Both compiler checks run on every CI Python/OS matrix cell.
+Native workers share host path/paging checks without eagerly importing the host configuration,
+runner or CLI. CLI-specific infrastructure loads only for explicitly selected CLI operations;
+the same external bootstrap, cancellation, process-tree and memory ceilings still supervise it.
+
 Reproduce same-interpreter, same-input, alternating fresh-stdio trials with the unmodified
 competitor at `848c711f1d80a1c2577283f1fa5f475ff734aa40`:
 
@@ -37,12 +85,142 @@ uv run --with ./artifacts/aimard-asc-mcp python scripts/benchmark_competitor_run
   --rounds 3 --workers 2 --graph-depth 3 --output matched-runtime.json
 ```
 
+The harness preflights the actual installed competitor Python source tree against the pinned,
+clean checkout before starting trials. Missing packages or stale/different installed code fail
+early. Reports include interpreter path, package origin and every competitor Python-source hash;
+the same match is required again after all trials. A source SHA alone is not evidence that the
+matching installed package was executed. The 39-case harness/wrapper selection covers package
+identity, complete structured cold/warm equality, timing boundaries, sampled storage enforcement
+and inherited CPU-budget enforcement: cpu-budget-monitor-zero-skips.xml.
+
+The pinned competitor passes its outer pool's worker_count into an inner per-query process
+pool. Matching worker settings is therefore not an aggregate CPU cap. Current reports add
+cpu_budget_version=1 and an explicit logical-CPU affinity set of size workers, inherited from
+the same Python/psutil wrapper before product imports. Wrapper time/RSS is included for both;
+only the owned server tree is modified, never the benchmark parent or unrelated processes.
+The monitor samples each descendant's nonempty subset mask after transport initialization.
+An escaped/unreadable mask stops that trial's processes and fails it; an already-exited process
+does not count as a successful sample. Every passing real trial requires actual samples.
+Unsupported platforms or requests exceeding available affinity fail rather than silently
+weakening the budget. Historical reports without this version match settings, not a hard
+aggregate logical-CPU limit. Do not compare their numbers as a controlled optimization ratio.
+
 The report records full runtime hashes, real progress, cold/warm calls, concurrent batches,
 aggregate descendant RSS, output and timeout failures. Both implementations share external
 180-second/4-GiB limits; OS caches remain intact. A competitor timeout is not a completed
 graph timing or evidence of our graph completeness. Verify every emitted graph site with
 the independent decoder and complete method/field rows and diagnostics against the frozen
 JVM oracle (`benchmark_reference_scan.py --native`). Pilot results are not release authority.
+
+Timing version 2 records decoded-response arrival directly, including the complete cold
+batch's first-result timestamp, and saves the potentially multi-megabyte report only after
+all measured calls finish. Earlier report writers ran inside call-finalization paths; their
+per-call seconds exclude that I/O, but ready/batch and derived end-to-end metrics can include
+it. Keep those original receipts intact and label their timing limitation instead of silently
+rewriting them or mixing the two methods. New receipts include timing_version and harness
+SHA-256. The expanded nine-case fake-transport regression checks that report persistence happens
+only after close, ready/first-result metrics stop at the correct received responses, regular-file
+accounting excludes symlinks, and a sampled temporary-byte cap fails both implementations.
+Temporary-file logical/allocated bytes are sampled in a background thread every 0.2 seconds,
+separately from RSS; both implementations share the same external temporary-byte cap. Allocated
+bytes use st_blocks if available (otherwise null). Peaks are sampled lower bounds, and missing
+or failed storage measurements cannot pass a trial. These are command-flow unit regressions,
+not independent HTTP performance measurements.
+
+Preparation overlaps ownership insertion with the next DEX copy, but scans only closed/flushed
+members and releases every mapping before the enclosing ZIP grows. SQLite stays on one owner
+thread, at most one DEX's names remain live, and the pending database only becomes owners.sqlite
+after all original-input validation succeeds. Error/metadata/late-input/hash cases must leave no
+ready metadata and no background writer preventing cleanup. Raw-file, archive, 041 normalization
+and pure Python fallback semantics remain covered. The 257-case targeted receipt,
+pipelined-directory-and-path-zero-skips.xml, includes selected real stdio/HTTP investigation,
+fuzzy references and bounded graphs, but deliberately deselects 52 other integration cases.
+
+The newer compact-directory-targeted-zero-skips.xml passes 281 cases with the same 52-case
+deselection. It includes real owner-writer timeout/cancellation, cleanup/recovery and compact
+key ordering. Linux source checks on Python 3.10-3.13 each pass 168 cases with zero skips
+(compact-directory-py3.{10,11,12,13}.xml). These receipts predate five separately passing
+installed-package identity harness cases and are not fresh native-wheel or Windows evidence.
+Class-directory format 1 uses internal CESU-8 keys with exact UTF-16 ordering; format 0 is
+read-only compatible, and unknown formats are rejected. The ownership verifier independently
+encodes original class names one UTF-16 code unit at a time rather than reusing product codecs.
+
+After shortening validated root-inventory lifetime, the current selection passes 288 cases
+with zero skips and the same 52 deselections (released-inventory-targeted-zero-skips.xml).
+Linux source checks on Python 3.10-3.13 each pass 214 cases without skips, including containers
+and all 20 harness cases (released-inventory-py3.{10,11,12,13}.xml). Three fresh full original-APK
+class/ownership/snapshot verifiers also pass (released-inventory-{douyin,wechat,taobao}-full-ownership.json).
+These are targeted development receipts, not proof of the final complete release matrix.
+
+The checked ASCII directory selection additionally passes 377 native/graph/structure/index
+cases and 320 preparation/container/benchmark/real-transport cases (zero skips; the latter
+deliberately deselects 52 other integration cases). Receipts:
+checked-directory-native-zero-skips.xml and checked-directory-targeted-zero-skips.xml.
+Three full original-input owner/snapshot checks pass after that change:
+checked-directory-{douyin,wechat,taobao}-full-ownership.json. Strict Unicode/duplicate handling,
+CRC, legacy accelerator and pure Python fallback remain required, not performance shortcuts.
+
+The following duplicate-stamp selector revision passes 397 native/graph/structure/index cases
+without skips (duplicate-stamps-native-zero-skips.xml), including twenty additional member-ID/
+duplicate/class-local-generation regressions. Its per-call table is at most 524,292 bytes and
+must be freed on every exit; there is no persistent host state. Three fresh alternating rounds
+against the frozen JVM oracle match every method/field row and diagnostic, 24,461/332 sites and
+12,495,817 decoded instructions, with unchanged input/runtime/oracle sources:
+duplicate-stamps-full-reference-parity.json. The real-MCP four-CPU field receipt still trails
+the competitor's complete first result by 0.6832 seconds at the median. See
+NATIVE_QUERY_VALIDATION.md for separate stage, memory and CPU-allocation details. No feature
+freeze, Windows approval or final source/wheel package acceptance follows from these checks.
+
+After the duplicate-stamp revision, all three full owner/snapshot oracles pass again with
+unchanged source/input and identical class-owner digests:
+duplicate-stamps-{douyin,wechat,taobao}-full-ownership.json. Python 3.10-3.13 each pass
+331 Linux source cases with zero skips (duplicate-stamps-py3.{10,11,12,13}.xml). The
+real stdio/HTTP investigation/fuzzy/bounded-graph selection, with preparation/container and
+benchmark regressions, passes 320, zero skips and 52 deliberate integration deselections
+(duplicate-stamps-targeted-zero-skips.xml). Existing interpreters load the rebuilt shared
+stable-ABI source extension; these are not new wheel/sdist installations or Windows results.
+
+The incoming graph-filter revision additionally passes 374 native/graph/structure and real
+acceptance-script cases with zero skips (frontier-filter-native-transport-zero-skips.xml).
+The graph script now uses artifact preparation, frontier results, full warm-response equality
+and Java-disabled stdio; it no longer requires obsolete implicit-full-index fields. A larger
+expansion budget also scales its worst-case session reservation. Its independent decoder
+checks canonical DEX-to-original-entry mapping, exact emitted instruction operands/offsets/
+opcodes and polymorphic prototypes. A failed recheck clears any earlier independent pass;
+transport success and independent-site success are separate fields. Reproduce with:
+
+```sh
+uv run python scripts/benchmark_call_graph.py INPUT.apk --expanded-mib 512 --output graph.json
+uv run --with androguard python scripts/benchmark_call_graph.py INPUT.apk \
+  --output graph.json --verify-sites
+```
+
+The input, runtime and verifier must remain unchanged between these commands. The standalone
+pilot is not a matched competitor timing. The separate matched product-revision receipt has
+mixed per-round outcomes despite a lower cold median; do not call it a robust startup win.
+See NATIVE_QUERY_VALIDATION.md for exact values and the remaining release requirements.
+
+Run the full original-input ownership/snapshot oracle separately from timing trials:
+
+```sh
+uv run python scripts/verify_preparation_directory.py INPUT.apk --expanded-mib 512 \
+  --output ownership-oracle.json
+```
+
+This compares every original DEX class and owner using accelerator=False, all snapshot DEX bytes
+by SHA-256, counts/provenance and the entire common metadata envelope. Fixture corruption tests
+must fail on a missing class, wrong owner or damaged snapshot. The verifier keeps a full oracle
+dictionary only on the acceptance side; it is not a production memory policy or performance run.
+All three large original APKs pass on the current candidate: 551,538/233,555/99,712 classes for
+Douyin/WeChat/Taobao, with stable input/runtime hashes. This does not replace full call-site and
+graph completeness oracles or final cross-platform installation gates.
+
+Do not omit RAM-backed storage from memory conclusions. On this host, findmnt identifies /tmp
+as tmpfs; the current Douyin receipt retains about 500 MB of immutable snapshot/directory files.
+Warm host RSS around 79 MB is therefore not a 79-MB total memory footprint or a total-memory
+win over the competitor. Record filesystem placement and separate file/RSS measurements; do not
+add unrelated phase peaks as an exact simultaneous total. Startup field latency, startup RSS
+and retained RAM-backed storage remain open candidate gaps, not accepted release tradeoffs.
 
 The large fuzzy union also has a complete independent instruction-decoder check, rather
 than only checking the first page or trusting another implementation's byte candidates:
@@ -64,6 +242,23 @@ persisted call-index multiset separately from bounded graph responses:
 uv run --with ./artifacts/aimard-asc-mcp python scripts/verify_call_index.py INPUT.apk \
   --output call-index-oracle.json
 ```
+
+The 0.2.3 candidate can explore bounded call-graph frontiers without first building a
+whole-APK index. Full instruction validation remains mandatory. Up to 32 BFS nodes share
+a scan; dense batches shrink before the original disk-bounded index fallback is used.
+An existing valid session index still takes precedence; explicitly configuring the durable
+xref cache preserves the original calls-only build/restore path. Frontier responses identify
+`backend=native-dex-frontier` and omit `index`; `query_cache.hit` describes exact-page reuse,
+not creation of an index. Compare all graph fields, ordered nodes/edges, diagnostics and
+truncation against a freshly built full call index:
+
+```sh
+uv run python scripts/verify_frontier_graph.py INPUT.apk --root 'Lexample/Main;->run()V' \
+  --depths 1 3 5 --output frontier-parity.json
+```
+
+This direct-worker comparison is accuracy evidence only. Real stdio/HTTP and matched
+fresh-process latency, preparation, RSS and disk/tmpfs receipts are separate release gates.
 
 ## v0.4.1 cold-query gate, 2026-10-22
 

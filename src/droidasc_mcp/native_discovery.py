@@ -35,7 +35,9 @@ def _query_discovery(settings, bundle, query, page):
             if operation == "search_classes":
                 if query.get("prefix") and not owner.startswith(query["prefix"]):
                     continue
-                if needle in (owner if sensitive else owner.lower()):
+                dotted = owner[1:-1].replace("/", ".")
+                candidates = (owner, dotted) if sensitive else (owner.lower(), dotted.lower())
+                if any(needle in candidate for candidate in candidates):
                     page.add((utf16_key(owner), b"", 0), {"class_name": owner, "dex_entry": entry})
                 continue
             fields, methods = dex.members(cls)
@@ -62,7 +64,7 @@ def _query_discovery(settings, bundle, query, page):
         + (
             "string_value"
             if strings
-            else "class_descriptor"
+            else "class_descriptor_or_dotted_name"
             if operation == "search_classes"
             else "member_name"
             if names
