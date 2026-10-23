@@ -305,3 +305,121 @@ sampled inside the supervised trial root; zero is not a system-wide write claim,
 on this host's tmpfs are additional to process RSS. The competitor's first repeat remains
 substantially slower than its second repeat; without traced worker routing this is an
 observation, not proof of a specific cache/process-pool cause. No failed round is omitted.
+
+## Complete Reference Collection Baseline
+
+The 2026-10-23/24 full-page pilot extends scripts/benchmark_competitor_runtime.py with
+full_method/full_field and adds scripts/verify_reference_page_benchmark.py. Each API follows
+its actual continuation until the complete result is collected; response_limit recovery
+retries the same offset with a smaller page and its cost remains in the measurement.
+The measured endpoint is the last decoded response, not the first page. Offline acceptance
+normalizes original DEX names, exact caller/target, byte offset, opcode and access, retaining
+duplicate sites. Our complete ordered rows and every scanner diagnostic are additionally
+compared with the frozen independent JVM scanner over independently inventoried original bytes.
+Oracle work is outside both servers' measured costs.
+
+These are one fresh paired round per APK, two complete collections per selected query,
+not multi-round acceptance. Both servers share Python 3.13.11/dependencies, four configured
+workers, the same inherited four logical CPUs, 4096-MiB aggregate process RSS, 8192-MiB
+temporary-file caps and 180-second per-call limits. Requested page size is 1000. Our method
+response exceeds the unchanged 256-KiB cap and retries at 500 sites; competitor pages contain
+caller groups, but the complete selected method-site corpus is independently equal. OS caches
+are retained. Product sources remain byte-identical to e3f3819; installed competitor sources
+match pinned 848c711f, freshly rechecked against GitHub main.
+
+| Input | Complete method sites | Product successful pages | First complete collection seconds, ours / competitor | Second complete collection seconds, ours / competitor | Process start to complete first collection seconds, ours / competitor |
+| --- | --- | --- | --- | --- | --- |
+| Taobao | 24461 | 49 | 27.1845 / 5.3954 | 25.8598 / 4.1029 | 29.6298 / 6.3633 |
+| WeChat | 26184 | 53 | 36.6546 / 6.6087 | 36.3356 / 3.9139 | 39.5336 / 7.9801 |
+| Douyin | 47005 | 95 | 158.3533 / 14.4882 | 177.8112 / 6.8126 | 163.8523 / 16.5657 |
+
+All six product method collections have zero exact-page-cache hits, including second reads.
+The PageCache key includes offset/limit, and its 32-entry/four-MiB LRU cannot retain a complete
+49/53/95-page collection. Reading again from the beginning evicts later pages before reaching
+them. The native _references path scans for every uncached offset; it does not stop after
+selecting a page because complete counters/diagnostics must still be checked. This establishes
+a real remaining architectural deficit, despite favorable earlier first-page measurements.
+query_cache.py is a separate disk-page helper with no production caller; its presence does
+not prove query-wide result reuse.
+
+| Input | Method-trial peak process RSS bytes, ours / competitor | Method-trial peak temporary-file bytes, ours / competitor |
+| --- | --- | --- |
+| Taobao | 124440576 / 818905088 | 117598393 / 0 |
+| WeChat | 128290816 / 945487872 | 181487576 / 0 |
+| Douyin | 134668288 / 1099501568 | 477079703 / 0 |
+
+Receipts: full-pages-{taobao,wechat,douyin}-baseline-pilot.json and their -accuracy.json
+files under the evidence root. The remaining-input orchestrator distinguishes process
+completion from accuracy success. Taobao's overall accuracy receipt intentionally fails:
+product method/field pages and competitor method pages pass, but the competitor's field
+evidence has 429 sites versus the independently verified 332, with zero missing and 97 extra.
+WeChat and Douyin pass complete method and field content for both implementations. Do not
+report the Taobao field workload as an equal-correct-result speed comparison.
+
+full-pages-taobao-field-mismatch-examples.json independently decodes five discrepant original
+sites with Androguard. All five claimed offsets lie beyond the named caller's instruction
+stream, not at valid field instructions: for example, offset 22 in a 12-byte constructor.
+The pinned InsnLocator keeps method starts but no exact ends; bucket conflicts collect
+multiple method IDs, validate the first member and later expand evidence to every member.
+This is source-backed evidence of unsafe caller association, not justification to copy its
+byte-filter shortcuts. The five-example diagnosis does not claim to classify all 97 extras.
+
+The benchmark/normalizer/oracle replay selection passes 95 local tests with zero skips:
+full-page-benchmark-targeted-final.xml. Cases reject equal-count target/caller/offset/opcode/
+access/source corruption, duplicate loss, changed diagnostics/provenance, empty continuations,
+wrong cursors and unaccounted responses. A real trial-loop stub also requires timing through
+the final page and inclusion of retry costs. This is test-harness acceptance, not a new full
+source, Windows or distribution gate. No product runtime change is retained from this baseline.
+
+## Selected-Result Spool Feasibility
+
+Two isolated source copies test a targeted alternative without retaining a full-APK object.
+reference-spool-prototype/droidasc_mcp streams every matching row into a private SQLite
+file while the existing checked instruction scan runs. It retains only the requested page
+in Python, then atomically publishes complete scan diagnostics and final target definitions.
+The query key excludes pagination. A file is capped at 32 MiB, the sequential pilot's retained
+spools at 64 MiB, and SQLite's page cache at two MiB. Readback uses rowid ranges and restores
+the exact target-resolution fields; the original 256-KiB response cap remains unchanged.
+
+The worker-read Taobao pilot collects all method sites in 9.7513 / 9.1797 seconds on first /
+second reads, versus 6.9999 / 4.5568 for its matched competitor. It removes repeated scans
+but still starts a worker for each new page. Its independent oracle receipt passes every
+product row/diagnostic and competitor method row; the same competitor field mismatch is
+retained as failed evidence. This is not a sufficient implementation by itself.
+
+reference-spool-host-prototype adds a host-side page read for a published selected result,
+avoiding that fresh-worker cost. Each input again has one fresh paired round and two complete
+collections, with the baseline's interpreter/CPU/RSS/temp/page budgets. All preparation,
+first scan, spool construction, oversized-response retry and readback costs are included.
+
+| Input | First complete method collection seconds, prototype / competitor | Second complete method collection seconds, prototype / competitor | Process start to complete first collection seconds, prototype / competitor | Peak process RSS bytes, prototype / competitor | Peak temporary-file bytes, prototype / competitor |
+| --- | --- | --- | --- | --- | --- |
+| Taobao | 4.9700 / 5.9328 | 4.4509 / 3.9490 | 7.0098 / 6.9469 | 117575680 / 826818560 | 125273205 / 0 |
+| WeChat | 5.2038 / 7.5940 | 4.4645 / 4.8209 | 7.9419 / 8.7487 | 121196544 / 930377728 | 189114325 / 0 |
+| Douyin | 10.4062 / 13.1900 | 8.2802 / 6.5125 | 15.6735 / 14.9850 | 133959680 / 1107787776 | 491501716 / 0 |
+
+Receipts: full-pages-{taobao,wechat,douyin}-host-spool-pilot.json and -accuracy.json.
+All product ordered rows and diagnostics and every competitor method site match the frozen
+independent original-byte oracle. WeChat/Douyin competitor field results also agree; Taobao
+still fails with the same 97 extra sites. File costs include the extra spool, separately from
+RSS; tmpfs bytes are not free memory. These are sequential pilots, not alternating before/after
+revision trials, multi-round speedup proof or universal superiority. Although each first
+collection query beats its paired competitor, Taobao/Douyin still lose from process start
+and on the second full collection. Neither source copy modifies the production runtime.
+
+This evidence selects a direction, not a releasable cache. Production work must bind each
+publication to input/runtime/settings identity, handle cache replacement/corruption and
+index lifecycle changes, coordinate concurrent writers/eviction, reserve combined pending/
+retained/index bytes under the session budget, and enforce bounded metadata/readback with
+cancellation. Selector resolution, fuzzy unions, 041 mappings, engine changes, source handoff,
+cleanup and Windows behavior need focused coverage before final matched multi-round gates.
+The prototype's sequential eviction, simplified identity and separate file caps do not prove
+those invariants; it must not be copied directly into the shipped worker or host.
+
+The separate host-spool-reference-pages-corpus.json accuracy/cleanup exercise passes all
+three inputs, all 98581 selected ordered rows, 200 successful pages and every diagnostic.
+Each session closes without cleanup_pending, owned temporary files disappear, and inputs,
+prototype runtime and oracle files remain unchanged. This validates those sequential paths,
+not untested concurrent cancellation or corrupted-cache behavior. full-page-experiment-summary.json
+binds the baseline/prototype/accuracy/cleanup/test receipts and explicitly records
+eligible_for_publication=false; the Taobao competitor field failure is not relabelled green.

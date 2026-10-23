@@ -53,6 +53,13 @@ new release; the current startup/storage experiments are separate and remain iso
 
 ## Complete MCP Reference Pages
 
+The later complete-collection benchmark and isolated selected-result spool experiments are
+recorded in STARTUP_STORAGE_EXPERIMENTS.md. The production runtime still matches e3f3819;
+neither prototype is adopted or approved for release. The new benchmark/normalization/replay
+selection passes 95 local tests without skips: full-page-benchmark-targeted-final.xml under
+artifacts/startup-next-20261023. This is distinct from the earlier 95-test container/reference
+selection below and does not raise the exact e3f3819 CI count.
+
 The development-only verifier scripts/verify_mcp_reference_pages.py reads every successful
 page for String.equals method references and Build.MODEL field references through real
 stdio. A frozen independent JVM scanner consumes original APK bytes, mapped to canonical

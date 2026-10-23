@@ -106,6 +106,17 @@ full collection-latency comparison or all-query coverage. Current exact-page cac
 offset/limit in their keys, so a new page still takes the scan path; that amplification
 needs its own matched competitor measurement before claiming paging superiority.
 
+The subsequent complete-collection pilot does that measurement: all selected method sites
+match the independent original-byte scanner across the three large APKs, while complete
+product pagination is substantially slower than the pinned competitor. All second full
+collections also miss the current exact-page LRU. The Taobao competitor field collection
+fails independent parity with 97 extra sites (429 versus 332). Androguard verifies that five
+listed examples lie beyond their named caller's instruction stream; InsnLocator's bucket
+association tracks starts but lacks precise method-end checks. WeChat/Douyin method and
+field collections pass full parity for both implementations. The failed Taobao field receipt
+is retained rather than labelled a passing timing comparison. See the complete-collection
+baseline in STARTUP_STORAGE_EXPERIMENTS.md; these one-round pilots are not final gates.
+
 The 2026-10-23 parameter exercise reads the pinned server's forwarding of `fuzzy_class`,
 `exact_name`, `descriptor`/`field_type`, `cursor` and `limit` and checks the corresponding
 selectors over both real transports. `test_native_fuzzy_references_without_java` now

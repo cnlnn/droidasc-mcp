@@ -101,6 +101,56 @@ def query_content(result):
     return content
 
 
+async def collect_reference_pages(call, implementation, tool, params, label, page_size):
+    """Follow real continuations, preserving all rows and stable page diagnostics."""
+    ours = implementation == "ours"
+    combined, pages, recoveries = [], [], []
+    cursor, expected = None, None
+    while True:
+        arguments = {**params, "limit": page_size}
+        arguments["offset" if ours else "cursor"] = len(combined) if ours else cursor
+        page_label = f"{label}:page:{len(pages)}:attempt:{len(recoveries)}"
+        result = await call(page_label, tool, arguments, allow_response_limit=ours)
+        if result.get("status") == "error":
+            assert ours and result.get("code") == "response_limit" and page_size > 1, result
+            recoveries.append({"offset": len(combined), "limit": page_size})
+            page_size = max(1, page_size // 2)
+            continue
+        row_key = "items" if ours else "hits"
+        rows = result[row_key]
+        assert isinstance(rows, list) and len(rows) <= page_size
+        stable = query_content(result)
+        for key in (
+            row_key,
+            "offset",
+            "limit",
+            "next_offset",
+            "next_cursor",
+            "has_more",
+            "truncated",
+        ):
+            stable.pop(key, None)
+        if expected is None:
+            expected = stable
+        assert stable == expected, "Page metadata changes inside a collection"
+        assert len(combined) + len(rows) <= result["total"]
+        more = len(combined) + len(rows) < result["total"]
+        if ours:
+            assert result["offset"] == len(combined) and result["limit"] == page_size
+            assert result["has_more"] == result["truncated"] == more
+            assert result["next_offset"] == (len(combined) + len(rows) if more else None)
+        else:
+            cursor = result["next_cursor"]
+            assert cursor == (str(len(combined) + len(rows)) if more else None)
+        assert rows or not more, "Nonterminal reference page does not advance"
+        combined.extend(rows)
+        pages.append(page_label)
+        if not more:
+            break
+    assert len(combined) == expected["total"]
+    return {**expected, row_key: combined}, pages, recoveries
+
+
 def queries(implementation, key, scenario, graph_root, graph_depth):
     if implementation == "ours":
         method = {"operation": "find_method_refs", "method_descriptor": METHOD}
@@ -177,7 +227,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
     return (
         [command(method), command(field)]
         if scenario == "concurrent"
-        else [command(chosen[scenario])]
+        else [command(chosen[scenario.removeprefix("full_")])]
     )
 
 
@@ -325,7 +375,7 @@ async def trial(args, implementation, scenario, round_number, report, save):
             async with Client(endpoint) as client:
                 metric["transport_start_seconds"] = round(time.monotonic() - started, 4)
 
-                async def call(label, tool, params):
+                async def call(label, tool, params, *, allow_response_limit=False):
                     nonlocal peak
                     peak = current_rss()
                     start = time.monotonic()
@@ -358,9 +408,19 @@ async def trial(args, implementation, scenario, round_number, report, save):
                         )
                         result = reply.structured_content
                         operation["result"] = result
-                        if reply.is_error or not result or result.get("status", "ok") != "ok":
+                        recovery = (
+                            allow_response_limit
+                            and result
+                            and result.get("status") == "error"
+                            and result.get("code") == "response_limit"
+                        )
+                        if (
+                            reply.is_error
+                            or not result
+                            or (result.get("status", "ok") != "ok" and not recovery)
+                        ):
                             raise RuntimeError(str(reply)[:2000])
-                        operation["status"] = "ok"
+                        operation["status"] = "response_limit" if recovery else "ok"
                         return result
                     except Exception as exc:
                         operation.update(status="error", error=repr(exc)[:2000])
@@ -392,11 +452,28 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 )
                 key = opened["session_id" if ours else "analysis_id"]
                 commands = queries(implementation, key, scenario, args.graph_root, args.graph_depth)
-                for repeat in range(3):
+
+                async def command(label, tool, params):
+                    if not scenario.startswith("full_"):
+                        return await call(label, tool, params)
+                    result, pages, recoveries = await collect_reference_pages(
+                        call, implementation, tool, params, label, args.page_size
+                    )
+                    response_times[label] = response_times[pages[-1]]
+                    metric.setdefault("reference_collections", []).append(
+                        {
+                            "label": label,
+                            "page_labels": pages,
+                            "response_limit_recoveries": recoveries,
+                        }
+                    )
+                    return result
+
+                for repeat in range(getattr(args, "repeats", 3)):
                     start = time.monotonic()
                     results = await asyncio.gather(
                         *(
-                            call(f"query:{repeat}:{i}", tool, params)
+                            command(f"query:{repeat}:{i}", tool, params)
                             for i, (tool, params) in enumerate(commands)
                         )
                     )
@@ -473,6 +550,8 @@ async def main(args):
         "graph_depth": args.graph_depth,
         "memory_cap_mib": args.memory_mib,
         "timeout_per_call_seconds": args.timeout,
+        "repeats": args.repeats,
+        "full_collection_page_size": args.page_size,
         "ours_expansion_budget_mib": args.expanded_mib,
         "ours_session_disk_budget_mib": args.session_disk_mib,
         "external_temporary_logical_cap_mib": args.session_disk_mib,
@@ -487,6 +566,8 @@ async def main(args):
         "not added to RSS; peaks are lower bounds and include indexes/private snapshots. "
         "Allocated bytes use st_blocks where available, otherwise null; tmpfs is not process RSS. "
         "Reference totals: ours individual sites, competitor caller groups. "
+        "full_method/full_field collect every page; timings include all response-limit retries. "
+        "Cross-implementation complete-site equality requires the separate offline verifier. "
         "Graphs must normalize to caller/callee pairs and check truncation.",
         "trials": [],
         "status": "running",
@@ -533,10 +614,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scenarios",
         nargs="+",
-        choices=["method", "field", "fuzzy", "string", "graph", "concurrent"],
+        choices=[
+            "method",
+            "field",
+            "fuzzy",
+            "string",
+            "graph",
+            "concurrent",
+            "full_method",
+            "full_field",
+        ],
         default=["method", "field", "fuzzy", "graph", "concurrent"],
     )
     parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--repeats", type=int, choices=range(1, 4), default=3)
+    parser.add_argument("--page-size", type=int, choices=range(1, 1001), default=1000)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--memory-mib", type=int, default=4096)

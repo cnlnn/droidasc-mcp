@@ -122,6 +122,22 @@ change or new full cross-platform gate is implied. The existing exact-page cache
 offset/limit and unseen pages rescan instructions. Measure full-collection scan amplification
 against the competitor rather than inferring paging performance from first-page timings.
 
+The complete-collection pilot now confirms that deficit on all three inputs. First method
+collection is 27.1845/36.6546/158.3533 seconds versus the competitor's
+5.3954/6.6087/14.4882; second full collections still miss every product page-cache entry.
+Every method site matches an independent original-byte oracle for both implementations.
+The competitor's Taobao field result instead has 97 extra sites; five independently decoded
+examples exceed their named caller's instruction stream. This is not an accuracy target to
+copy. See STARTUP_STORAGE_EXPERIMENTS.md for one-round scope, complete receipts, resources
+and exact distinctions from earlier first-page/concurrent comparisons. Query-wide selective
+result reuse and its host paging path now have priority over cursor micro-optimizations.
+An isolated streamed-SQLite/host-reader pilot reduces those first collection observations
+to 4.9700/5.2038/10.4062 seconds, with every product row and diagnostic independently equal.
+It is not production code or final before/after acceptance: Taobao/Douyin still lose to the
+paired competitor at complete-result startup and on repeat; combined session reservations,
+concurrent publication, invalidation, corruption and cancellation remain implementation work.
+The private prototype and receipts are preserved in STARTUP_STORAGE_EXPERIMENTS.md.
+
 ## Competitor workflow closure
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
