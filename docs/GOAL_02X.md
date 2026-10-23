@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 through v0.2.6 are published; the next increment is in development. Remaining deficits stay explicit
+  v0.2.3 through v0.2.7 are published; v0.2.8 is in development. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; fresh readback confirms the four tags are absent. v0.2.6 is now latest.
+  Completed 2026-10-23; fresh readback confirms the four tags are absent. v0.2.7 is now latest.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -79,6 +79,25 @@ all-gap completion goal stays active after an intermediate patch is published.
 
 Update, 2026-10-23:
 
+- Published increment: v0.2.7, main/tag target
+  f7efd9a0f907280c31993b95535ec85ee5bf4494. CI 39866704262 passes all 25 jobs;
+  eight source cells pass 1132 tests and seven signing variants each, with zero skips,
+  errors or failures. All eight distribution cells test the same canonical sdist and
+  their exact native wheel with the complete suite. Fresh source and CI-wheel ownership
+  receipts each verify all 884,805 owners and every snapshot DEX byte. Independent fuzzy,
+  call/string and bounded graph receipts pass in their recorded scopes. Published assets
+  match server/local hashes and retained tags are unchanged. Evidence:
+  artifacts/acceptance-0.2.7-ci-39866704262/{acceptance-summary,published-readback}.json.
+  This query-memory increment does not close startup, retained-storage or workflow deficits.
+- Selected v0.2.8 increment: dictionary-encode DEX owners in the SQLite class directory,
+  keeping key order, logical budgets, integrity and legacy read-only formats. Five
+  alternating rounds on each original APK preserve every owner, common metadata and full
+  snapshot hash. Owner storage falls 21.5/26.3/27.4 percent on Taobao/WeChat/Douyin;
+  total retained files fall only about 1-2 percent. Preparation medians (before/after,
+  seconds) are 1.3484/1.1736, 2.2570/2.1293 and 5.0610/5.0386. The largest-input
+  timing is effectively flat and process RSS is mixed; this is not a universal startup
+  or total-memory win. Receipt: increment028-owners-before-after.json. Final-runtime
+  independent ownership, real MCP, source, Windows and package gates remain required.
 - Published increment: v0.2.6, main/tag target
   a0a34d77f0f21cac27b69a69c85070a663605916. CI 39858964129 passes all 17 jobs;
   all eight Linux/Windows Python 3.10-3.13 cells pass 1108 tests without failures,
@@ -116,8 +135,8 @@ Update, 2026-10-23:
   and reproduce the complete fixture class/member/instruction results, including pinned-buffer
   failure cleanup. Receipts: increment027-source.xml and increment027-isolated-wheel-tiers.json.
   Those diagnostic wheels still carry pre-freeze 0.2.6 metadata and are not release assets.
-  The candidate metadata is now 0.2.7; exact final-commit CI/packages and independent
-  large-input/MCP receipts are still required. No main merge, tag or release has occurred.
+  Those were pre-freeze results. Final v0.2.7 acceptance and publication supersede this
+  candidate status as recorded above; no earlier receipt is relabeled as final evidence.
 - Published increment: v0.2.5, main/tag target
   1b25267d2f123b03d722509f56425da347031818. CI 39847579502 passes all 17 jobs;
   each Linux/Windows Python 3.10-3.13 cell passes 1096 tests, zero skips/errors/failures,

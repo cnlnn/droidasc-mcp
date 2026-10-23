@@ -73,7 +73,11 @@ def test_directory_publishes_bounded_batches_not_one_statement_per_class(tmp_pat
     with ClassDirectory(path, budget=1024**2) as directory:
         directory.connection.set_trace_callback(statements.append)
         assert directory.add(names, "classes.dex") == []
-        inserts = [statement for statement in statements if statement.startswith("INSERT")]
+        inserts = [
+            statement
+            for statement in statements
+            if statement.startswith("INSERT OR IGNORE INTO classes")
+        ]
         assert len(inserts) <= (len(names) + 127) // 128
         assert directory.metadata_bytes == len(json.dumps(dict.fromkeys(names, "classes.dex")))
         assert directory.page(None, 128, 2)[1] == [
@@ -128,12 +132,12 @@ def test_compact_keys_match_utf16_order_roundtrip_and_partial_prefix(tmp_path):
             assert [row["class_name"] for row in rows] == wanted
 
 
-@pytest.mark.parametrize("version", [0, 2])
+@pytest.mark.parametrize("version", [0, 1, 3])
 def test_legacy_keys_read_only_compatibility_and_unknown_format_rejected(tmp_path, version):
     import sqlite3
     from contextlib import closing
 
-    from droidasc_mcp.class_directory import ClassDirectory
+    from droidasc_mcp.class_directory import ClassDirectory, key
 
     path = tmp_path / "legacy.sqlite"
     names = ["La/A;", "La/\U0001f600;", "La/\ud800;"]
@@ -141,12 +145,18 @@ def test_legacy_keys_read_only_compatibility_and_unknown_format_rejected(tmp_pat
         db.execute("CREATE TABLE classes(name BLOB PRIMARY KEY, entry TEXT NOT NULL) WITHOUT ROWID")
         db.executemany(
             "INSERT INTO classes VALUES (?,?)",
-            [(name.encode("utf-16-be", "surrogatepass"), "classes.dex") for name in names],
+            [
+                (
+                    name.encode("utf-16-be", "surrogatepass") if version == 0 else key(name),
+                    "classes.dex",
+                )
+                for name in names
+            ],
         )
         db.execute(f"PRAGMA user_version={version}")
         db.commit()
     original = path.read_bytes()
-    if version == 2:
+    if version == 3:
         with (
             pytest.raises(ValueError, match="Unsupported prepared class directory"),
             ClassDirectory(path),
@@ -157,4 +167,91 @@ def test_legacy_keys_read_only_compatibility_and_unknown_format_rejected(tmp_pat
             assert directory[names[1]] == "classes.dex"
             assert directory.page("La/", 0, 3)[0] == 3
             assert {row["class_name"] for row in directory.page(None, 0, 3)[1]} == set(names)
+    assert path.read_bytes() == original
+
+
+def test_owner_names_are_interned_once_per_dex_with_integer_class_references(tmp_path):
+    from droidasc_mcp.class_directory import ClassDirectory
+
+    path = tmp_path / "interned.sqlite"
+    expected = {}
+    with ClassDirectory(path, budget=1024**2) as directory:
+        for number in range(1, 65):
+            entry = "classes.dex" if number == 1 else f"classes{number}.dex"
+            names = [f"Lfixture/dex{number}/Type{index};" for index in range(17)]
+            assert directory.add(names, entry) == []
+            expected.update(dict.fromkeys(names, entry))
+        assert directory.connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert directory.connection.execute("SELECT count(*) FROM entries").fetchone()[0] == 64
+        assert (
+            directory.connection.execute(
+                "SELECT count(*) FROM classes WHERE typeof(entry)!='integer'"
+            ).fetchone()[0]
+            == 0
+        )
+        assert directory.metadata_bytes == len(json.dumps(expected))
+        with pytest.raises(ValueError, match="DEX entry limit"):
+            directory.add([], "classes65.dex")
+    with ClassDirectory(path) as directory:
+        assert len(directory) == len(expected)
+        assert {
+            row["class_name"]: row["dex_entry"] for row in directory.page(None, 0, 2000)[1]
+        } == expected
+        assert all(directory[name] == entry for name, entry in expected.items())
+
+
+@pytest.mark.parametrize("operation", ["lookup", "page"])
+def test_interned_directory_rejects_dangling_owner_ids(tmp_path, operation):
+    import sqlite3
+    from contextlib import closing
+
+    from droidasc_mcp.class_directory import ClassDirectory
+
+    path = tmp_path / "dangling.sqlite"
+    with ClassDirectory(path, budget=65536) as directory:
+        directory.add(["Lfixture/Type;"], "classes.dex")
+    with closing(sqlite3.connect(path)) as db:
+        db.execute("UPDATE classes SET entry=9999")
+        db.commit()
+    with ClassDirectory(path) as directory, pytest.raises(ValueError, match="class directory"):
+        directory["Lfixture/Type;"] if operation == "lookup" else directory.page(None, 0, 100)
+
+
+def test_interned_directory_empty_and_small_budget_remain_bounded(tmp_path):
+    from droidasc_mcp.class_directory import ClassDirectory
+
+    path = tmp_path / "empty.sqlite"
+    with ClassDirectory(path, budget=2) as directory:
+        assert directory.add([], "classes.dex") == []
+        assert directory.metadata_bytes == 2
+        assert directory.connection.execute("PRAGMA user_version").fetchone()[0] == 2
+    assert path.stat().st_size <= 2 * 2 + 16384
+    with ClassDirectory(path) as directory:
+        assert len(directory) == 0
+        assert directory.page(None, 0, 100) == (0, [])
+
+
+@pytest.mark.parametrize("damage", ["id", "empty", "duplicate"])
+def test_interned_directory_dictionary_validation(tmp_path, damage):
+    import sqlite3
+    from contextlib import closing
+
+    from droidasc_mcp.class_directory import ClassDirectory
+
+    path = tmp_path / "dictionary.sqlite"
+    with ClassDirectory(path, budget=65536) as directory:
+        directory.add(["La/A;"], "classes.dex")
+        directory.add(["Lb/B;"], "classes2.dex")
+    with closing(sqlite3.connect(path)) as db:
+        db.execute(
+            {
+                "id": "UPDATE entries SET id=65 WHERE id=1",
+                "empty": "UPDATE entries SET name='' WHERE id=1",
+                "duplicate": "UPDATE entries SET name='classes.dex' WHERE id=2",
+            }[damage]
+        )
+        db.commit()
+    original = path.read_bytes()
+    with pytest.raises(ValueError, match="class directory"), ClassDirectory(path):
+        pass
     assert path.read_bytes() == original

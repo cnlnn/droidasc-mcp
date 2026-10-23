@@ -230,7 +230,7 @@ def test_closed_member_can_be_scanned_before_zip_close_and_then_appended(tmp_pat
     bundle.unlink()
 
 
-@pytest.mark.parametrize("damage", [None, "missing", "owner", "snapshot"])
+@pytest.mark.parametrize("damage", [None, "missing", "owner", "dictionary", "snapshot"])
 def test_full_original_archive_oracle_detects_ownership_and_byte_mismatch(
     settings, tmp_path, monkeypatch, damage
 ):
@@ -251,10 +251,15 @@ def test_full_original_archive_oracle_detects_ownership_and_byte_mismatch(
     root.mkdir()
     prepared = dex_worker.analyze(request, root)
     assert prepared["status"] == "ok", prepared
-    if damage in {"missing", "owner"}:
+    if damage in {"missing", "owner", "dictionary"}:
         with closing(sqlite3.connect(root / "owners.sqlite")) as db:
             if damage == "missing":
-                db.execute("DELETE FROM classes WHERE entry='classes2.dex'")
+                db.execute(
+                    "DELETE FROM classes WHERE entry=(SELECT id FROM entries "
+                    "WHERE name='classes2.dex')"
+                )
+            elif damage == "dictionary":
+                db.execute("UPDATE entries SET name='wrong.dex' WHERE name='classes2.dex'")
             else:
                 db.execute("UPDATE classes SET entry='wrong.dex'")
             db.commit()

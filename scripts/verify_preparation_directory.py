@@ -50,8 +50,17 @@ def verify_ownership(apk, root, prepared):
     matched = hashlib.sha256()
     with closing(sqlite3.connect((root / "owners.sqlite").as_uri() + "?mode=ro", uri=True)) as db:
         version = db.execute("PRAGMA user_version").fetchone()[0]
-        assert version in (0, 1), "Unsupported ownership key format"
-        actual = db.execute("SELECT name,entry FROM classes ORDER BY name")
+        assert version in (0, 1, 2), "Unsupported ownership key format"
+        if version == 2:
+            assert db.execute("SELECT id,name FROM entries ORDER BY id").fetchall() == [
+                (index + 1, record["dex_entry"]) for index, record in enumerate(records)
+            ], "DEX ownership dictionary differs"
+            actual = db.execute(
+                "SELECT classes.name,entries.name FROM classes LEFT JOIN entries "
+                "ON classes.entry=entries.id ORDER BY classes.name"
+            )
+        else:
+            actual = db.execute("SELECT name,entry FROM classes ORDER BY name")
         ordered = sorted(
             expected.items(), key=lambda row: row[0].encode("utf-16-be", "surrogatepass")
         )
@@ -61,7 +70,7 @@ def verify_ownership(apk, root, prepared):
             # Deliberately independent of the product key encoder/decoder. Encode
             # the oracle name one UTF-16 code unit at a time for the compact format.
             expected_key = wanted[0].encode("utf-16-be", "surrogatepass")
-            if version == 1:
+            if version >= 1:
                 expected_key = b"".join(
                     chr(int.from_bytes(expected_key[i : i + 2], "big")).encode(
                         "utf-8", "surrogatepass"

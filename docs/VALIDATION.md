@@ -42,7 +42,7 @@ all snapshot DEX bytes across Taobao/WeChat/Douyin. That wheel independently ver
 match local and GitHub SHA-256 digests. Receipts:
 artifacts/acceptance-0.2.5-ci-39847579502/{acceptance-summary,published-readback}.json.
 
-v0.2.6 is published and latest, targeting a0a34d77f0f21cac27b69a69c85070a663605916.
+v0.2.6 is published, targeting a0a34d77f0f21cac27b69a69c85070a663605916.
 CI 39858964129 passes all 17 jobs: each Linux/Windows Python 3.10-3.13 cell passes
 1108 tests without failures, errors or skips and all seven signing variants. Both canonical
 source/native-wheel clean-install jobs pass. Fresh source and exact Linux CI-wheel oracles
@@ -62,15 +62,39 @@ are retained under artifacts/release-renumber-20261022/increment026-*.
 The experiment's three-round preparation timings are mixed and do not establish a speedup.
 Its runtime differs from the released serial-hash fix and does not describe that runtime.
 
-The next query-memory experiment uses one read-only mapping and pinned native buffer per
+v0.2.7 is published and latest, targeting f7efd9a0f907280c31993b95535ec85ee5bf4494.
+CI 39866704262 passes all 25 jobs. All eight Linux/Windows Python 3.10-3.13 source
+cells pass 1132 tests without failures/errors/skips and seven signing variants each.
+All eight distribution cells pass the full suite for both the canonical sdist and exact
+native wheel. Fresh source and CI-wheel ownership receipts each verify all 884,805 owners
+and snapshot DEX bytes; source fuzzy oracles verify all 108,151 selected sites across
+86,473,182 instructions. The wheel additionally verifies all 2,914,002 Taobao call sites,
+2163 selected string sites and nine bounded graph cases. Published assets match fresh
+downloads and GitHub digests. Receipts:
+artifacts/acceptance-0.2.7-ci-39866704262/{acceptance-summary,published-readback}.json.
+
+The v0.2.7 query-memory implementation uses one read-only mapping and pinned native buffer per
 stored DEX; compressed members and builds without that capability retain owned bytes.
 The complete CRC, ZIP local-name/overlap checks and checked cursor remain mandatory.
 Python 3.10 uses a native cp310 wheel; Python 3.11+ uses cp311-abi3 because the public
 [buffer API entered the Stable ABI in 3.11](https://docs.python.org/3/c-api/buffer.html).
 The package CI matrix now tests both wheel tiers
-against the same canonical sdist on every supported interpreter and platform. These are
-in-development gates, not completed acceptance. Full-result diagnostics and their mixed
+against the same canonical sdist on every supported interpreter and platform. Full-result diagnostics and their mixed
 timing outcomes are recorded in GOAL_02X.md; no overall speed or total-memory win is claimed.
+
+The v0.2.8 candidate dictionary-encodes prepared DEX ownership; it does not change the DEX
+decoder, native buffer path or snapshot format. Five alternating preparation-only rounds
+against v0.2.7 verify identical complete metadata, ordered class/owner hashes and private
+snapshot hashes for each original APK. Owner-file sizes (before / after, bytes) are
+5,955,584 / 4,673,536 (Taobao), 11,255,808 / 8,294,400 (WeChat) and
+27,541,504 / 19,992,576 (Douyin). Preparation medians are 1.3484 / 1.1736,
+2.2570 / 2.1293 and 5.0610 / 5.0386 seconds. Total retained files decrease only
+about 1-2 percent; raw DEX snapshots remain. Sampled process RSS does not establish a
+consistent reduction. These are direct preparation diagnostics, not process-start-to-first
+MCP or competitor evidence. Tiny/empty directories incur an extra fixed SQLite page.
+Receipt: artifacts/release-renumber-20261022/increment028-owners-before-after.json.
+Fresh full-source, real-MCP, independent ownership, Windows and exact-package acceptance
+are required before publishing this candidate. Overall performance/workflow closure stays open.
 
 The v0.2.5 directory-only five-round before/after diagnostic uses the same Python/runtime/input,
 four inherited CPUs and alternating subprocesses. Every inventory name and retained ZipInfo

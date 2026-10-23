@@ -60,27 +60,27 @@ all 18 tools over stdio/HTTP against a source-built
 and package installation. macOS remains unverified.
 
 Versions 0.3.0 through 0.5.0 have been withdrawn. Accepted updates use increasing 0.2.x
-versions without rolling back the native implementation. These version-pinned 0.2.7 commands
+versions without rolling back the native implementation. These version-pinned 0.2.8 commands
 are available only after that version passes acceptance and appears on
 [Releases](https://github.com/cnlnn/droidasc-mcp/releases).
 CPython 3.11+ on x86-64 Linux:
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.7/droidasc_mcp-0.2.7-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.8/droidasc_mcp-0.2.8-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+ on Windows (PowerShell):
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.7/droidasc_mcp-0.2.7-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.8/droidasc_mcp-0.2.8-cp311-abi3-win_amd64.whl
 ```
 
 For CPython 3.10, create the environment with `python3.10` or `py -3.10` and replace
 `cp311-abi3` in the wheel URL with `cp310-cp310`. The stable-ABI wheels support CPython 3.11
 and newer; the Linux wheels require glibc 2.34 or newer. The canonical source archive is
-`droidasc_mcp-0.2.7.tar.gz`. Source installation retains the Python fallback if no compiler is
+`droidasc_mcp-0.2.8.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. `--force-reinstall` also permits replacing an installed withdrawn
 version with the current stable version; no previously published version number will be reused.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,

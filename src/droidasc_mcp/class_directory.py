@@ -53,6 +53,7 @@ class ClassDirectory:
         self.path, self.budget, self.connection = path, budget, None
         self.metadata_bytes, self.rows, self.failed = 2, 0, False
         self.entries = set()
+        self.entry_names = None
         self.key, self.decode_key = key, decode_key
 
     @checked
@@ -70,18 +71,45 @@ class ClassDirectory:
                 self.connection.execute("PRAGMA journal_mode=OFF")
                 self.connection.execute("PRAGMA synchronous=OFF")
                 self.connection.execute("PRAGMA page_size=4096")
-                self.connection.execute("PRAGMA user_version=1")
+                self.connection.execute("PRAGMA user_version=2")
                 # Account logical JSON-equivalent metadata separately from SQLite's
-                # fixed pages/UTF-16 storage. Both fit the existing disk reservation.
-                self.connection.execute(f"PRAGMA max_page_count={(2 * self.budget + 8192) // 4096}")
+                # fixed pages/key storage. Both fit the existing disk reservation.
                 self.connection.execute(
-                    "CREATE TABLE classes(name BLOB PRIMARY KEY, entry TEXT NOT NULL) WITHOUT ROWID"
+                    f"PRAGMA max_page_count={(2 * self.budget + 16384) // 4096}"
                 )
+                self.connection.execute(
+                    "CREATE TABLE entries(id INTEGER PRIMARY KEY, name TEXT NOT NULL)"
+                )
+                self.connection.execute(
+                    "CREATE TABLE classes(name BLOB PRIMARY KEY, "
+                    "entry INTEGER NOT NULL) WITHOUT ROWID"
+                )
+                # At most 64 DEX names are shared instead of repeated for every class.
+                self.entry_names = {}
             else:
                 version = self.connection.execute("PRAGMA user_version").fetchone()[0]
                 if version == 0:
                     self.key = lambda name: name.encode("utf-16-be", "surrogatepass")
                     self.decode_key = lambda value: value.decode("utf-16-be", "surrogatepass")
+                elif version == 2:
+                    entries = self.connection.execute(
+                        "SELECT id,name FROM entries LIMIT 65"
+                    ).fetchall()
+                    if (
+                        len(entries) > 64
+                        or any(
+                            type(number) is not int
+                            or not 1 <= number <= 64
+                            or not isinstance(name, str)
+                            or not name
+                            for number, name in entries
+                        )
+                        or len({name for _, name in entries}) != len(entries)
+                    ):
+                        raise ArchiveError(
+                            "invalid_query", "Invalid prepared class directory entries"
+                        )
+                    self.entry_names = dict(entries)
                 elif version != 1:
                     raise ArchiveError("invalid_query", "Unsupported prepared class directory")
                 self.connection.execute("SELECT name,entry FROM classes LIMIT 0")
@@ -101,11 +129,17 @@ class ClassDirectory:
 
     @checked
     def add(self, names, entry):
+        if not isinstance(entry, str) or not entry:
+            raise ArchiveError("invalid_query", "Invalid prepared class directory entry name")
         if entry in self.entries:
             raise ArchiveError("invalid_query", "Class directory entry was already inserted")
+        if len(self.entries) >= 64:
+            raise ArchiveError("dex_count_limit", "Class directory exceeds the DEX entry limit")
         self.entries.add(entry)
+        number = self.connection.execute("INSERT INTO entries(name) VALUES (?)", (entry,)).lastrowid
+        self.entry_names[number] = entry
         before = self.connection.total_changes
-        records = ((self.key(name), entry) for name in names)
+        records = ((self.key(name), number) for name in names)
         # Stay below SQLite's oldest supported 999-variable limit and bound
         # transient allocations; avoid one Python/SQLite transition per class.
         while batch := list(islice(records, 128)):
@@ -140,6 +174,13 @@ class ClassDirectory:
     def __len__(self):
         return self.connection.execute("SELECT count(*) FROM classes").fetchone()[0]
 
+    def entry_name(self, value):
+        if self.entry_names is None:
+            return value
+        if type(value) is not int or value not in self.entry_names:
+            raise ArchiveError("invalid_query", "Invalid prepared class directory owner")
+        return self.entry_names[value]
+
     @checked
     def __getitem__(self, name):
         row = self.connection.execute(
@@ -147,7 +188,7 @@ class ClassDirectory:
         ).fetchone()
         if row is None:
             raise KeyError(name)
-        return row[0]
+        return self.entry_name(row[0])
 
     def __contains__(self, name):
         if name is None:
@@ -179,5 +220,6 @@ class ClassDirectory:
             (*values, min(limit, total), offset),
         )
         return total, [
-            {"class_name": self.decode_key(name), "dex_entry": entry} for name, entry in rows
+            {"class_name": self.decode_key(name), "dex_entry": self.entry_name(entry)}
+            for name, entry in rows
         ]

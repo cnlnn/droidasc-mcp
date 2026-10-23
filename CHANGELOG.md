@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.8
+
+- Store each prepared DEX owner name once and reference it by bounded integer IDs in
+  the class directory. Preserve exact Unicode ordering, duplicate-class rejection,
+  logical metadata budgets and read-only compatibility with both older directory formats.
+  Reject invalid dictionaries and dangling owner IDs rather than silently losing classes.
+- Independently verify the complete dictionary and every class/owner against the original
+  DEX files. Extend empty/tiny-budget, 64-DEX, legacy-format and corruption regressions.
+- Five alternating preparation-only rounds on Taobao/WeChat/Douyin preserve full metadata,
+  ordered ownership and snapshot hashes. Owner files shrink by 21.5/26.3/27.4 percent;
+  total retained storage falls only about 1-2 percent because raw snapshots are unchanged.
+  Douyin preparation time is essentially unchanged; this is not a universal startup,
+  memory or competitor-workflow win. Full release gates remain mandatory.
+
 ## 0.2.7
 
 - Share a single read-only mapping of each private stored DEX between Python and native
