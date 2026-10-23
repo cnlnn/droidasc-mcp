@@ -107,6 +107,7 @@ class Entry(Object, total=False):
 
 class ArchiveResult(Result, total=False):
     status: Required[Literal["ok", "partial", "error", "not_applicable"]]
+    format_validation: Literal["not_performed"]
     items: list[Entry]
     entry: Entry
     entry_path: str

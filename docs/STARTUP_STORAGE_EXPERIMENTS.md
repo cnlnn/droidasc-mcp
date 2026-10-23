@@ -1,15 +1,16 @@
 # Startup And Storage Experiments
 
-Development evidence, 2026-10-23. None of the experimental runtime changes below is
-retained. The retained runtime is byte-identical to the workflow candidate at
-`b02c18092c7d5283a215b2d96fa441f2fe30ded0`; only tests and documentation are added.
+Development evidence, 2026-10-23. None of the experimental storage/runtime changes below
+is retained. The comparisons used the workflow candidate at
+`b02c18092c7d5283a215b2d96fa441f2fe30ded0`, before the separate standalone-DEX entry
+reader addition. That addition does not replace the stored preparation/query path.
 These receipts neither approve publication nor close the startup/storage objective.
 
-The retained Linux Python 3.13 source suite passes 1,231 tests in 190.59 seconds,
+The pre-entry-reader Linux Python 3.13 source suite passes 1,231 tests in 190.59 seconds,
 zero failures, errors or skips: `source-full-retained-runtime.xml` under the evidence
 root below. This includes the 18 added opcode regressions and real stdio/HTTP flows.
-`diff -qr --exclude=__pycache__` confirms the complete runtime tree, including the C
-source and loaded native extension, exactly matches the frozen before snapshot.
+At that gate, `diff -qr --exclude=__pycache__` confirmed the complete runtime tree,
+including the C source and loaded native extension, matched the frozen before snapshot.
 Windows and clean-package acceptance of this development branch remain pending.
 
 Evidence root: `artifacts/startup-next-20261023/`. Inputs are the private Taobao
@@ -98,7 +99,7 @@ both C changes are removed. The new opcode regressions remain: all 256 opcode va
 five DEX versions and three selection kinds, truncated instructions, exact long-method
 counters and corrupt tails after otherwise matching code.
 
-## Next Structural Experiment
+## Original Payload Reuse And Overlapped Inflation
 
 The pinned competitor's `analysis/artifact_handler.py` maps the original artifact in
 `_get_worker_artifact_mm` and inflates selected entries in `_inflate_dex`; its repeated
@@ -106,10 +107,54 @@ reference workers do not retain our canonical expanded snapshot. Our private sto
 snapshot avoids repeated decompression, but retains substantially more bytes. These are
 different storage/lifetime choices, not evidence that either implementation wins overall.
 
-The next prototype should preserve already-compressed source member payloads, avoiding
-recompression, and test bounded overlapped query inflation. It must include normalization,
-directory preparation, temporary decoded buffers, all source/member integrity checks,
-concurrent readers, cancellation and Windows handle cleanup. Measure complete first use,
-repeats and process RSS plus retained/peak file bytes before selecting a new default.
-Uncompressed input fallback and public-CLI source handoff also require explicit coverage.
-This structural prototype is not implemented or accepted by these component experiments.
+The isolated prototype now copies source STORED/DEFLATED payload bytes into canonical ZIP
+members without recompression. Existing expanded DEX SHA-256/SHA-1/Adler, ZIP CRC, strict
+class checks and final original-archive hash checks remain active. A temporary stored ZIP
+holds one member for directory validation, then is unlinked before proceeding. The copied
+compressed range is SHA-256 checked against a readback before its directory entry is added.
+Failure rolls back unpublished output. The source ZIP lock also serializes direct payload
+reads with the existing prefetch readers.
+
+The copier passes 25 local Python 3.13 cases: STORED/DEFLATED, data descriptors, ZIP64,
+prefixed archives, Unicode original names, canonical target names, simultaneous stdlib
+reads, local/central mismatches, overlap, short writes, corrupt/truncated readback, rollback
+and mixed standard/raw writes. Receipt: `raw-payload-tests.xml`. This is not Windows or a
+complete container/normalization acceptance gate.
+
+`compact-matched-three-apks-cpu4.json` passes all 27 fresh direct-worker trials, rotating
+three variants over three rounds per APK with a common four-CPU affinity. The baseline
+uses the unchanged stored snapshot; `compact` preserves original compressed payloads;
+`compact2` adds two-slot, ordered query inflation. All complete ownership rows, metadata,
+expanded DEX hashes and first field pages (including two direct repeats) agree across
+variants. All temporary roots and helper threads are gone before each child returns.
+The receipt binds inputs, runtime and helper hashes. These are not MCP/competitor timings,
+OS-cache-cold measurements or independent all-reference accuracy results.
+
+| Input | Variant | Median prepare seconds | Median first field seconds | Median prepare + field seconds | Retained file bytes | Median first-field process RSS bytes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Taobao | Stored | 0.8051 | 0.1714 | 0.9741 | 117,596,620 | 45,875,200 |
+| Taobao | Compact | 0.9559 | 0.6570 | 1.6263 | 48,067,868 | 59,109,376 |
+| Taobao | Compact, two-slot inflation | 0.9561 | 0.4463 | 1.4023 | 48,067,868 | 83,968,000 |
+| WeChat | Stored | 1.5069 | 0.2720 | 1.7853 | 181,485,807 | 51,236,864 |
+| WeChat | Compact | 1.7618 | 1.0510 | 2.8129 | 77,179,740 | 68,116,480 |
+| WeChat | Compact, two-slot inflation | 1.8635 | 0.6312 | 2.5027 | 77,179,740 | 96,325,632 |
+| Douyin | Stored | 3.4264 | 0.8735 | 4.2999 | 477,077,924 | 50,561,024 |
+| Douyin | Compact | 3.9500 | 2.7224 | 6.6724 | 189,261,777 | 63,143,936 |
+| Douyin | Compact, two-slot inflation | 4.0302 | 1.8368 | 5.8213 | 189,261,777 | 84,328,448 |
+
+The sum column is the median of paired prepare-plus-query observations, not the sum of
+independently selected medians. Peak compact preparation file bytes reach 57,602,967 /
+88,867,464 / 197,508,485 respectively; temporary validation storage is included rather
+than hidden. These direct defaults still differ from real-MCP budgets. File bytes on
+this host's tmpfs remain a separate cost from process RSS.
+
+Reject this as a default replacement: retained files fall about 57-60%, but preparation,
+first use and both repeated scans are slower on all three inputs; query RSS increases.
+Two-slot inflation reduces the sequential decompression penalty but does not eliminate it.
+The two-slot count is not a general worker-memory bound for very large individual members;
+production adoption would additionally need byte-budgeted streaming/mapping, reservation
+accounting, error/cancellation tests and Windows/source-handoff/041 coverage. None is
+claimed from this pilot, and no runtime change or dependency is retained.
+
+Remaining work must improve the actual preparation/query/storage tradeoff, not move
+decompression costs outside the reported first use or rename storage savings as RSS gains.

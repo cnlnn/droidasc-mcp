@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "f51279f9ffc1df79b50e2cdc2418753b04c1bb3545dfa782696440868b2d66c9",
+  "source_sha256": "caa00bfcbeb9d1e60bbc8d9b1d87f53b31ffae87f546d0fcce18f0cb4dc6c074",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "53c3857aefb679d075a6e9c84316f9bb40db2bae5ab0b01e38e11ce6e2d0e503",
+  "records_sha256": "f24466058da4cbc0cc07609778c66e1a99980d505aeac346c589440632d8f858",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -326,11 +326,11 @@
       "is_async": false
     },
     "asc_list_apk_entries": {
-      "description": "List APK contents, sizes, CRC metadata and native ABIs without extracting files.\n\nSHA-256 binds this page to the APK. CRC values here are declarations, not verification.\nNative rows are an archive inventory, not ELF analysis. Follow next_offset for more.",
+      "description": "List archive contents or a standalone DEX file without extracting files.\n\nSHA-256 binds this page to the input. Standalone DEX entries use the original basename\nand bytes, without code validation or ZIP CRC metadata. Archive CRCs are declarations.\nNative rows are an archive inventory, not ELF analysis. Follow next_offset for more.",
       "parameters": {
         "properties": {
           "apk_path": {
-            "description": "APK path within the configured allowed roots",
+            "description": "Archive or standalone DEX path within allowed roots",
             "title": "Apk Path",
             "type": "string"
           },
@@ -395,16 +395,16 @@
       "is_async": false
     },
     "asc_read_apk_entry": {
-      "description": "Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.\n\nBinary XML decoding and returned-content truncation are separate statuses. Partial raw\nreads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.",
+      "description": "Read bounded entry bytes as UTF-8 or base64, with input hash and entry provenance.\n\nBinary XML decoding and returned-content truncation are separate statuses. Partial raw\nreads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.\nStandalone DEX bytes remain original, including 041 headers; code validation is separate.",
       "parameters": {
         "properties": {
           "apk_path": {
-            "description": "APK path within the configured allowed roots",
+            "description": "Archive or standalone DEX path within allowed roots",
             "title": "Apk Path",
             "type": "string"
           },
           "entry_path": {
-            "description": "Exact relative ZIP entry path from inventory",
+            "description": "Exact entry path or standalone DEX basename from inventory",
             "title": "Entry Path",
             "type": "string"
           },

@@ -36,8 +36,8 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `apk_disassemble_method` | `analysis_id,class_name,method_name,descriptor` | disassemble_method accepts exact class_name plus method_name directly; target_descriptor optionally filters the prototype. Only a unique declared definition executes; ambiguous_method and candidate_count preserve ambiguity. Full method_descriptor remains available, including from list_methods/get_class_outline. Paged structured opcode/operands/code-unit offsets; get_method_source uses the same selection for Smali or explicit Java. | tests/test_method_selection.py; tests/test_structure.py; tests/test_methods.py; tests/test_integration.py; scripts/verify_method_selection.py |
 | tool | `apk_get_class_hierarchy` | `analysis_id,class_name` | get_class_hierarchy reports superclass chain, direct interfaces/subclasses/implementors, external definitions and cycle diagnostics. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_get_call_graph` | `analysis_id,class_name,method_name,descriptor,depth` | get_call_graph accepts full method_descriptor or exact class_name plus method_name, with optional target_descriptor prototype; ambiguous selection fails before indexing/scanning. direction=both and depth 1-5 include competitor's 1-3. Independent node/edge/output caps preserve call-site offsets, external roots and unresolved dynamic sites. Bounded frontiers avoid mandatory full-index materialization; existing-index and dense-frontier fallback costs remain explicit. | tests/test_method_selection.py; tests/test_call_graph.py; tests/test_native_graph.py; tests/test_integration.py |
-| tool | `apk_list_entries` | `analysis_id,kind,cursor,limit` | asc_list_apk_entries works for all supported archives, category/prefix/offset/limit. AndroidManifest.xml is our separate manifest category, not silently grouped under metadata. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
-| tool | `apk_get_resource_content` | `analysis_id,path,max_bytes` | asc_read_apk_entry works for generic archives, bounded text/XML/base64. 128-KiB pages plus byte_offset/next_byte_offset reconstruct content larger than competitor's 1-MiB response cap; bounded XML decoding and CRC status remain explicit. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
+| tool | `apk_list_entries` | `analysis_id,kind,cursor,limit` | asc_list_apk_entries works for supported archives and standalone DEX, category/prefix/offset/limit. Standalone entries retain the original basename, size and whole-file hash, without ZIP CRC metadata or code-validation claims. AndroidManifest.xml is our separate manifest category. | tests/test_archive.py; tests/test_containers.py; tests/test_raw_dex_entries.py; tests/test_integration.py |
+| tool | `apk_get_resource_content` | `analysis_id,path,max_bytes` | asc_read_apk_entry supports generic archives and original standalone DEX bytes, including physical 041 bytes, with bounded text/XML/base64. 128-KiB pages plus byte_offset/next_byte_offset reconstruct content larger than competitor's 1-MiB response cap; XML decoding and CRC status remain explicit. | tests/test_archive.py; tests/test_containers.py; tests/test_raw_dex_entries.py; tests/test_integration.py |
 | tool | `apk_list_native_libraries` | `analysis_id` | asc_list_apk_entries(kind=native), all pages, ABI/original and compressed sizes. Archive inventory, not native-code disassembly. | tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_get_signing_info` | `analysis_id` | asc_signing_inventory: v1/v2/v3 certificate metadata and v3.1 presence; cryptographic_verification=not_performed. Do not convert mere block presence into valid signatures. | tests/test_signing.py; scripts/verify_signing.py; tests/test_integration.py |
 | tool | `apk_scan_secrets` | `analysis_id,include_values,limit` | asc_secret_candidates covers the competitor's five pattern families plus GitHub tokens, include_values=false by default, explicit opt-in matched values, pages/fingerprints/source locations and scan limits. No automatic credential use. | tests/test_review.py; tests/test_structure.py; tests/test_integration.py |
@@ -84,6 +84,39 @@ recovery. scripts/verify_artifact_summary.py compares real-MCP summary fields wi
 pinned competitor and original ZIP/hash evidence on the private large-APK corpus.
 These additions are separate from the frozen, published v0.2.3 acceptance; Windows and
 clean-package acceptance for this candidate remain pending.
+
+The 2026-10-23 parameter exercise reads the pinned server's forwarding of `fuzzy_class`,
+`exact_name`, `descriptor`/`field_type`, `cursor` and `limit` and checks the corresponding
+selectors over both real transports. `test_native_fuzzy_references_without_java` now
+checks all four exact/fuzzy owner/name combinations against exact-site responses for
+both `pick` overloads and both `value:I`/`value:J` fields. It also checks omitted names,
+case-sensitive misses, prefix-plus-substring class selection, complete one-row pagination
+and beyond-end pages. This exercises combinations rather than counting parameter names.
+
+`test_resource_content_continuation_over_transport` follows an inventory `next_offset`
+to a path containing spaces and a plus sign, then follows nine `next_byte_offset` values
+to reconstruct all 1,048,832 original binary bytes. Every page is bounded and hash-bound;
+EOF, invalid-offset recovery, no retained session and unchanged input are checked. This
+exercises the documented paged alternative to the competitor's larger single response,
+not a same-call `max_bytes` compatibility claim. The four targeted stdio/HTTP cases pass,
+zero skips: `artifacts/startup-next-20261023/workflow-parameters-targeted-fixed.xml`.
+The initial resource-test failure was an incorrect test assumption about inventory order;
+the final test follows the returned cursor instead. No runtime change was required.
+
+Further source inspection of `service.py:list_entries/resource_content` identified an
+actual standalone-DEX gap, not covered by archive-only equivalence. The candidate now
+routes those two entry operations through the existing supervised worker and original
+before/after file identity/hash checks. The file read is bounded to a page plus one
+sentinel byte; inventory does not normalize 041 or validate code. Missing names,
+unsafe paths, unsupported archive capabilities, invalid page selectors and changed inputs
+fail explicitly. ZIP CRC fields are absent for a raw file. `asc_inspect_artifact` and archive
+session loading retain their existing archive policy; raw analysis still opens DEX paths.
+The targeted entry/archive/container/schema/real-transport selection passes 178 cases,
+zero skips and 56 deliberate transport deselections:
+`artifacts/startup-next-20261023/raw-dex-targeted-zero-skips.xml`.
+The full current Linux Python 3.13 suite subsequently passes 1262 cases in 212.53 seconds,
+zero failures/errors/skips: `artifacts/startup-next-20261023/source-full-raw-dex-entry.xml`.
+Windows and canonical-package gates for this new runtime are separate from that local result.
 
 `test_complete_investigation_handoffs_without_java[stdio/http]` exercises one connected
 investigation, rather than independent calls with every descriptor hard-coded: capability

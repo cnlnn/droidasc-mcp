@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "07ac1d942a2fa329469c856cc0cad6a4b3ea3603efdddaf37809367dd9a899e4",
+  "contracts_sha256": "d71d5917bb09b45cc9d0912b846a2b4e5b8e4c4f3a891102c3fb2a69723fc941",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "76f7e7fa7e6fc8b49a972ad4e15aedf39e1d775d2f147d7d4b31a756a6719f81",
+  "schemas_sha256": "211474764e3ee43b5a427ddfea143e7f7805bd582829bf66b0347942f2e92c4d",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -225,6 +225,11 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "format_validation": {
+          "const": "not_performed",
+          "title": "Format Validation",
+          "type": "string"
         },
         "items": {
           "items": {

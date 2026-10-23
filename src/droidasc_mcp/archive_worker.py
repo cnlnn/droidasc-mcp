@@ -211,7 +211,7 @@ def xml_document(data):
         raise ArchiveError("invalid_xml", "Entry is not well-formed XML") from exc
 
 
-def _content(archive, info, query):
+def _content_options(query):
     max_bytes = query.get("max_bytes", 16 * 1024)
     if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_READ_BYTES:
         raise ArchiveError("invalid_query", "max_bytes must be between 1 and 131072")
@@ -221,6 +221,11 @@ def _content(archive, info, query):
         raise ArchiveError("invalid_query", "byte_offset must be a nonnegative integer")
     if type(decode_xml) is not bool:
         raise ArchiveError("invalid_query", "decode_xml must be a boolean")
+    return max_bytes, byte_offset, decode_xml
+
+
+def _content(archive, info, query):
+    max_bytes, byte_offset, decode_xml = _content_options(query)
     is_xml = info.filename.lower().endswith(".xml") and decode_xml
     # XML needs a complete bounded document; raw reads need only the requested prefix.
     budget = MAX_XML_BYTES if is_xml and info.file_size <= MAX_XML_BYTES else max_bytes
@@ -261,6 +266,10 @@ def _content(archive, info, query):
         data = data[byte_offset:]
     truncated = not complete or len(data) > max_bytes
     data = data[:max_bytes]
+    return {**result, **_content_page(data, byte_offset, truncated)}
+
+
+def _content_page(data, byte_offset, truncated):
     try:
         content, encoding = data.decode("utf-8"), "utf-8"
         # UTF-8 control bytes are binary data too, not useful MCP text.
@@ -269,7 +278,6 @@ def _content(archive, info, query):
     except UnicodeDecodeError:
         content, encoding = base64.b64encode(data).decode("ascii"), "base64"
     return {
-        **result,
         "content": content,
         "encoding": encoding,
         "returned_bytes": len(data),
@@ -279,6 +287,15 @@ def _content(archive, info, query):
         "content_complete": not truncated,
         "status": "partial" if truncated else "ok",
     }
+
+
+def _page_bounds(query, max_page_size):
+    offset, limit = query.get("offset", 0), query.get("limit", 100)
+    if type(offset) is not int or offset < 0 or type(limit) is not int:
+        raise ArchiveError("invalid_query", "offset and limit must be integers")
+    if not 1 <= limit <= max_page_size:
+        raise ArchiveError("invalid_query", "limit exceeds the configured page budget")
+    return offset, limit
 
 
 def _query(archive, entries, query, max_page_size):
@@ -297,11 +314,7 @@ def _query(archive, entries, query, max_page_size):
 
         return inventory(archive.fp, archive, entries)
     if operation in {"list_entries", "manifest_summary", "manifest_xml", "artifact_inventory"}:
-        offset, limit = query.get("offset", 0), query.get("limit", 100)
-        if type(offset) is not int or offset < 0 or type(limit) is not int:
-            raise ArchiveError("invalid_query", "offset and limit must be integers")
-        if not 1 <= limit <= max_page_size:
-            raise ArchiveError("invalid_query", "limit exceeds the configured page budget")
+        offset, limit = _page_bounds(query, max_page_size)
     if operation == "artifact_inventory":
         from .containers import inspect
 
@@ -373,7 +386,7 @@ def analyze(request):
             allowed_roots=tuple(Path(p) for p in request["allowed_roots"]),
             max_apk_bytes=request["max_input_bytes"],
         )
-        apk = settings.validate_artifact(request["apk_path"])
+        apk = settings.validate_entry_input(request["apk_path"])
         artifact = (
             request["query"].get("operation") == "artifact_inventory"
             or apk.suffix.lower() != ".apk"
@@ -390,10 +403,15 @@ def analyze(request):
             if not stat.S_ISREG(before.st_mode) or before.st_size > request["max_input_bytes"]:
                 raise ArchiveError("input_changed", "APK size or file type changed before analysis")
             source_hash = _digest(handle)
-            with zipfile.ZipFile(handle) as archive:
-                result = _query(
-                    archive, _entries(archive), request["query"], request["max_page_size"]
-                )
+            if apk.suffix.lower() == ".dex":
+                from .raw_dex_entry import query_entry
+
+                result = query_entry(handle, apk.name, request["query"], request["max_page_size"])
+            else:
+                with zipfile.ZipFile(handle) as archive:
+                    result = _query(
+                        archive, _entries(archive), request["query"], request["max_page_size"]
+                    )
             # Windows stat(path) and fstat(fd) can expose different ctime semantics.
             # Reopen the path so both identity checks use the same handle-based API.
             with apk.open("rb") as current:

@@ -33,13 +33,39 @@ Startup/storage experiments on this candidate are recorded in
 STARTUP_STORAGE_EXPERIMENTS.md. Larger SQLite batches, native key encoding, ordinary
 Deflate recompression and two cursor micro-optimizations did not establish a robust
 cross-input benefit and are not retained. LZ4 component measurements alone do not approve
-a production format or dependency. The next structural prototype must test preserving
-original compressed payloads and bounded overlapped inflation, with full end-to-end,
-integrity, cleanup and resource accounting; that work remains open.
-The retained runtime is unchanged from b02c180; the added opcode boundary/counter
-regressions increase the complete local Linux Python 3.13 suite to 1231 passing tests,
+a production format or dependency. The original-compressed-payload/two-slot inflation
+prototype also remains isolated: all 27 three-APK/four-CPU direct trials preserve complete
+owners, metadata, expanded DEX hashes and first field pages, but first use and repeats slow
+down while query RSS increases. Retained files fall 57-60%, not an all-resource or latency
+win. No production replacement is adopted; byte-budgeted large-member, Windows, 041 and
+source-handoff acceptance are not claimed from this rejected pilot.
+At d356da3 the runtime was unchanged from b02c180; the added opcode boundary/counter
+regressions increased the complete local Linux Python 3.13 suite to 1231 passing tests,
 zero failures/errors/skips: artifacts/startup-next-20261023/source-full-retained-runtime.xml.
 This is not a new Windows or canonical-distribution gate.
+
+The real stdio/HTTP parameter exercise now covers all four exact/fuzzy owner/name
+combinations for two method overloads and same-named I/J fields, exact prototype/type,
+omitted member names, case-sensitive misses, complete one-row pagination and beyond-end
+pages. A discovered archive path is also followed through nine bounded content pages to
+reconstruct 1,048,832 exact original bytes, then an EOF and invalid-offset recovery check.
+The targeted four transport cases pass without skips:
+artifacts/startup-next-20261023/workflow-parameters-targeted-fixed.xml.
+This strengthens specific workflow evidence, not an assertion that all parameter behavior
+or the final cross-platform release gate is closed.
+
+Reading the competitor's raw-file entry branches exposed a concrete remaining gap.
+The candidate now accepts standalone DEX paths in the two entry tools, using the existing
+supervised worker, input roots/size limits and full before/after identity/hash checks.
+Pages retain original bytes/basenames, including physical 041 headers, and do not invent
+ZIP CRC or code-validation metadata. Archive inventory/session routing stays unchanged.
+The entry/archive/container/schema/real-transport selection passes 178 cases, zero skips:
+artifacts/startup-next-20261023/raw-dex-targeted-zero-skips.xml.
+The full current Linux Python 3.13 source suite passes 1262 tests in 212.53 seconds,
+zero failures/errors/skips, including both transports and the regenerated input/output
+schemas: artifacts/startup-next-20261023/source-full-raw-dex-entry.xml.
+Candidate-branch Windows and canonical-package acceptance must identify this new runtime;
+the earlier b02c180/d356da3 receipts are not reused for it.
 
 ## Competitor workflow closure
 

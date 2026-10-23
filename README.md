@@ -17,8 +17,8 @@ structured data instead of unbounded terminal output.
 | --- | --- |
 | `asc_ping` | Show adapter/engine versions and effective runtime limits |
 | `asc_apk_info` | Return size, SHA-256, manifest presence, and DEX entries |
-| `asc_list_apk_entries` | Page APK contents, resources, assets and native ABIs |
-| `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML |
+| `asc_list_apk_entries` | Page archive contents or inventory a standalone DEX file |
+| `asc_read_apk_entry` | Read bounded archive/DEX bytes and decode binary XML |
 | `asc_manifest_summary` | Page structured components, filters and permission provenance |
 | `asc_signing_inventory` | Inspect signature-container presence and certificate fingerprints, without signature verification |
 | `asc_inspect_artifact` | Page container capabilities; optional compact manifest/native summary |
@@ -153,6 +153,12 @@ defaults to 16 KiB, with a 128 KiB maximum before UTF-8/base64 encoding. XML dec
 only complete inputs up to 4 MiB. `decoded`, `decoding_status`, `decoding_warnings`,
 `truncated`, `content_complete` and `crc_verified` distinguish successful decoding, decoder
 warnings, output truncation and incomplete raw reads. Resource-table values remain unresolved.
+
+These two entry tools also accept a standalone `.dex` path. Use its returned basename as
+`entry_path`, then follow `next_byte_offset` with `byte_offset` for subsequent pages. Results
+retain `artifact_sha256` and original bytes, including physical DEX 041 bytes. Raw files have
+no ZIP CRC fields; `format_validation=not_performed` distinguishes byte reads from validated
+code analysis through `asc_open_dex_session`.
 
 `asc_manifest_summary` preserves raw namespaced declarations and component order, intent
 filters, metadata, provider path/URI-grant rules, and permission inheritance sources. Explicit

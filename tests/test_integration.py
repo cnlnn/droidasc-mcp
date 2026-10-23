@@ -1,5 +1,6 @@
 """Real subprocess, transport, and optional real-APK acceptance checks."""
 
+import base64
 import hashlib
 import json
 import os
@@ -2275,6 +2276,21 @@ async def test_native_fuzzy_references_without_java(
         assert progress and progress[-1][0] == progress[-1][1]
         assert [p[0] for p in progress] == sorted(p[0] for p in progress)
         key = opened.structured_content["session_id"]
+        inventory = await client.call_tool(
+            "asc_list_apk_entries", {"apk_path": paths[0], "kind": "dex"}
+        )
+        assert not inventory.is_error, inventory
+        original_entry = inventory.structured_content["items"][0]["path"]
+        original_content = await client.call_tool(
+            "asc_read_apk_entry",
+            {"apk_path": paths[0], "entry_path": original_entry, "max_bytes": 32},
+        )
+        assert not original_content.is_error, original_content
+        assert (
+            base64.b64decode(original_content.structured_content["content"])
+            == Path(paths[0]).read_bytes()[:32]
+        )
+        assert original_content.structured_content["format_validation"] == "not_performed"
 
         async def query(**parameters):
             result = await client.call_tool(
@@ -2308,10 +2324,173 @@ async def test_native_fuzzy_references_without_java(
             target_descriptor="I",
         )
         assert owner["items"] == exact["items"] and owner["total"] == exact["total"] > 0
+        for kind, name, prototype, identity in (
+            ("method", "pick", "(I)V", "Lfixture/Target;->pick(I)V"),
+            (
+                "method",
+                "pick",
+                "(Ljava/lang/String;)V",
+                "Lfixture/Target;->pick(Ljava/lang/String;)V",
+            ),
+            ("field", "value", "I", "Lfixture/Target;->value:I"),
+            ("field", "value", "J", "Lfixture/Target;->value:J"),
+        ):
+            exact = await query(
+                operation="find_method_refs" if kind == "method" else "find_field_refs",
+                **{"method_descriptor" if kind == "method" else "field_descriptor": identity},
+            )
+            assert exact["total"] > 0
+            for fuzzy_class in (False, True):
+                for exact_name in (False, True):
+                    parameters = {
+                        "operation": "search_refs",
+                        "kind": kind,
+                        "class_name": "fixture.tar" if fuzzy_class else "fixture.Target",
+                        "fuzzy_class": fuzzy_class,
+                        "value": name.upper() if exact_name else name[1:-1].upper(),
+                        "member_match": "exact_name" if exact_name else "name",
+                        "case_sensitive": False,
+                        "target_descriptor": prototype,
+                    }
+                    full = await query(**parameters)
+                    assert full["items"] == exact["items"] and full["total"] == exact["total"]
+                    rows, offset = [], 0
+                    while True:
+                        page = await query(**parameters, offset=offset, limit=1)
+                        rows.extend(page["items"])
+                        assert page["total"] == full["total"]
+                        if not page["has_more"]:
+                            assert page["next_offset"] is None
+                            break
+                        assert page["next_offset"] > offset
+                        offset = page["next_offset"]
+                    assert rows == full["items"]
+                    beyond = await query(**parameters, offset=full["total"], limit=1)
+                    assert beyond["items"] == [] and beyond["next_offset"] is None
+            owner_only = await query(
+                operation="search_refs",
+                kind=kind,
+                class_name="fixture.Target",
+                target_descriptor=prototype,
+            )
+            assert owner_only["items"] == exact["items"]
+            mismatched = await query(
+                operation="search_refs",
+                kind=kind,
+                class_name="fixture.Target",
+                value=name.upper(),
+                member_match="exact_name",
+                case_sensitive=True,
+                target_descriptor=prototype,
+            )
+            assert mismatched["total"] == 0
+        classes = await query(
+            operation="search_classes", value="CALL", prefix="fixture.", case_sensitive=False
+        )
+        assert [row["class_name"] for row in classes["items"]] == ["Lfixture/Caller;"]
+        empty = await query(
+            operation="search_classes", value="CALL", prefix="external.", case_sensitive=False
+        )
+        assert empty["items"] == []
         assert not any(
             "java" in child.name().lower() for child in psutil.Process().children(recursive=True)
         )
         await client.call_tool("asc_close_dex_session", {"session_id": key})
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+@pytest.mark.parametrize("input_kind", ["archive", "dex"])
+async def test_resource_content_continuation_over_transport(
+    transport, input_kind, tmp_path, request, monkeypatch
+):
+    original = bytes(range(256)) * 4097
+    if input_kind == "archive":
+        artifact = tmp_path / "resource + continuation.jar"
+        with zipfile.ZipFile(artifact, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("assets/large + binary.bin", original)
+            archive.writestr("assets/config.txt", b"synthetic configuration\n")
+    else:
+        artifact = tmp_path / "original + bytes.DEX"
+        artifact.write_bytes(original)
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        inventory = await client.call_tool(
+            "asc_list_apk_entries",
+            {
+                "apk_path": str(artifact),
+                "kind": "asset" if input_kind == "archive" else "dex",
+                "limit": 1,
+            },
+        )
+        assert not inventory.is_error, inventory
+        if input_kind == "archive":
+            assert inventory.structured_content["next_offset"] == 1
+            inventory = await client.call_tool(
+                "asc_list_apk_entries",
+                {
+                    "apk_path": str(artifact),
+                    "kind": "asset",
+                    "offset": inventory.structured_content["next_offset"],
+                    "limit": 1,
+                },
+            )
+            assert not inventory.is_error, inventory
+        assert inventory.structured_content["next_offset"] is None
+        entry = inventory.structured_content["items"][0]["path"]
+        assert entry == ("assets/large + binary.bin" if input_kind == "archive" else artifact.name)
+        chunks, offset = [], 0
+        while True:
+            reply = await client.call_tool(
+                "asc_read_apk_entry",
+                {
+                    "apk_path": str(artifact),
+                    "entry_path": entry,
+                    "max_bytes": 131072,
+                    "byte_offset": offset,
+                    "decode_xml": False,
+                },
+            )
+            assert not reply.is_error, reply
+            page = reply.structured_content
+            assert page["status"] in {"ok", "partial"}, page
+            assert page["artifact_sha256"] == digest
+            if input_kind == "dex":
+                assert page["format_validation"] == "not_performed" and "crc_verified" not in page
+            decoded = base64.b64decode(page["content"], validate=True)
+            assert len(decoded) <= 131072
+            chunks.append(decoded)
+            if page["content_complete"]:
+                assert page["next_byte_offset"] is None
+                break
+            assert page["next_byte_offset"] == offset + len(decoded)
+            offset = page["next_byte_offset"]
+        assert b"".join(chunks) == original and len(chunks) == 9
+        beyond = await client.call_tool(
+            "asc_read_apk_entry",
+            {"apk_path": str(artifact), "entry_path": entry, "byte_offset": len(original) + 1},
+        )
+        assert not beyond.is_error, beyond
+        assert beyond.structured_content["content_complete"]
+        assert beyond.structured_content["content"] == ""
+        invalid = await client.call_tool(
+            "asc_read_apk_entry",
+            {"apk_path": str(artifact), "entry_path": entry, "byte_offset": -1},
+        )
+        assert invalid.is_error
+        ping = await client.call_tool("asc_ping", {})
+        assert not ping.is_error and ping.structured_content["dex_sessions"]["open_count"] == 0
+    assert hashlib.sha256(artifact.read_bytes()).hexdigest() == digest
 
 
 async def assert_fixture_query_boundaries(client, apk, tmp_path):

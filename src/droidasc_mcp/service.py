@@ -210,7 +210,7 @@ class DroidAscService:
         return self.runner.apk_info(apk, include_sha256)
 
     def query_archive(self, apk_path: str, **query) -> dict[str, object]:
-        apk = self.settings.validate_artifact(apk_path)
+        apk = self.settings.validate_entry_input(apk_path)
         return self.runner.query_archive(apk, query)
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:

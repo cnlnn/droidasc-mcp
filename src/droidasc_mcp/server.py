@@ -344,7 +344,9 @@ def build_server(
 
     @registry.tool(annotations=READ_ONLY)
     def asc_list_apk_entries(
-        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        apk_path: Annotated[
+            str, Field(description="Archive or standalone DEX path within allowed roots")
+        ],
         kind: Annotated[
             Literal["manifest", "resource", "asset", "native", "dex", "metadata", "other"] | None,
             Field(description="Entry category; omit for all file entries"),
@@ -359,9 +361,10 @@ def build_server(
             int, Field(ge=1, le=1000, description="Page size, capped by server limits")
         ] = 100,
     ) -> ArchiveResult:
-        """List APK contents, sizes, CRC metadata and native ABIs without extracting files.
+        """List archive contents or a standalone DEX file without extracting files.
 
-        SHA-256 binds this page to the APK. CRC values here are declarations, not verification.
+        SHA-256 binds this page to the input. Standalone DEX entries use the original basename
+        and bytes, without code validation or ZIP CRC metadata. Archive CRCs are declarations.
         Native rows are an archive inventory, not ELF analysis. Follow next_offset for more.
         """
         return service.query_archive(
@@ -370,9 +373,11 @@ def build_server(
 
     @registry.tool(annotations=READ_ONLY)
     def asc_read_apk_entry(
-        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        apk_path: Annotated[
+            str, Field(description="Archive or standalone DEX path within allowed roots")
+        ],
         entry_path: Annotated[
-            str, Field(description="Exact relative ZIP entry path from inventory")
+            str, Field(description="Exact entry path or standalone DEX basename from inventory")
         ],
         max_bytes: Annotated[
             int,
@@ -390,10 +395,11 @@ def build_server(
             ),
         ] = 0,
     ) -> ArchiveResult:
-        """Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.
+        """Read bounded entry bytes as UTF-8 or base64, with input hash and entry provenance.
 
         Binary XML decoding and returned-content truncation are separate statuses. Partial raw
         reads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.
+        Standalone DEX bytes remain original, including 041 headers; code validation is separate.
         """
         return service.query_archive(
             apk_path,
