@@ -90,12 +90,13 @@ def main():
                             "-c",
                             (
                                 "import json,sys; from dataclasses import replace; "
+                                "from pathlib import Path; "
                                 "from droidasc_mcp.config import Settings; "
                                 "from droidasc_mcp.native_dex import query_references; "
                                 "q={'operation':sys.argv[2],'offset':0,'limit':2**31-1,"
                                 "('field_descriptor' if sys.argv[2]=='find_field_refs' "
                                 "else 'method_descriptor'):sys.argv[3]}; "
-                                "print(json.dumps(query_references(replace(Settings.from_env(),max_page_size=2**31-1),sys.argv[1],q)))"
+                                "print(json.dumps(query_references(replace(Settings.from_env(),max_page_size=2**31-1),Path(sys.argv[1]),q)))"
                             ),
                             str(bundle),
                             operation,

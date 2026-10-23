@@ -158,3 +158,41 @@ claimed from this pilot, and no runtime change or dependency is retained.
 
 Remaining work must improve the actual preparation/query/storage tradeoff, not move
 decompression costs outside the reported first use or rename storage savings as RSS gains.
+
+## Fresh Candidate Comparison
+
+The standalone-DEX candidate runtime at `f144c0849eb3bab878b79d8fe6472ef1c87b7d25`
+has fresh real-stdio field receipts: `raw-entry-{taobao,wechat,douyin}-affinity4-field.json`.
+All three pass three alternating rounds against the pinned competitor, on the same Python
+3.13.11 interpreter, four inherited logical CPUs, 2-GiB process-tree RSS and 8192-MiB
+session-disk budgets. These use timing version 2 and CPU-budget version 1. "Cold" means
+the first query in a fresh session, not evicted OS page caches. Exact cold/warm pages agree
+within each implementation; that alone does not prove independent full-reference accuracy.
+
+| Input | First result seconds, ours / competitor | Cold field seconds, ours / competitor | Peak process-tree RSS bytes, ours / competitor | Peak temporary file bytes, ours / competitor |
+| --- | --- | --- | --- | --- |
+| Taobao | 2.0022 / 2.3947 | 0.2847 / 1.5135 | 112,959,488 / 727,613,440 | 117,598,385 / 0 |
+| WeChat | 3.0194 / 2.4458 | 0.4002 / 1.3808 | 118,435,840 / 715,849,728 | 181,487,568 / 0 |
+| Douyin | 5.7325 / 5.9380 | 1.0766 / 4.4453 | 134,287,360 / 1,053,171,712 | 477,079,695 / 0 |
+
+All columns are medians of per-trial measurements. Temporary files are sampled in each
+supervised temporary root; zero is an observation there, not a claim of zero system-wide
+writes. File bytes on this host's tmpfs are additional to the reported process RSS. Query
+speed and process RSS therefore do not establish lower total memory. WeChat's first result
+is still 0.5736 seconds slower. Douyin's first-result advantage is small and one round loses;
+no universal startup win or causal speedup over earlier revisions is claimed.
+
+Separate current-runtime receipts `raw-entry-{taobao,wechat,douyin}-full-ownership.json`
+independently verify all 884,805 original class/owner identities and every expanded snapshot
+byte. `raw-entry-large-summary-parity.json` checks actual-MCP summaries against original
+ZIP/manifest/hash evidence and the pinned competitor. Neither is an all-reference oracle.
+
+The full selected-reference oracle initially failed because its native subprocess supplied
+a string after the native snapshot reader adopted a Path contract. The driver now constructs
+Path explicitly; two unit cases execute that actual child command with a contract-checking
+query stub, including alternating order. The fresh real-APK rerun
+`raw-entry-full-reference-pathfix.json` passes all 12 comparisons: complete ordered rows
+and diagnostics for 24,461 method sites and 332 field sites across 12,495,817 instructions,
+three rounds each. Input, runtime and both scanner source hashes remain unchanged. This is
+direct-backend accuracy for the selected descriptors, not MCP latency or all possible queries.
+The initial failed receipts are retained, not overwritten or counted as passing evidence.

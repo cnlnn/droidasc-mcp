@@ -67,6 +67,17 @@ schemas: artifacts/startup-next-20261023/source-full-raw-dex-entry.xml.
 Candidate-branch Windows and canonical-package acceptance must identify this new runtime;
 the earlier b02c180/d356da3 receipts are not reused for it.
 
+Fresh current-runtime field comparisons, full original class-owner/snapshot checks and
+the selected full-reference oracle are recorded in STARTUP_STORAGE_EXPERIMENTS.md.
+WeChat still loses 0.5736 seconds at process-start-to-first-result; lower query RSS does
+not remove the tmpfs-backed preparation-file cost. These remain explicit open gaps.
+The oracle driver now constructs Path in its native child command; two regressions
+execute that command against a path-checking stub. With this test-driver-only fix, the
+local Linux Python 3.13 suite passes 1264 tests in 207.20 seconds, zero failures/errors/skips:
+artifacts/startup-next-20261023/source-full-entry-oracle-driver.xml.
+CI 39962833696 is bound to f144c0849eb3bab878b79d8fe6472ef1c87b7d25, before those
+two driver regressions; it must not be described as a 1264-test gate or release approval.
+
 ## Competitor workflow closure
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
