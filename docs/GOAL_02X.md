@@ -29,6 +29,18 @@ runtime and verifier hashes. This is summary parity, not a speed or DEX-accuracy
 This candidate is not published; its Windows and clean-package gates remain pending.
 The broader workflow exercise and startup/memory/graph/concurrency criteria below stay open.
 
+Startup/storage experiments on this candidate are recorded in
+STARTUP_STORAGE_EXPERIMENTS.md. Larger SQLite batches, native key encoding, ordinary
+Deflate recompression and two cursor micro-optimizations did not establish a robust
+cross-input benefit and are not retained. LZ4 component measurements alone do not approve
+a production format or dependency. The next structural prototype must test preserving
+original compressed payloads and bounded overlapped inflation, with full end-to-end,
+integrity, cleanup and resource accounting; that work remains open.
+The retained runtime is unchanged from b02c180; the added opcode boundary/counter
+regressions increase the complete local Linux Python 3.13 suite to 1231 passing tests,
+zero failures/errors/skips: artifacts/startup-next-20261023/source-full-retained-runtime.xml.
+This is not a new Windows or canonical-distribution gate.
+
 ## Competitor workflow closure
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
