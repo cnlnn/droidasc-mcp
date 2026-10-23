@@ -82,6 +82,7 @@ async def test_competitor_parity_views_and_resource_templates(
                 {"kind": "method", "value": "RUN", "member_match": "name", "case_sensitive": False},
             ),
             ("disassemble_method", {"method_descriptor": "Lfixture/Caller;->run()V"}),
+            ("disassemble_method", {"class_name": "fixture.Caller", "method_name": "run"}),
             ("get_class_source_metadata", {"class_name": "fixture.Caller"}),
         ):
             response = await client.call_tool(
@@ -208,6 +209,8 @@ async def test_complete_investigation_handoffs_without_java(
             assert method in trace.messages[0].content.text
             disassembly = await pages("disassemble_method", method_descriptor=method)
             assert len(disassembly) == 6
+            named = await pages("disassemble_method", class_name=component, method_name="run")
+            assert named == disassembly
             source = await query("get_method_source", method_descriptor=method)
             assert source["format"] == "smali"
             outgoing = await pages("get_method_calls", method_descriptor=method)
@@ -215,6 +218,28 @@ async def test_complete_investigation_handoffs_without_java(
             target = next(row["callee"] for row in outgoing if "->pick(I)" in row["callee"])
             incoming = await pages("find_method_refs", method_descriptor=target)
             assert any(row["caller"] == method for row in incoming)
+            target_owner = target.split("->", 1)[0]
+            ambiguous = await client.call_tool(
+                "asc_query_dex_session",
+                {
+                    "session_id": key,
+                    "operation": "get_call_graph",
+                    "class_name": target_owner,
+                    "method_name": "pick",
+                },
+            )
+            assert not ambiguous.is_error, ambiguous
+            assert ambiguous.structured_content["code"] == "ambiguous_method"
+            assert ambiguous.structured_content["candidate_count"] == 2
+            assert (
+                await pages(
+                    "find_method_refs",
+                    class_name=target_owner,
+                    method_name="pick",
+                    target_descriptor="(I)V",
+                )
+                == incoming
+            )
             fuzzy = await pages(
                 "search_refs",
                 kind="method",

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.9
+
+- Accept exact class_name plus method_name in disassembly, Smali/explicit Java source,
+  incoming references, outgoing calls and bounded call graphs. Resolve a unique declared
+  definition in the owning immutable DEX before executing the existing exact-method query.
+  Return the full method identity and candidate count for subsequent pages and handoffs.
+- Reject overloaded names without guessing; target_descriptor accepts an exact prototype
+  for disambiguation. Missing definitions, unrelated-operation selectors, malformed names,
+  fuzzy owners and conflicting selectors fail explicitly. External references still use
+  full descriptors; inheritance and runtime dispatch are not inferred.
+- Extend independent Smali fixtures and real stdio/HTTP investigation handoffs, including
+  constructors, Unicode names, arrays, no-code methods, overload recovery and ambiguity
+  without index publication. Add original-DEX Androguard and pinned-competitor MCP checks
+  for representative large-APK method workflows. These are scoped workflow improvements,
+  not a claim that all competitor workflows or performance dimensions are superior.
+
 ## 0.2.8
 
 - Store each prepared DEX owner name once and reference it by bounded integer IDs in

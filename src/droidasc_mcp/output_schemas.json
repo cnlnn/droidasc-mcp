@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "a29aa1e618085590723989afdbab4a3a4d98687db09bed52c9118e21f76cbeae",
+  "contracts_sha256": "b36b1950ac9343a8b0a939910af73caf6d1ca45742bfbe96fc4b2273e0fb0134",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "652de42399f7c03eeb8e033a13fbdd98c7813d4105c92e58959cb49643ef2f70",
+  "schemas_sha256": "7e772623d43d0dc34b8dc8ddbc653efa44963c44f96cc1afa225bab7a64cfeac",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -1168,6 +1168,14 @@
         "method_descriptor": {
           "title": "Method Descriptor",
           "type": "string"
+        },
+        "method_name": {
+          "title": "Method Name",
+          "type": "string"
+        },
+        "candidate_count": {
+          "title": "Candidate Count",
+          "type": "integer"
         },
         "field_descriptor": {
           "title": "Field Descriptor",

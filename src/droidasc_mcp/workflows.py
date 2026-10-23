@@ -55,7 +55,14 @@ asc_inspect_artifact class_query/class_prefix filter first-level JVM class inven
 compare_to compares JVM identities only. Use asc_diff_dex_sessions for DEX identity differences.
 Read per-artifact manifest and per-session class resource templates with offset/limit; their
 JSON envelopes preserve page/provenance fields. URI query values must be percent-encoded.
-Use the returned full descriptors unchanged; never guess an overload. Exact references
+Use the returned full descriptors unchanged; never guess an overload. For disassemble_method,
+get_method_source, get_method_calls, find_method_refs and get_call_graph, an exact class_name
+plus method_name selects a declared method directly. Only a unique match executes; overloads
+return ambiguous_method and candidate_count. Supply target_descriptor as the exact prototype
+or select a full method_descriptor with list_methods. These selectors are mutually exclusive.
+Name selection resolves supplied definitions only; external reference targets still require
+their full identity. Resolution does not scan instructions or build an index on ambiguity.
+Exact references
 use find_method_refs/get_method_calls/find_field_refs. For fuzzy owners, partial or omitted
 member names, use search_refs(kind=method/field, class_name, fuzzy_class, value,
 member_match, target_descriptor) in one pass; do not enumerate overloads and scan each separately.

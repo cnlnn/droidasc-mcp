@@ -315,6 +315,26 @@ class DroidAscService:
 
 def _normalize_dex_query(query):
     operation = query.get("operation")
+    exact_methods = {
+        "get_method_source",
+        "find_method_refs",
+        "get_method_calls",
+        "get_call_graph",
+        "disassemble_method",
+    }
+    named_method = query.get("method_name") is not None
+    if named_method:
+        if operation not in exact_methods:
+            raise ValueError("method_name requires an exact method operation")
+        name = query["method_name"]
+        if not isinstance(name, str) or not re.fullmatch(
+            r"(?:<init>|<clinit>|[^./;\[\]<>:()\s]+)", name
+        ):
+            raise ValueError("method_name must be a nonempty exact DEX member name")
+        if not query.get("class_name") or query.get("fuzzy_class"):
+            raise ValueError("method_name requires an exact class_name")
+        if query.get("method_descriptor") is not None:
+            raise ValueError("Use method_name or a full method_descriptor, not both")
     discoveries = {
         "search_members",
         "search_strings",
@@ -348,11 +368,17 @@ def _normalize_dex_query(query):
             raise ValueError("prototype matching requires kind=method")
         if query.get("class_name") and query.get("fuzzy_class"):
             query["class_name"] = query["class_name"].replace(".", "/")
-    if query.get("target_descriptor") and operation != "search_refs":
-        raise ValueError("target_descriptor requires search_refs")
-    if operation == "search_refs" and query.get("target_descriptor"):
+    if (
+        query.get("target_descriptor") is not None
+        and operation != "search_refs"
+        and not named_method
+    ):
+        raise ValueError("target_descriptor requires search_refs or method_name")
+    if query.get("target_descriptor") is not None:
         typ = r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)"
-        pattern = rf"\((?:{typ})*\)(?:V|{typ})" if query["kind"] == "method" else typ
+        pattern = (
+            rf"\((?:{typ})*\)(?:V|{typ})" if named_method or query["kind"] == "method" else typ
+        )
         if not re.fullmatch(pattern, query["target_descriptor"]):
             raise ValueError("target_descriptor requires an exact method prototype or field type")
     if not query.get("case_sensitive", True) and operation not in discoveries:
@@ -448,13 +474,7 @@ def _normalize_dex_query(query):
         raise ValueError("field_descriptor and field_access require find_field_refs")
     if query.get("field_access", "all") not in {"all", "read", "write"}:
         raise ValueError("field_access must be all, read, or write")
-    if query.get("operation") in {
-        "get_method_source",
-        "find_method_refs",
-        "get_method_calls",
-        "get_call_graph",
-        "disassemble_method",
-    }:
+    if operation in exact_methods and not named_method:
         descriptor = query.get("method_descriptor")
         owner_type = r"L[^;\[\]]+;"
         value_type = rf"\[*(?:[ZBCSIJFD]|{owner_type})"

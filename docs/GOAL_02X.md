@@ -53,7 +53,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 through v0.2.7 are published; v0.2.8 is in development. Remaining deficits stay explicit
+  v0.2.3 through v0.2.8 are published; v0.2.9 is in development. Remaining deficits stay explicit
   in this overall goal; a patch release does not mean comprehensive competitor superiority.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
@@ -62,7 +62,7 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Back up existing v0.3.0, v0.4.0, v0.4.1 and v0.5.0 release metadata/assets and Git refs.
   Local backup: artifacts/release-renumber-20261022/backup; all asset digests verified.
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
-  Completed 2026-10-23; fresh readback confirms the four tags are absent. v0.2.7 is now latest.
+  Completed 2026-10-23; the four tags remain absent in the v0.2.8 publication readback.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
   using exact successful CI artifacts. Never reuse a published patch version or roll back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
@@ -79,6 +79,23 @@ all-gap completion goal stays active after an intermediate patch is published.
 
 Update, 2026-10-23:
 
+- Published increment: v0.2.8, main/tag target
+  188853624a86b4d3159c2fd094fc3d6f42d6890b. CI 39900946375 passes all 25 jobs;
+  all eight source cells pass 1155 tests without skips/errors/failures. Every distribution
+  cell passes the complete suite from the same canonical sdist and its exact native wheel.
+  Fresh source and wheel ownership oracles each verify all 884,805 owners and every snapshot
+  DEX byte; bounded graph parity is scoped to the recorded unchanged-decoder comparisons.
+  Published assets match server/local digests, main/tag agree, retained tags are unchanged
+  and withdrawn versions remain absent. Evidence:
+  artifacts/acceptance-0.2.8-ci-39900946375/{acceptance-summary,published-readback}.json.
+  The direct-preparation storage measurements below do not become end-to-end speed claims.
+- Selected v0.2.9 workflow increment: remove the extra declaration-discovery round trip
+  when a class and method name identify a unique supplied definition. Resolve only in its
+  owning checked DEX; return full identity, reject ambiguity and permit prototype filtering.
+  This covers disassembly, source, incoming/outgoing calls and bounded graphs without Java
+  or mandatory preprocessing. Re-read pinned competitor disassembly/graph source; current
+  GitHub head remains 848c711f1d80a1c2577283f1fa5f475ff734aa40. New Smali and real-transport
+  regressions precede final-runtime, cross-platform and canonical-package acceptance.
 - Published increment: v0.2.7, main/tag target
   f7efd9a0f907280c31993b95535ec85ee5bf4494. CI 39866704262 passes all 25 jobs;
   eight source cells pass 1132 tests and seven signing variants each, with zero skips,

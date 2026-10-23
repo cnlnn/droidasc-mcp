@@ -8,6 +8,55 @@ from .native_page import SortedPage
 from .worker_errors import DroidAscError
 
 
+def resolve_method(bundle, entry, owner, name, prototype=None):
+    """Resolve declared members in just the owning DEX, before any instruction/index work."""
+    import zipfile
+
+    from .native_dex import InvalidDex
+    from .native_snapshot import query_dex
+
+    result = {"class_name": owner, "method_name": name, "candidate_count": 0}
+    if entry is None:
+        return {**result, "status": "error", "code": "class_not_found"}
+    result["dex_entry"] = entry
+    selected, count = None, 0
+    try:
+        with (
+            zipfile.ZipFile(bundle) as archive,
+            query_dex(bundle, archive, archive.getinfo(entry)) as dex,
+        ):
+            for class_name, cls in dex.classes():
+                if class_name != owner:
+                    continue
+                _, methods = dex.members(cls)
+                for descriptor, _, _ in methods:
+                    declaring_class, local = descriptor.split("->", 1)
+                    if declaring_class != owner:
+                        raise InvalidDex("Method declaration belongs to a different class")
+                    method_name, proto = local.split("(", 1)
+                    if method_name == name and (prototype is None or "(" + proto == prototype):
+                        selected, count = descriptor, count + 1
+                break
+            else:
+                raise InvalidDex("Class directory disagrees with snapshot definitions")
+    except (InvalidDex, struct.error, UnicodeError) as exc:
+        raise DroidAscError("Invalid DEX method selection: " + str(exc)) from exc
+    result["candidate_count"] = count
+    if count != 1:
+        return {
+            **result,
+            "status": "error",
+            "code": "ambiguous_method" if count else "method_not_found",
+            "message": (
+                "Method name is overloaded; select a full identity with list_methods or supply "
+                "an exact target_descriptor prototype"
+                if count
+                else "Method definition was not found in the selected class"
+            ),
+        }
+    return {**result, "status": "ok", "method_descriptor": selected}
+
+
 def method_row(descriptor, flags, code):
     local = descriptor.split("->", 1)[1]
     name, proto = local.split("(", 1)

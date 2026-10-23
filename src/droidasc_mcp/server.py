@@ -55,6 +55,13 @@ MethodId = Annotated[
     str | None,
     Field(description="Full method identity: Lpkg/C;->name(args)return; preserves overloads"),
 ]
+MethodName = Annotated[
+    str | None,
+    Field(
+        description="Exact declared method name with class_name, instead of method_descriptor; "
+        "overloads require target_descriptor"
+    ),
+]
 FieldId = Annotated[str | None, Field(description="Full field identity: Lpkg/C;->name:type")]
 TypeId = Annotated[
     str | None, Field(description="Exact DEX type including array dimensions, for find_type_refs")
@@ -522,6 +529,7 @@ def build_server(
         prefix: Prefix = None,
         class_name: OptionalClass = None,
         method_descriptor: MethodId = None,
+        method_name: MethodName = None,
         field_descriptor: FieldId = None,
         field_access: FieldAccess = "all",
         type_descriptor: TypeId = None,
@@ -533,7 +541,11 @@ def build_server(
         case_sensitive: CaseSensitive = True,
         member_match: MemberMatch = "descriptor",
         target_descriptor: Annotated[
-            str | None, Field(description="search_refs exact prototype or field-type filter")
+            str | None,
+            Field(
+                description="Exact prototype for method_name selection; "
+                "search_refs prototype or field-type filter"
+            ),
         ] = None,
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
@@ -572,6 +584,8 @@ def build_server(
         Explicit source_format=java alone selects the optional compatibility backend.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         Use a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.
+        Or supply exact class_name and method_name for a declared method; target_descriptor
+        optionally selects its prototype. Ambiguous names fail without choosing an overload.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         find_type_refs reports exact type operands, declarations and annotation types/values.
@@ -593,6 +607,7 @@ def build_server(
             prefix=prefix,
             class_name=class_name,
             method_descriptor=method_descriptor,
+            method_name=method_name,
             field_descriptor=field_descriptor,
             field_access=field_access,
             type_descriptor=type_descriptor,
@@ -675,6 +690,7 @@ def build_server(
         prefix: Prefix = None,
         class_name: OptionalClass = None,
         method_descriptor: MethodId = None,
+        method_name: MethodName = None,
         field_descriptor: FieldId = None,
         field_access: FieldAccess = "all",
         type_descriptor: TypeId = None,
@@ -686,7 +702,11 @@ def build_server(
         case_sensitive: CaseSensitive = True,
         member_match: MemberMatch = "descriptor",
         target_descriptor: Annotated[
-            str | None, Field(description="search_refs exact prototype or field-type filter")
+            str | None,
+            Field(
+                description="Exact prototype for method_name selection; "
+                "search_refs prototype or field-type filter"
+            ),
         ] = None,
         fuzzy_class: FuzzyClass = False,
         threads: Threads = 8,
@@ -724,6 +744,8 @@ def build_server(
         target_descriptor optionally filters exact prototypes/field types.
         find_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.
         method_descriptor is the full DEX class->name(args)return identity.
+        Or supply exact class_name and method_name for a declared method; target_descriptor
+        optionally selects its prototype. Ambiguous names fail without choosing an overload.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         build_xref_index persists an atomic static index for this session's lifetime.
@@ -746,6 +768,7 @@ def build_server(
             prefix=prefix,
             class_name=class_name,
             method_descriptor=method_descriptor,
+            method_name=method_name,
             field_descriptor=field_descriptor,
             field_access=field_access,
             type_descriptor=type_descriptor,

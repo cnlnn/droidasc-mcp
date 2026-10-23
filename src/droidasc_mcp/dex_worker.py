@@ -357,10 +357,39 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, query, workspace):
-    if query["operation"] in OWNER_OPERATIONS:
+    if query["operation"] in OWNER_OPERATIONS or query.get("method_name") is not None:
         from .class_directory import ClassDirectory
 
         with ClassDirectory(bundle.parent / "owners.sqlite") as owners:
+            if query.get("method_name") is not None:
+                from .native_structure import resolve_method
+
+                owner = query["class_name"]
+                try:
+                    entry = owners[owner]
+                except KeyError:
+                    entry = None
+                selection = resolve_method(
+                    bundle,
+                    entry,
+                    owner,
+                    query["method_name"],
+                    query.get("target_descriptor"),
+                )
+                if selection["status"] != "ok":
+                    return {**common, **selection}
+                result = _query_prepared(
+                    runner,
+                    bundle,
+                    common,
+                    owners,
+                    {**query, "method_descriptor": selection["method_descriptor"]},
+                    workspace,
+                )
+                return {
+                    **result,
+                    **{key: value for key, value in selection.items() if key != "status"},
+                }
             return _query_prepared(runner, bundle, common, owners, query, workspace)
     return _query_prepared(runner, bundle, common, {}, query, workspace)
 

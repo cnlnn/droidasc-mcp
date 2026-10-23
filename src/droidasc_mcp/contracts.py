@@ -335,6 +335,8 @@ class DexResult(Result, total=False):
     format: Literal["java", "smali", "cli-text-best-effort"]
     class_name: str
     method_descriptor: str
+    method_name: str
+    candidate_count: int
     field_descriptor: str
     type_descriptor: str
     dex_entry: str
