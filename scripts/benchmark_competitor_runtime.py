@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from contextlib import suppress
 from pathlib import Path
@@ -28,6 +29,28 @@ from mcp.client.stdio import StdioServerParameters
 METHOD = "Ljava/lang/String;->equals(Ljava/lang/Object;)Z"
 FIELD = "Landroid/os/Build;->MODEL:Ljava/lang/String;"
 GRAPH_ROOT = "Landroid/taobao/safemode/SafeModeActivity;->onCreate(Landroid/os/Bundle;)V"
+
+
+class CallDeadline:
+    """Enforce the measured call budget even while async cancellation is pending."""
+
+    def __init__(self, seconds, abort):
+        self.seconds, self.abort = seconds, abort
+        self.stopped, self.expired = threading.Event(), threading.Event()
+        self.thread = threading.Thread(target=self._watch, daemon=True)
+
+    def _watch(self):
+        if not self.stopped.wait(self.seconds):
+            self.expired.set()
+            self.abort()
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stopped.set()
+        self.thread.join()
 
 
 def digest(path):
@@ -228,7 +251,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
     chosen = {"method": method, "field": field, "fuzzy": fuzzy, "string": string, "graph": graph}
     return (
         [command(method), command(field)]
-        if scenario == "concurrent"
+        if scenario in {"concurrent", "full_concurrent"}
         else [command(chosen[scenario.removeprefix("full_")])]
     )
 
@@ -257,6 +280,11 @@ async def trial(args, implementation, scenario, round_number, report, save):
         return [
             child for child in psutil.Process().children(recursive=True) if child.pid not in before
         ]
+
+    def stop_children():
+        for child in reversed(children()):
+            with suppress(psutil.Error):
+                child.kill()
 
     running, peak = True, 0
     response_times = {}
@@ -394,16 +422,20 @@ async def trial(args, implementation, scenario, round_number, report, save):
                             }
                         )
 
+                    deadline = CallDeadline(args.timeout, stop_children)
                     try:
-                        reply = await asyncio.wait_for(
-                            client.call_tool(
-                                tool,
-                                params,
-                                read_timeout_seconds=args.timeout,
-                                progress_callback=progress,
-                            ),
-                            args.timeout,
-                        )
+                        with deadline:
+                            reply = await asyncio.wait_for(
+                                client.call_tool(
+                                    tool,
+                                    params,
+                                    read_timeout_seconds=args.timeout,
+                                    progress_callback=progress,
+                                ),
+                                args.timeout,
+                            )
+                            if deadline.expired.is_set():
+                                raise TimeoutError("External call deadline expired")
                         response_times[label] = time.monotonic()
                         operation["response_from_process_start_seconds"] = round(
                             response_times[label] - started, 4
@@ -428,11 +460,10 @@ async def trial(args, implementation, scenario, round_number, report, save):
                         operation.update(status="error", error=repr(exc)[:2000])
                         # A timed-out ProcessPool task can outlive the MCP transport.
                         # Stop only this trial's descendants before context shutdown.
-                        for child in reversed(children()):
-                            with suppress(psutil.Error):
-                                child.kill()
+                        stop_children()
                         raise
                     finally:
+                        operation["external_deadline_expired"] = deadline.expired.is_set()
                         operation["seconds"] = round(
                             response_times.get(label, time.monotonic()) - start, 4
                         )
@@ -541,6 +572,7 @@ async def main(args):
         "ours_runtime_sha256": runtime_identity(),
         "harness_sha256": digest(Path(__file__)),
         "timing_version": 2,
+        "external_call_deadline_version": 1,
         "temporary_usage_sampling_seconds": 0.2,
         "logical_cpus": psutil.cpu_count(),
         "physical_cpus": psutil.cpu_count(logical=False),
@@ -568,7 +600,8 @@ async def main(args):
         "not added to RSS; peaks are lower bounds and include indexes/private snapshots. "
         "Allocated bytes use st_blocks where available, otherwise null; tmpfs is not process RSS. "
         "Reference totals: ours individual sites, competitor caller groups. "
-        "full_method/full_field collect every page; timings include all response-limit retries. "
+        "full_method/full_field/full_concurrent collect every page; timings include all "
+        "response-limit retries. full_concurrent overlaps complete method and field collections. "
         "Cross-implementation complete-site equality requires the separate offline verifier. "
         "Graphs must normalize to caller/callee pairs and check truncation.",
         "trials": [],
@@ -625,6 +658,7 @@ if __name__ == "__main__":
             "concurrent",
             "full_method",
             "full_field",
+            "full_concurrent",
         ],
         default=["method", "field", "fuzzy", "graph", "concurrent"],
     )

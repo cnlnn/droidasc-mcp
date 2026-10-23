@@ -3,6 +3,33 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Complete concurrency development checks, 2026-10-24
+
+The full_concurrent harness now collects every method and field page concurrently and
+independently checks the actual request/cursor/collection inventory. The unchanged
+`3bb432d` production runtime passes all 72 complete collections across three APKs,
+two/four CPUs, three matched rounds and two repeats. Comparator replay accepts 60 of 72;
+12 Taobao field collections each have 97 extra sites, excluding those batch timings from
+equal-correct-result comparisons. Four-CPU Douyin complete repeated concurrency still
+loses: 7.5007 versus 6.2604 seconds median. First-page wins do not close that deficit.
+
+The initial graph batch exposed an async deadline/cleanup overrun and was stopped, with
+its evidence preserved. The harness now has a separate owned-child watchdog, tested with
+a blocked event loop and a real sleeping child. The focused harness gate passes 110 tests
+with zero skips in artifacts/graph-concurrent-20261024/harness-provenance-fixed.xml.
+This is not new Linux/Windows/package acceptance or publication approval. Full details
+and timing scope are in STARTUP_STORAGE_EXPERIMENTS.md.
+
+The deadline-fixed large-graph batch additionally accepts 24 measured product graphs
+against a fresh full index built from original DEX bytes and independently decodes every
+emitted call site. All graphs explicitly reach their 128-KiB output bound. The comparator's
+12 trials time out at 30.0350-30.0761 seconds, so there is no equal-success graph timing
+ratio. Eleven records show watchdog expiry and one async timeout finishes first. The
+interrupted Douyin offline replay is preserved and resumed separately; no timing batch
+was repeated. artifacts/graph-concurrent-20261024/summary.json binds the accepted receipts.
+This proves bounded output equality and emitted-site validity, not independent full-graph
+completeness or broader workflow closure.
+
 ## Consolidated v0.2.3, 2026-10-23
 
 The maintainer requested withdrawal of v0.2.3-v0.2.9 and fresh consolidation as v0.2.3.

@@ -85,6 +85,18 @@ check is not a substitute for the behavioral tests linked in each row.
 
 ## Acceptance Status
 
+The subsequent full-concurrency/bounded-graph harness increment verifies all 72 complete
+product collections over two/four CPUs and all 24 measured product graphs. Twelve of 72
+comparator collections retain the Taobao-field 97-extra-site failure; four-CPU Douyin
+repeated complete concurrency remains slower. Comparator graphs time out around the
+enforced 30-second budget, without an equal successful graph for a speed comparison.
+All product graphs explicitly report output-byte truncation. Fresh original-byte full-index
+replay plus independent emitted-site decoding do not establish independent full-graph
+completeness. The focused harness gate passes 110 cases with zero skips; inventory audit
+still matches 25 tools, two resources, three prompts and 87 parameters. See
+artifacts/graph-concurrent-20261024/summary.json and STARTUP_STORAGE_EXPERIMENTS.md.
+This is not a production performance fix, full behavioral closure or release approval.
+
 The latest adaptive reference-page increment passes 288 focused tests, zero skips, with
 52 deliberately deselected integration cases. Both transports collect all 2000 generated
 DEX call sites twice without failed-page retries. Fresh independent original-byte checks

@@ -17,6 +17,39 @@ def graph_benchmark(monkeypatch):
     return importlib.import_module("benchmark_call_graph")
 
 
+@pytest.mark.parametrize("fault", [None, "missing_edge", "provenance", "diagnostic", "unknown"])
+def test_measured_graph_replay_checks_complete_payload_and_provenance(monkeypatch, fault):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    verifier = importlib.import_module("verify_graph_benchmark")
+    expected = {"status": "ok", "edges": [{"site": 1}], "truncated": False}
+    opened = {"status": "ok", "session_id": "session", "sources": [{"sha256": "original"}]}
+    actual = {
+        **opened,
+        **expected,
+        "instruction_scan_complete": True,
+        "scan_errors": 0,
+        "runtime_target_resolution": "not_performed",
+        "backend": "native-dex-frontier",
+        "query_cache": {"hit": True},
+    }
+    opened.update(
+        idle_ttl_seconds=1800, reserved_index_bytes=1024, reuse="immutable", stored_bytes=512
+    )
+    if fault == "missing_edge":
+        actual["edges"] = []
+    elif fault == "provenance":
+        actual["session_id"] = "wrong"
+    elif fault == "diagnostic":
+        actual["instruction_scan_complete"] = False
+    elif fault == "unknown":
+        actual["unverified_field"] = 123
+    if fault:
+        with pytest.raises(AssertionError):
+            verifier.validate_graph_result(actual, opened, expected)
+    else:
+        verifier.validate_graph_result(actual, opened, expected)
+
+
 @pytest.mark.parametrize("opcode", [0x6E, 0x74, 0xFA, 0xFB])
 def test_independent_method_operand_handles_polymorphic_formats(graph_benchmark, opcode):
     oracle = importlib.import_module("verify_fuzzy_references")

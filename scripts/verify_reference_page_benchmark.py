@@ -11,7 +11,7 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from benchmark_competitor_runtime import competitor_runtime_identity
+from benchmark_competitor_runtime import GRAPH_ROOT, competitor_runtime_identity, queries
 from verify_mcp_reference_pages import (
     QUERIES,
     digest,
@@ -109,8 +109,62 @@ async def verify_native_collection(operations, collection, opened, query, expect
     return result
 
 
+def collection_fields(trial, repeats):
+    scenario = trial["scenario"]
+    assert scenario in {"full_method", "full_field", "full_concurrent"}
+    fields = [False, True] if scenario == "full_concurrent" else [scenario == "full_field"]
+    expected = {
+        f"query:{repeat}:{index}": field
+        for repeat in range(repeats)
+        for index, field in enumerate(fields)
+    }
+    collections = trial["reference_collections"]
+    labels = [row["label"] for row in collections]
+    assert len(labels) == len(expected) and set(labels) == set(expected), (
+        "Missing, duplicate or unexpected complete collection"
+    )
+    return [(row, expected[row["label"]]) for row in collections]
+
+
+def competitor_collection(operations, collection, opened, field, page_size):
+    tool, params = queries(
+        "competitor", opened["analysis_id"], "field" if field else "method", GRAPH_ROOT, 1
+    )[0]
+    params.pop("limit")
+    attempts = [op for op in operations if op["label"].startswith(collection["label"] + ":page:")]
+    assert attempts and not collection["response_limit_recoveries"]
+    assert collection["page_labels"] == [op["label"] for op in attempts]
+    rows, total, cursor = [], None, None
+    for index, attempt in enumerate(attempts):
+        assert attempt["label"] == f"{collection['label']}:page:{index}:attempt:0"
+        assert attempt["tool"] == tool
+        assert attempt["arguments"] == {**params, "limit": page_size, "cursor": cursor}
+        assert attempt["status"] == "ok"
+        response = attempt["result"]
+        assert response.get("status", "ok") == "ok"
+        assert response["total"] == (response["total"] if total is None else total)
+        total = response["total"]
+        hits = response["hits"]
+        assert isinstance(hits, list) and len(hits) <= page_size
+        rows.extend(hits)
+        assert len(rows) <= total and (hits or len(rows) == total)
+        cursor = response["next_cursor"]
+        assert cursor == (str(len(rows)) if len(rows) < total else None)
+        assert (cursor is None) == (index == len(attempts) - 1)
+    assert len(rows) == total
+    return rows, total
+
+
 async def main(args):
-    for key in ("receipt", "apk", "baseline_source", "java", "oracle_home", "competitor"):
+    for key in (
+        "receipt",
+        "apk",
+        "baseline_source",
+        "java",
+        "oracle_home",
+        "competitor",
+        "benchmark_source",
+    ):
         setattr(args, key, getattr(args, key).resolve(strict=True))
     assert not args.output.exists(), "Preserve previous acceptance attempts"
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -123,7 +177,7 @@ async def main(args):
         Path(__file__),
         Path(__file__).with_name("verify_mcp_reference_pages.py"),
         Path(__file__).with_name("verify_fuzzy_references.py"),
-        Path(__file__).with_name("benchmark_competitor_runtime.py"),
+        args.benchmark_source,
     ]
     report = {
         "status": "running",
@@ -152,9 +206,7 @@ async def main(args):
         assert receipt["apk_sha256"] == digest(args.apk)
         assert receipt["ours_runtime_sha256"] == report["runtime_sha256"]
         assert receipt["competitor_runtime"] == competitor_runtime_identity(args.competitor)
-        assert receipt["harness_sha256"] == digest(
-            Path(__file__).with_name("benchmark_competitor_runtime.py")
-        )
+        assert receipt["harness_sha256"] == digest(args.benchmark_source)
         opened = next(
             t["operations"][0]["result"] for t in receipt["trials"] if t["implementation"] == "ours"
         )
@@ -167,25 +219,22 @@ async def main(args):
             )
             expected = {}
             for trial in receipt["trials"]:
-                assert trial["status"] == "passed" and trial["scenario"] in {
-                    "full_method",
-                    "full_field",
-                }
-                field = trial["scenario"] == "full_field"
-                operation, name, descriptor = QUERIES[int(field)]
-                if operation not in expected:
-                    expected[operation] = await asyncio.to_thread(
-                        oracle, args, bundle, operation, descriptor
-                    )
-                truth = expected[operation]
-                sites = native_sites(truth["items"], sources, field)
-                assert len(trial["reference_collections"]) == receipt["repeats"]
-                for collection in trial["reference_collections"]:
+                assert trial["status"] == "passed"
+                assert trial["implementation"] in {"ours", "competitor"}
+                for collection, field in collection_fields(trial, receipt["repeats"]):
+                    operation, name, descriptor = QUERIES[int(field)]
+                    if operation not in expected:
+                        expected[operation] = await asyncio.to_thread(
+                            oracle, args, bundle, operation, descriptor
+                        )
+                    truth = expected[operation]
+                    sites = native_sites(truth["items"], sources, field)
                     row = {
                         "implementation": trial["implementation"],
                         "scenario": trial["scenario"],
                         "round": trial["round"],
                         "label": collection["label"],
+                        "operation": operation,
                     }
                     report["collections"].append(row)
                     if trial["implementation"] == "ours":
@@ -205,19 +254,13 @@ async def main(args):
                             normalized_sites_sha256=fingerprint(sites),
                         )
                     else:
-                        operations = {op["label"]: op for op in trial["operations"]}
-                        rows, total = [], None
-                        for label in collection["page_labels"]:
-                            response = operations[label]["result"]
-                            assert response["total"] == (
-                                response["total"] if total is None else total
-                            )
-                            total = response["total"]
-                            rows.extend(response["hits"])
-                            assert response["next_cursor"] == (
-                                str(len(rows)) if len(rows) < total else None
-                            )
-                        assert len(rows) == total
+                        rows, total = competitor_collection(
+                            trial["operations"],
+                            collection,
+                            trial["operations"][0]["result"],
+                            field,
+                            receipt["full_collection_page_size"],
+                        )
                         row.update(
                             compare_sites(sites, competitor_sites(rows, sources, field)),
                             caller_groups=total,
@@ -254,6 +297,12 @@ if __name__ == "__main__":
     parser.add_argument("--java", type=Path, required=True)
     parser.add_argument("--oracle-home", type=Path, required=True)
     parser.add_argument("--competitor", type=Path, default=Path("artifacts/aimard-asc-mcp"))
+    parser.add_argument(
+        "--benchmark-source",
+        type=Path,
+        default=Path(__file__).with_name("benchmark_competitor_runtime.py"),
+        help="Exact frozen benchmark source that produced this receipt",
+    )
     parser.add_argument("--oracle-heap-mib", type=int, choices=range(128, 4097), default=1024)
     parser.add_argument("--output", type=Path, required=True)
     asyncio.run(main(parser.parse_args()))

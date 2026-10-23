@@ -177,6 +177,23 @@ and new full cross-platform/package gates remain open.
 
 ## Competitor workflow closure
 
+Complete-concurrency follow-up, 2026-10-24: all 72 product method/field collections
+pass independent original-byte replay over three APKs and two/four CPUs. Twelve of 72
+comparator collections retain the Taobao-field 97-extra-site failure. Four-CPU Douyin
+repeated complete concurrency still loses at 7.5007 / 6.2604 seconds median, despite
+favorable first-page results. The first graph batch also exposed a cancellation deadline
+overrun; it is preserved as rejected timing evidence. The harness now enforces deadlines
+with a separate owned-child watchdog and passes 110 focused tests with zero skips.
+These are harness/acceptance improvements, not a production performance fix or closure of
+the remaining workflow, storage, graph-completeness and cross-platform/package criteria.
+The corrected same-budget graph batch now verifies all 24 measured bounded product
+graphs against a fresh original-byte full index, plus independent emitted-site decoding.
+All comparator trials time out around 30 seconds; no equal-success graph ratio is claimed.
+Every product graph explicitly reaches its output-byte bound. This does not independently
+prove full-corpus graph completeness. The final receipts are bound in
+artifacts/graph-concurrent-20261024/summary.json, including the separately resumed offline
+Douyin verification after a host reboot. No additional release is approved.
+
 Latest paging increment, 2026-10-24: reference queries now return byte-bounded complete
 prefixes at the original 256-KiB ceiling, retain the requested maximum limit and continue
 at the exact next_offset. The targeted gate passes 288 cases with zero skips and 52

@@ -7,6 +7,97 @@ used the workflow candidate at
 reader addition. That addition does not replace the stored preparation/query path.
 These receipts neither approve publication nor close the startup/storage objective.
 
+## Complete Concurrent Collections, 2026-10-24
+
+The new `full_concurrent` scenario overlaps complete method and field collections,
+including every continuation page, instead of comparing only their first pages. The
+offline verifier binds each repeat/target label, actual tool and arguments, analysis ID,
+page limit, cursor, response and complete original-byte site identities. Missing,
+duplicate, unexpected or nonadvancing collections fail verification. This increment
+changes the acceptance harness, not the production runtime at `3bb432d`.
+
+Evidence root: artifacts/graph-concurrent-20261024/. Six timing receipts cover three
+APKs, two/four logical CPUs and workers, three alternating fresh-server rounds and two
+complete concurrent batches per trial: 36 trials total. Both implementations use the
+same interpreter/dependencies, 4096-MiB descendant-RSS and 8192-MiB temporary-file caps,
+512-MiB expanded input limit and retained OS caches. Independent replay accepts all 72
+product collections. Of 72 comparator collections, 60 pass and 12 Taobao-field collections
+each contain 97 extra sites with none missing. Taobao batch timings therefore do not
+establish equal-correct-result performance wins.
+
+Medians in seconds for the independently correct complete batches:
+
+| Input / CPUs | First complete batch ours / competitor | Repeat complete batch ours / competitor | Startup to complete batch ours / competitor |
+| --- | --- | --- | --- |
+| WeChat / 2 | 4.1273 / 13.2255 | 3.6064 / 3.6980 | 6.6904 / 14.3350 |
+| WeChat / 4 | 3.9143 / 8.7757 | 3.3840 / 3.6924 | 6.1162 / 9.7233 |
+| Douyin / 2 | 9.7474 / 33.4776 | 7.1211 / 7.9076 | 15.7048 / 37.2845 |
+| Douyin / 4 | 8.9340 / 21.7225 | 7.5007 / 6.2604 | 14.8668 / 24.6572 |
+
+The four-CPU Douyin repeated complete batch still loses. Earlier first-page concurrency
+results do not close this full-collection deficit. These receipts bind the exact producing
+harness preserved as benchmark-before-deadline.py, SHA-256
+`e208933e6db7581f203c1925cd8dbc25c192ff5c080f5ac5a89a22cdc7e15fff`.
+All successful operations finished within the configured 180 seconds, but that harness's
+async cancellation alone did not guarantee termination at the deadline.
+
+The first large-graph batch exposed that defect: a nominal 180-second call took
+1059.4956 seconds while transport cancellation waited for cleanup. That batch was stopped
+and preserved, not accepted as a same-budget comparison. A separate watchdog now kills
+only the current trial's owned descendants at the external deadline, independent of
+async cancellation. Regression tests exercise blocked event-loop behavior, actual child
+termination and timer disarming. harness-provenance-fixed.xml passes 110 focused cases
+with zero skips; an earlier four-skip run is not the accepted focused gate. Neither these
+tests nor the concurrent receipts replace fresh full cross-platform/package acceptance.
+
+## Bounded Large Graph Replay, 2026-10-24
+
+The corrected graph batch uses the same three inputs, interpreter/dependencies and
+two/four-CPU resource budgets, with two alternating fresh-server rounds per input/budget.
+Both implementations receive the exact FileProvider.getUriForFile prototype, direction
+both and depth three. Calls have a 30-second deadline. Product graph limits remain 500
+nodes, 1000 individual sites and 128 KiB of encoded graph output. All 12 product trials
+return both cold and repeated graphs; all 12 comparator trials time out before a graph.
+Eleven timeout records set the external watchdog flag; in one Douyin four-CPU trial the
+async deadline completes cleanup first. Actual failed-call durations are 30.0350-30.0761
+seconds. No out-of-memory or source-level API exception is inferred from these timeouts.
+
+Product medians in seconds; first/repeat start after validated open, while startup includes
+process initialization and preparation:
+
+| Input / CPUs | First graph | Repeat graph | Startup to graph |
+| --- | --- | --- | --- |
+| Taobao / 2 | 6.4055 | 0.0673 | 9.0751 |
+| Taobao / 4 | 7.6996 | 0.0658 | 10.5086 |
+| WeChat / 2 | 8.8811 | 0.1002 | 15.0918 |
+| WeChat / 4 | 9.5718 | 0.0675 | 13.4703 |
+| Douyin / 2 | 7.8030 | 0.0850 | 16.4325 |
+| Douyin / 4 | 10.7169 | 0.0958 | 22.6130 |
+
+scripts/verify_graph_benchmark.py separately builds a full call-site index from the
+original DEX bytes and replays every actual query, comparing complete measured graph
+payloads, provenance and diagnostics. All 24 measured graphs match. A second oracle uses
+Androguard sequential method decoding to verify all emitted unique instruction sites:
+219 Taobao, 233 WeChat and 180 Douyin. Graphs have 141/196/179 nodes respectively; every
+graph explicitly reports output_bytes truncation. Equality with a native full index plus
+independent emitted-site validity does not establish independent full-corpus graph
+completeness, runtime dispatch resolution or an untruncated graph.
+
+Oracle indexes are offline acceptance storage, excluded from both timed products. Input,
+runtime, helper and receipt hashes are checked before/after, and temporary oracle storage
+is removed. A host reboot interrupted only the last offline Douyin replay: its running
+v2 receipt is preserved; graph-accuracy-v3.json reuses hash-verified completed Taobao and
+WeChat receipts and resumes Douyin under a new filename. It does not replace any timing
+trial. summary.json binds the final 72 product collections, 24 graphs and focused tests.
+The first aggregation attempt's incorrect assumption that every timeout set the external
+flag is also retained separately; the final summary distinguishes both deadline paths.
+
+Evidence root: artifacts/graph-concurrent-20261024/, graph timing/accuracy under
+deadline-fixed/. The comparator produced no equal successful graph in this bounded batch;
+there is no accepted graph speed ratio or universal graph superiority claim. Independent
+full-graph completeness, broader workflow behavior, remaining latency/storage deficits
+and fresh unified Linux/Windows/package gates remain open. No new release is approved.
+
 ## Adaptive Reference Pages, 2026-10-24
 
 The development runtime now returns the largest complete prefix that fits the existing
