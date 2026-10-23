@@ -523,7 +523,8 @@ def build_server(
                 "get_class_source_metadata",
             ],
             Field(
-                description="Static DEX operation; method selection preserves exact overload identity"
+                description="Static DEX operation; method selection preserves "
+                "exact overload identity"
             ),
         ] = "info",
         prefix: Prefix = None,

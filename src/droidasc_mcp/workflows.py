@@ -69,7 +69,8 @@ member_match, target_descriptor) in one pass; do not enumerate overloads and sca
 find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;
 get_call_graph uses bounded frontiers for incoming/outgoing/both multi-hop exploration,
-or reuses/builds a call-only/full index when needed. Index creation time and disk usage remain explicit.
+or reuses/builds a call-only/full index when needed. Index creation time and disk usage
+remain explicit.
 It preserves individual call sites and reports depth/node/edge/byte truncation explicitly.
 Inspect returned nodes' unresolved dynamic sites; expand a boundary method as a new root or
 raise graph budgets within their limits. Graph limits are separate from ordinary page limits.
