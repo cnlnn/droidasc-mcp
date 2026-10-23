@@ -23,6 +23,78 @@ under artifacts/reissue-0.2.3-ci-39939932398/{acceptance-summary,published-readb
 The [consolidated release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3) is published.
 These receipts cover that frozen release, not subsequent development-branch changes.
 
+## Workflow candidate, 2026-10-23
+
+Candidate e3f381927c98976d4b2052ec29e0d86136e47c48 remains on
+codex/workflow-triage-next, not main or the published tag.
+[CI 39967501671](https://github.com/cnlnn/droidasc-mcp/actions/runs/39967501671) passes
+all 25 jobs: each of eight Linux/Windows Python 3.10-3.13 source cells passes 1264 tests
+without failures/errors/skips; each distribution cell passes the same 1264 tests on both
+the canonical sdist and its exact native wheel. Source cells additionally pass seven
+independent signing variants; package, Rust, stability and fixture jobs pass.
+
+The initial f144c08 run 39962833696 is not acceptance: Windows pytest setup/teardown
+failed because auto-generated test IDs contained full oversized XML payloads and exceeded
+the 32767-character environment-variable limit. Fixed short IDs retain every payload and
+assertion and explicitly bound the node ID. The failing attempt was cancelled and retained.
+
+Evidence: artifacts/workflow-entry-ci-39967501671/acceptance-summary.json verifies all
+12 downloaded artifact ZIP digests, 24 extracted files, canonical-sdist hashes in all
+eight distribution logs, packaged runtime source against the commit, four wheel identities
+and installed-byte checks. wheel-original-accuracy.json binds the exact Linux CI wheel and
+installed native extension to full independent original ownership/snapshot checks for all
+884805 classes across Taobao/WeChat/Douyin and complete selected Taobao reference/diagnostic
+comparisons (24461 method sites, 332 field sites, 12495817 instructions, three rounds each).
+The native oracle driver Path fix has two regressions executing the real child command.
+
+These receipts do not prove all-query/all-APK accuracy, lower total memory, a universal
+startup advantage or complete competitor workflow superiority. They do not authorize a
+new release; the current startup/storage experiments are separate and remain isolated.
+
+## Complete MCP Reference Pages
+
+The development-only verifier scripts/verify_mcp_reference_pages.py reads every successful
+page for String.equals method references and Build.MODEL field references through real
+stdio. A frozen independent JVM scanner consumes original APK bytes, mapped to canonical
+names only after independently enumerating every original DEX. Missing DEX entries,
+duplicate inventories, swapped canonical mappings, altered bytes, diagnostic changes,
+same-count corruptions, wrong ordering and skipped/repeated continuation offsets fail.
+Only implementation-specific backend/backend_version labels are excluded from equality.
+
+Evidence root: artifacts/startup-next-20261023. The final batch receipt is
+current-reference-pages-corpus-final.json; its three
+current-{taobao,wechat,douyin}-mcp-full-reference-pages-final.json receipts pass:
+
+| Input | Complete method sites | Complete field sites | Successful pages | Instructions per full query |
+| --- | --- | --- | --- | --- |
+| Taobao | 24461 | 332 | 50 | 12495817 |
+| WeChat | 26184 | 110 | 54 | 21430036 |
+| Douyin | 47005 | 489 | 96 | 52547329 |
+
+All 98581 ordered rows and every scanner diagnostic agree, not just totals. Each method
+query first receives response_limit at limit=1000, records that response and retries the
+same offset at limit=500. No rows are lost by recovery. These 200 successful pages are
+not 200 distinct full instruction corpora; changing offsets currently repeats scans.
+Original input, runtime, scanner source, executable and jar hashes stay unchanged;
+original DEX inventory/canonical mapping, session/input/source provenance and complete
+owned-temporary cleanup pass. The independent JVM's explicit heap cap is 1024 MiB;
+its work/storage are accuracy-oracle costs, not product latency or RSS measurements.
+
+The initial two attempts remain failed evidence: oversized pages, then an incorrectly
+compared backend-version label; the initial Douyin scanner also exited nonzero with a
+512-MiB heap (that first receipt did not preserve stderr, so its root cause is not claimed).
+Two regressions subsequently exposed and fixed a verifier-only common-mode inventory gap:
+an omitted original DEX or swapped canonical mapping must not be accepted based solely on
+session metadata. All three complete transport checks were rerun after that fix. Earlier
+checked receipts are separate; their exact helper is retained as reference-pages-checked-verifier.py.
+
+The final verifier, container and preparation-directory selection passes 95 tests with no
+failures/errors/skips: reference-pages-and-prefetch-final-targeted.xml. This is not a
+replacement for a final full source/package/Windows matrix. Runtime code is unchanged
+from e3f3819; the added acceptance scripts/tests do not change its historical CI count.
+Full-collection performance against the competitor, additional graph inputs and the
+startup/storage gaps remain open; no new publication is approved by these receipts.
+
 ## Historical v0.2.x native-query evidence
 
 The versioned publication statements below describe the withdrawn increments, not current

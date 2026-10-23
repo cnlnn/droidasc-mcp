@@ -26,7 +26,8 @@ scripts/verify_artifact_summary.py passes the separate original-ZIP and pinned-c
 summary oracle for all three private Taobao, WeChat and Douyin APKs. The final receipt is
 artifacts/workflow-triage-20261023/large-summary-parity-final.json, with unchanged input,
 runtime and verifier hashes. This is summary parity, not a speed or DEX-accuracy claim.
-This candidate is not published; its Windows and clean-package gates remain pending.
+This candidate is not published. The final e3f3819 runtime passes the refreshed
+cross-platform/source/package gates recorded below; earlier local counts are historical.
 The broader workflow exercise and startup/memory/graph/concurrency criteria below stay open.
 
 Startup/storage experiments on this candidate are recorded in
@@ -82,7 +83,44 @@ large XML parameters in PYTEST_CURRENT_TEST, exceeding Windows' 32767-character 
 The seven manifest diagnostic cases now use fixed short IDs and assert a bounded node ID;
 their original payloads and parser assertions are unchanged. All 31 summary/driver tests
 pass locally without skips: artifacts/startup-next-20261023/windows-id-fixed-targeted.xml.
-The failing first attempt remains evidence, not acceptance; a new complete matrix is required.
+The failing first attempt remains evidence, not acceptance. The corrected candidate at
+e3f381927c98976d4b2052ec29e0d86136e47c48 passes CI 39967501671: all 25 jobs,
+1264 tests with zero failures/errors/skips in each Linux/Windows Python 3.10-3.13 source
+cell and for each canonical-sdist/exact-wheel installation. Seven signing variants per
+source cell, Rust and stability gates also pass. The downloaded ZIP digests, 24 extracted
+files, packaged runtime source and installed-wheel identity are verified in
+artifacts/workflow-entry-ci-39967501671/acceptance-summary.json.
+The exact Linux CI wheel independently passes every original class/owner and snapshot byte
+across Taobao/WeChat/Douyin (884805 identities), and all selected Taobao method/field rows
+and diagnostics over three rounds: wheel-original-accuracy.json under the same evidence root.
+The source worktree, wheel bytes, installed runtime and verifier remain unchanged throughout.
+These gates do not close the startup/storage or broader comparative-workflow criteria, and
+do not approve a new publication. main and the existing v0.2.3 tag remain at 12a4fc5.
+
+A fresh 27-trial 64/128/256-KiB prefetch sweep suggested preparation gains, but the actual
+18-trial real-stdio before/after comparison did not preserve them at first result: WeChat
+and Douyin each regress in two of three pairs. The change is removed; production remains
+byte-identical to e3f3819. The separate bounded-memory compact pilot also remains rejected
+as a default. See STARTUP_STORAGE_EXPERIMENTS.md for complete receipts and resource costs.
+Two new full-queue abandonment regressions pass alongside all container/directory cases
+(68 tests, zero skips); these are test-only additions, not a new full cross-platform gate.
+
+The current three-APK concurrent corpus now has 36 passing real-stdio trials across two/four
+CPU budgets, three alternating rounds each, with equal 4096-MiB aggregate RSS and 8192-MiB
+temporary-file caps. All cold/first-complete-batch/repeat medians favor the product for
+these method+field pairs; see STARTUP_STORAGE_EXPERIMENTS.md. Inputs, both runtimes and
+harnesses remain unchanged. This does not close the separate single-field startup deficit,
+storage cost, broader graph comparison or all-query accuracy.
+
+Complete real-MCP reference pagination additionally matches an independently inventoried
+original-byte JVM oracle for 98581 method/field sites across all three APKs, 200 successful
+pages and full scan diagnostics. Final receipts: current-reference-pages-corpus-final.json
+and its three per-APK final reports under artifacts/startup-next-20261023. Failed attempts
+and the verifier's missing-DEX/swapped-mapping regressions remain separate evidence.
+The final verifier/container/directory selection passes 95 tests, zero skips; no runtime
+change or new full cross-platform gate is implied. The existing exact-page cache key includes
+offset/limit and unseen pages rescan instructions. Measure full-collection scan amplification
+against the competitor rather than inferring paging performance from first-page timings.
 
 ## Competitor workflow closure
 
@@ -112,6 +150,8 @@ The failing first attempt remains evidence, not acceptance; a new complete matri
   Revalidate all affected workflows, cleanup and resource boundaries after any such refactor.
 - [ ] Re-measure repeated queries and fix any confirmed residual latency regression while
   keeping host caches bounded and not retaining a full-APK analysis object or worker pool.
+  Include complete multipage collection: unseen pages currently repeat the scan path, while
+  exact-page cache hits alone do not establish good full-collection cost.
 - [ ] Freeze alternating cold/warm/concurrent and bounded-large-graph comparisons. Include
   both two/four-worker budgets, additional APK workloads, complete-result accuracy and
   separate process RSS versus index disk/tmpfs usage. Report failures and truncation plainly.

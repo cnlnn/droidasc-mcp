@@ -266,6 +266,52 @@ def test_prefetch_full_chunks_are_transferred_without_copying():
         assert stream.read(1) == b""
 
 
+@pytest.mark.parametrize("consume_block", [False, True])
+def test_abandoned_prefetched_entries_bound_both_queues_and_join_threads(consume_block):
+    from types import SimpleNamespace
+
+    from droidasc_mcp.containers import prefetched_entries
+
+    queued = {name: threading.Event() for name in ("first.dex", "second.dex")}
+    sources = []
+    block = b"x" * (256 * 1024)
+
+    class Source(io.BytesIO):
+        def __init__(self, name):
+            super().__init__(block * 8)
+            self.name, self.reads = name, 0
+
+        def read(self, count):
+            assert 0 < count <= len(block)
+            self.block_size = count
+            self.reads += 1
+            if self.reads == 2:
+                queued[self.name].set()
+            return super().read(count)
+
+    class Archive:
+        def open(self, info):
+            source = Source(info.filename)
+            sources.append(source)
+            return source
+
+    inputs = [(Archive(), SimpleNamespace(filename=name), name) for name in queued]
+    with (
+        pytest.raises(RuntimeError, match="abandon both"),
+        prefetched_entries(inputs) as entries,
+    ):
+        assert all(event.wait(3) for event in queued.values())
+        assert [source.reads for source in sources] == [2, 2]
+        if consume_block:
+            stream, _, _ = next(entries)
+            assert stream.read(len(block)) == block[: sources[0].block_size]
+        raise RuntimeError("abandon both")
+    assert all(source.closed for source in sources)
+    assert sources[0].reads <= (3 if consume_block else 2)
+    assert sources[1].reads == 2
+    assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
 def test_capability_routes_do_not_duplicate_resource_inventory():
     from droidasc_mcp.containers import capabilities
 

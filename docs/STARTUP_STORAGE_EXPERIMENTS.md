@@ -11,7 +11,9 @@ zero failures, errors or skips: `source-full-retained-runtime.xml` under the evi
 root below. This includes the 18 added opcode regressions and real stdio/HTTP flows.
 At that gate, `diff -qr --exclude=__pycache__` confirmed the complete runtime tree,
 including the C source and loaded native extension, matched the frozen before snapshot.
-Windows and clean-package acceptance of this development branch remain pending.
+That historical local gate did not prove Windows or clean-package acceptance. The later
+workflow/raw-entry candidate at e3f3819 passed all 25 cross-platform/package CI jobs in
+39967501671; see VALIDATION.md for that separate, exact-commit receipt.
 
 Evidence root: `artifacts/startup-next-20261023/`. Inputs are the private Taobao
 10.62.0, WeChat 8.0.74 and Douyin 39.1.0 corpus. Receipts bind original input hashes,
@@ -159,6 +161,67 @@ claimed from this pilot, and no runtime change or dependency is retained.
 Remaining work must improve the actual preparation/query/storage tradeoff, not move
 decompression costs outside the reported first use or rename storage savings as RSS gains.
 
+## Bounded In-Memory Compact Pilot
+
+`compact-memory-wechat-pilot.json` is a single four-CPU direct-worker feasibility trial
+on the e3f3819 runtime. Instead of an intermediate validation file, a child-only helper
+validates one original DEX in a 32-MiB bounded buffer, with stored-file fallback for larger
+members. Optional two-slot query inflation reserves at most 64 MiB of expanded bytes.
+All 233,555 class/owner rows, metadata, expanded snapshot hashes and first/repeated field
+pages agree; input/runtime/helper identity and complete temporary/thread cleanup pass.
+
+| Variant | Prepare seconds | First field seconds | Retained file bytes | First-field process RSS bytes |
+| --- | --- | --- | --- | --- |
+| Stored | 1.4732 | 0.2761 | 181,485,807 | 51,212,288 |
+| Compact, bounded memory validation | 1.8576 | 1.0658 | 77,179,740 | 67,973,120 |
+| Compact, bounded validation and two-slot inflation | 1.8456 | 0.6518 | 77,179,740 | 107,913,216 |
+
+The largest validation buffer is 13,688,452 bytes and scheduled query expansion peaks at
+25,651,164 bytes. This pilot rejects removing the intermediate validation file as a
+sufficient solution: it does not establish faster first use. It is neither an independent
+all-reference oracle nor Windows/041/source-handoff acceptance. The prototype also waits
+for the previous ownership insertion before copying the next member, unlike the product;
+restoring that overlap is a separate, untested hypothesis. No production format is adopted.
+
+## Prefetch Block-Size Sweep
+
+`prefetch-chunks-three-apks-cpu4.json` passes 27 fresh direct-worker trials: 64/128/256-KiB
+blocks, three rotating rounds on each original APK, identical four-CPU affinity, unchanged
+one-block queues and at most two active member streams. All complete ownership rows,
+metadata, expanded DEX bytes and first/repeated field pages agree, with cleanup and stable
+input/runtime/helper hashes. The runtime is the e3f3819 candidate; only the diagnostic child
+substitutes the block size. Preparation medians for 64 -> 256 KiB are 0.7774 -> 0.7734,
+1.7407 -> 1.4654 and 3.7637 -> 3.1406 seconds for Taobao/WeChat/Douyin. Sampled preparation
+RSS increases by about 1.9/2.3/2.5 MB; retained files are unchanged. These internal timings
+do not establish a product startup improvement.
+
+The subsequent `prefetch-matched-three-apks-cpu4.json` exercises the actual source revisions
+over stdio, with only containers.py changed. All 18 alternating trials pass complete
+open/cold/warm response equality except session IDs and explicit cache state. Both revisions
+use Python 3.13.11, four inherited CPUs, 2048-MiB process-tree RSS and 8192-MiB temporary
+file budgets; all measured input/runtime/helper hashes stay unchanged.
+
+| Input | First result seconds, 64 / 256 KiB | Open seconds, 64 / 256 KiB | Peak process-tree RSS bytes, 64 / 256 KiB |
+| --- | --- | --- | --- |
+| Taobao | 2.0556 / 1.9738 | 0.9741 / 0.9402 | 112,947,200 / 112,021,504 |
+| WeChat | 2.7585 / 2.9559 | 1.6455 / 1.7811 | 117,436,416 / 116,682,752 |
+| Douyin | 5.4270 / 5.6979 | 3.6008 / 3.4185 | 133,615,616 / 136,253,440 |
+
+These are medians, not independent full-reference or competitor comparisons. WeChat and
+Douyin each regress at first result in two of three pairs. Reject the block-size change:
+the product retains 64-KiB member prefetch, rather than adopting the direct-worker result.
+A small first-result gain on one input does not overcome regressions on the other two.
+
+The added two-case regression abandons both prefetched members with full queues, before
+or after taking one block. It checks one queued/one producer block per inactive stream,
+bounded reads, closed original streams and joined threads. Together with all container and
+preparation-directory tests it passes 68 cases, zero skips:
+`prefetch-retained-targeted-zero-skips.xml`. The initial invocation lacked optional fixture
+configuration (52 passed/14 skipped); it is not acceptance. Two initial test-development
+receipts are retained separately, including an overstrict assertion on the independent
+snapshot extractor's final short read. No runtime modification remains from this experiment;
+the new test cases do not retroactively increase the e3f3819 CI test count.
+
 ## Fresh Candidate Comparison
 
 The standalone-DEX candidate runtime at `f144c0849eb3bab878b79d8fe6472ef1c87b7d25`
@@ -196,3 +259,49 @@ and diagnostics for 24,461 method sites and 332 field sites across 12,495,817 in
 three rounds each. Input, runtime and both scanner source hashes remain unchanged. This is
 direct-backend accuracy for the selected descriptors, not MCP latency or all possible queries.
 The initial failed receipts are retained, not overwritten or counted as passing evidence.
+
+## Current Concurrent Corpus
+
+`current-concurrency-corpus.json` and its six `current-{taobao,wechat,douyin}-affinity{2,4}-concurrent.json`
+receipts pass all 36 real-stdio trials, three alternating rounds per input/CPU budget.
+Both implementations use the same Python 3.13.11 interpreter/dependencies, original APK,
+two/four configured workers, inherited two/four logical CPUs, 4096-MiB aggregate
+process-tree RSS and 8192-MiB temporary-file budgets. Product runtime, installed pinned
+competitor sources, input and harness hashes stay unchanged; every trial checks descendant
+affinity, measured temporary storage, successful close and complete cold/warm response
+equality within the implementation. OS caches are retained. This is the current e3f3819
+runtime, not a measured speedup caused by a new product revision.
+
+The concurrent workload requests exact String.equals method sites and Build.MODEL field
+sites together. "First batch" ends only when both decoded responses arrive; it is not
+the earlier of the two responses. All values below are per-trial medians, ours / competitor.
+Both APIs request limit=100, but ours returns individual sites and the competitor returns
+caller groups containing evidence sites. Reply payloads therefore are not normalized to
+an equal number of instruction sites; these are API-workload timings, not matched complete
+collection costs. Independent complete-site accuracy is recorded separately in VALIDATION.md.
+
+| Input | CPU budget | Cold batch seconds | Process start to complete first batch seconds | First / second repeat batch seconds, ours | First / second repeat batch seconds, competitor |
+| --- | --- | --- | --- | --- | --- |
+| Taobao | 2 | 0.5963 / 5.4608 | 2.5357 / 6.3921 | 0.0832 / 0.0725 | 5.1525 / 0.0977 |
+| Taobao | 4 | 0.5366 / 3.4640 | 2.7376 / 4.7029 | 0.0947 / 0.0763 | 3.2429 / 0.1404 |
+| WeChat | 2 | 0.8531 / 7.0102 | 4.8982 / 8.1849 | 0.0810 / 0.0728 | 6.4205 / 0.1300 |
+| WeChat | 4 | 0.9594 / 5.1281 | 4.6865 / 6.8618 | 0.1403 / 0.1089 | 4.6597 / 0.1531 |
+| Douyin | 2 | 1.8291 / 19.1680 | 6.6270 / 20.4622 | 0.0785 / 0.0807 | 19.7875 / 0.5056 |
+| Douyin | 4 | 1.9058 / 12.4801 | 6.9793 / 14.3093 | 0.0940 / 0.1008 | 12.2616 / 0.7104 |
+
+| Input | CPU budget | Peak process-tree RSS bytes, ours / competitor | Peak temporary logical file bytes, ours / competitor |
+| --- | --- | --- | --- |
+| Taobao | 2 | 147,562,496 / 958,418,944 | 117,599,473 / 0 |
+| Taobao | 4 | 147,419,136 / 1,483,137,024 | 117,599,473 / 0 |
+| WeChat | 2 | 153,862,144 / 1,057,697,792 | 181,488,656 / 0 |
+| WeChat | 4 | 153,411,584 / 1,446,535,168 | 181,488,656 / 0 |
+| Douyin | 2 | 149,753,856 / 1,341,374,464 | 477,080,783 / 0 |
+| Douyin | 4 | 148,525,056 / 2,080,415,744 | 477,080,783 / 0 |
+
+These selected concurrent workloads favor the product in all reported latency medians and
+process RSS. They do not close the separate WeChat single-field first-result deficit, graph
+comparison, full-site independent accuracy or storage requirement. Temporary files are
+sampled inside the supervised trial root; zero is not a system-wide write claim, and files
+on this host's tmpfs are additional to process RSS. The competitor's first repeat remains
+substantially slower than its second repeat; without traced worker routing this is an
+observation, not proof of a specific cache/process-pool cause. No failed round is omitted.

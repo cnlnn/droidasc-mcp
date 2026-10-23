@@ -52,6 +52,9 @@ check is not a substitute for the behavioral tests linked in each row.
 
 - Competitor cursor strings encode integer offsets; our next_offset is an integer. Follow pages,
   not tool-count equivalence. Default page sizes differ; both accept explicit bounded limits.
+- Our DEX worker also caps encoded responses at 256 KiB. A valid row limit can still return
+  response_limit; retry with a smaller limit at the same offset. The complete-reference
+  verifier exercises that recovery and all subsequent pages without weakening the byte cap.
 - Our empty member queries enumerate declarations; the competitor rejects them. Empty class
   queries use list_classes; an empty
   string/body search is intentionally rejected rather than returning every pool/instruction row.
@@ -82,8 +85,26 @@ The development-branch compact-summary and direct trace-prompt additions pass th
 1213-test source suite on Linux Python 3.13, including real stdio/HTTP handoff and error
 recovery. scripts/verify_artifact_summary.py compares real-MCP summary fields with the
 pinned competitor and original ZIP/hash evidence on the private large-APK corpus.
-These additions are separate from the frozen, published v0.2.3 acceptance; Windows and
-clean-package acceptance for this candidate remain pending.
+These additions are separate from the frozen, published v0.2.3 acceptance. The subsequent
+workflow/raw-DEX candidate e3f381927c98976d4b2052ec29e0d86136e47c48 passes CI
+39967501671: all 25 jobs, Linux/Windows Python 3.10-3.13, 1264 source tests per cell
+with zero failures/errors/skips, and the same count for each canonical-sdist/native-wheel
+installation. Downloaded package/source identity and signing variants are checked separately.
+The exact Linux wheel also independently verifies all 884805 original class/owner identities
+and snapshot bytes across the three private APKs, plus every selected Taobao method/field
+reference row and diagnostic over three rounds. Receipts are under
+artifacts/workflow-entry-ci-39967501671. These are candidate gates, not release approval or
+evidence of universal workflow/performance superiority.
+
+The later real-stdio complete-reference exercise verifies all ordered method/field sites
+for two selected identities across Taobao, WeChat and Douyin, including adaptive recovery
+from response_limit, every successful continuation and scanner diagnostics. Independent
+original DEX enumeration prevents the oracle from inheriting a missing source entry.
+The final three receipts cover 98581 rows and 200 successful pages, with immutable
+input/runtime/oracle identity and temporary cleanup; see VALIDATION.md. This is not a
+full collection-latency comparison or all-query coverage. Current exact-page caches retain
+offset/limit in their keys, so a new page still takes the scan path; that amplification
+needs its own matched competitor measurement before claiming paging superiority.
 
 The 2026-10-23 parameter exercise reads the pinned server's forwarding of `fuzzy_class`,
 `exact_name`, `descriptor`/`field_type`, `cursor` and `limit` and checks the corresponding
