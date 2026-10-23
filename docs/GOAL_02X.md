@@ -98,6 +98,12 @@ Update, 2026-10-23:
   timing is effectively flat and process RSS is mixed; this is not a universal startup
   or total-memory win. Receipt: increment028-owners-before-after.json. Final-runtime
   independent ownership, real MCP, source, Windows and package gates remain required.
+- The first v0.2.8 candidate CI (39899889877) fails its Windows Python 3.10.11
+  distribution cell before extraction: tarfile lacks the newer filter keyword. The
+  canonical-source acceptance helper now validates portable paths, duplicates and entry
+  types before copying regular files into an empty temporary directory. Fourteen new
+  regressions pass, including a legacy-API simulation. This failed CI is not release
+  approval; the final candidate and canonical packages require a fresh complete run.
 - Published increment: v0.2.6, main/tag target
   a0a34d77f0f21cac27b69a69c85070a663605916. CI 39858964129 passes all 17 jobs;
   all eight Linux/Windows Python 3.10-3.13 cells pass 1108 tests without failures,

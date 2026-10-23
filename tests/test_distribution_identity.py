@@ -2,6 +2,8 @@
 
 import hashlib
 import importlib
+import io
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -85,3 +87,78 @@ def test_release_wheel_requires_exactly_one_native_accelerator(distribution_pair
     check, _ = distribution_pair
     with pytest.raises(AssertionError, match="exactly one native"):
         check(changes)
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_sdist_extraction_works_without_new_tarfile_filter_api(tmp_path, monkeypatch, legacy):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    verify = importlib.import_module("verify_dist")
+    if legacy:
+        monkeypatch.delattr(tarfile, "data_filter", raising=False)
+
+        def old_extractall(self, path=".", members=None, *, numeric_owner=False):
+            raise AssertionError("Extraction must not depend on extractall/filter support")
+
+        monkeypatch.setattr(tarfile.TarFile, "extractall", old_extractall)
+    archive_path = tmp_path / "source.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as archive:
+        directory = tarfile.TarInfo("project/source/")
+        directory.type = tarfile.DIRTYPE
+        archive.addfile(directory)
+        member = tarfile.TarInfo("project/source/name with spaces.txt")
+        member.size = 7
+        archive.addfile(member, io.BytesIO(b"source\n"))
+    root = tmp_path / "output"
+    root.mkdir()
+    with tarfile.open(archive_path) as archive:
+        verify.extract_sdist(archive, root)
+    assert (root / "project/source/name with spaces.txt").read_bytes() == b"source\n"
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "../outside",
+        "/outside",
+        "C:/outside",
+        "project\\outside",
+        "project/../outside",
+        "project//outside",
+        "project/./outside",
+        "project/name. ",
+        "symlink",
+        "hardlink",
+        "device",
+        "duplicate",
+    ],
+)
+def test_sdist_extraction_rejects_unsafe_members_before_any_write(tmp_path, monkeypatch, damage):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    verify = importlib.import_module("verify_dist")
+    archive_path = tmp_path / "unsafe.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as archive:
+        safe = tarfile.TarInfo("project/safe.txt")
+        safe.size = 4
+        archive.addfile(safe, io.BytesIO(b"safe"))
+        member = tarfile.TarInfo(
+            "project/link"
+            if damage in {"symlink", "hardlink", "device"}
+            else "project/safe.txt"
+            if damage == "duplicate"
+            else damage
+        )
+        if damage in {"symlink", "hardlink", "device"}:
+            member.type = {
+                "symlink": tarfile.SYMTYPE,
+                "hardlink": tarfile.LNKTYPE,
+                "device": tarfile.CHRTYPE,
+            }[damage]
+            member.linkname = "../outside"
+            archive.addfile(member)
+        else:
+            archive.addfile(member, io.BytesIO(b""))
+    root = tmp_path / "output"
+    root.mkdir()
+    with tarfile.open(archive_path) as archive, pytest.raises(ValueError, match="sdist member"):
+        verify.extract_sdist(archive, root)
+    assert not list(root.iterdir())

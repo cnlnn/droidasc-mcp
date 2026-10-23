@@ -8,6 +8,9 @@
   Reject invalid dictionaries and dangling owner IDs rather than silently losing classes.
 - Independently verify the complete dictionary and every class/owner against the original
   DEX files. Extend empty/tiny-budget, 64-DEX, legacy-format and corruption regressions.
+- Make canonical-sdist acceptance work on older Python 3.10 installations without the
+  newer tar extraction-filter API. Preflight portable paths, reject links/special files
+  and duplicates, then extract regular files into an empty private directory.
 - Five alternating preparation-only rounds on Taobao/WeChat/Douyin preserve full metadata,
   ordered ownership and snapshot hashes. Owner files shrink by 21.5/26.3/27.4 percent;
   total retained storage falls only about 1-2 percent because raw snapshots are unchanged.

@@ -95,6 +95,13 @@ MCP or competitor evidence. Tiny/empty directories incur an extra fixed SQLite p
 Receipt: artifacts/release-renumber-20261022/increment028-owners-before-after.json.
 Fresh full-source, real-MCP, independent ownership, Windows and exact-package acceptance
 are required before publishing this candidate. Overall performance/workflow closure stays open.
+The first candidate CI (39899889877) is not accepted: its Windows 3.10 distribution job
+uses Python 3.10.11 and fails because tarfile lacks the newer extraction-filter argument.
+The acceptance extractor now preflights paths/types/duplicates and copies regular files
+into an empty temporary directory without depending on that API. Fourteen new regressions
+include a legacy-API simulation and rejected traversal/link/special-file inputs. The original
+failure log and red/green regression receipts remain under increment028-*; all final commit
+and package gates must be refreshed rather than relabeling that failed candidate.
 
 The v0.2.5 directory-only five-round before/after diagnostic uses the same Python/runtime/input,
 four inherited CPUs and alternating subprocesses. Every inventory name and retained ZipInfo

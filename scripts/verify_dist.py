@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -11,6 +12,40 @@ import tempfile
 import zipfile
 from email.parser import BytesParser
 from pathlib import Path
+
+
+def extract_sdist(archive: tarfile.TarFile, root: Path) -> None:
+    """Extract portable regular source files without version-specific tar filters."""
+    members = archive.getmembers()
+    seen = set()
+    for member in members:
+        name = member.name.removesuffix("/") if member.isdir() else member.name
+        parts = name.split("/")
+        if (
+            not (member.isdir() or member.isfile())
+            or "\\" in name
+            or any(
+                not part
+                or part in {".", ".."}
+                or ":" in part
+                or part.endswith((".", " "))
+                or any(ord(char) < 32 for char in part)
+                for part in parts
+            )
+            or name.casefold() in seen
+        ):
+            raise ValueError(f"Unsafe or duplicate sdist member: {member.name!r}")
+        seen.add(name.casefold())
+    if any(root.iterdir()):
+        raise ValueError("sdist extraction requires an empty directory")
+    for member in members:
+        target = root.joinpath(*member.name.removesuffix("/").split("/"))
+        if member.isdir():
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.extractfile(member) as source, target.open("xb") as output:
+                shutil.copyfileobj(source, output)
 
 
 def distribution_identity(project: Path, wheel: Path) -> tuple[str, dict[str, str]]:
@@ -215,7 +250,7 @@ def main():
                 "/artifacts/" in item or item.endswith((".apk", ".xapk", ".dex"))
                 for item in members
             )
-            archive.extractall(root, filter="data")
+            extract_sdist(archive, root)
         (project,) = root.iterdir()
         version, package_hashes = distribution_identity(project, wheel)
         print(f"Canonical sdist/wheel source identity passed: {version}", flush=True)
