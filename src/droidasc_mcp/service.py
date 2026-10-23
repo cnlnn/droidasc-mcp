@@ -40,6 +40,8 @@ class DroidAscService:
 
         path = self.settings.validate_artifact(artifact_path)
         validate_budget(query.get("max_uncompressed_bytes", 128 * 1024**2), self.settings)
+        if type(query.get("include_summary", False)) is not bool:
+            raise ValueError("include_summary must be a boolean")
         if query.get("compare_to"):
             query["compare_to"] = str(self.settings.validate_artifact(query["compare_to"]))
             if query.get("class_query") is not None or query.get("class_prefix") is not None:

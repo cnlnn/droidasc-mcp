@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "e5699a754a5f4ea6fc2315f92cf901c828edd9eb48f08bc68782330359f5f0e6",
+  "source_sha256": "f51279f9ffc1df79b50e2cdc2418753b04c1bb3545dfa782696440868b2d66c9",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "c372ac6baaa21ef5806381cba7ef971b1b266ccede85171cb9dc68aca93fac83",
+  "records_sha256": "53c3857aefb679d075a6e9c84316f9bb40db2bae5ab0b01e38e11ce6e2d0e503",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -35,7 +35,7 @@
       "is_async": false
     },
     "asc_inspect_artifact": {
-      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.",
+      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.\ninclude_summary describes the input artifact, including when compare_to is set.\nManifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.",
       "parameters": {
         "properties": {
           "artifact_path": {
@@ -58,7 +58,7 @@
           },
           "max_uncompressed_bytes": {
             "default": 134217728,
-            "description": "Nested classes.jar byte budget; server input limit also applies",
+            "description": "Nested JAR and optional manifest byte budget; input limit applies",
             "maximum": 2147483648,
             "minimum": 1,
             "title": "Max Uncompressed Bytes",
@@ -117,6 +117,12 @@
             "default": null,
             "description": "JVM class prefix in dotted or Dalvik form",
             "title": "Class Prefix"
+          },
+          "include_summary": {
+            "default": false,
+            "description": "Include compact manifest header, entry count and native ABI inventory",
+            "title": "Include Summary",
+            "type": "boolean"
           }
         },
         "required": [

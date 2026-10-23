@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "b36b1950ac9343a8b0a939910af73caf6d1ca45742bfbe96fc4b2273e0fb0134",
+  "contracts_sha256": "07ac1d942a2fa329469c856cc0cad6a4b3ea3603efdddaf37809367dd9a899e4",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "7e772623d43d0dc34b8dc8ddbc653efa44963c44f96cc1afa225bab7a64cfeac",
+  "schemas_sha256": "76f7e7fa7e6fc8b49a972ad4e15aedf39e1d775d2f147d7d4b31a756a6719f81",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -330,6 +330,56 @@
           "title": "ArtifactDifference",
           "type": "object"
         },
+        "ArtifactSummary": {
+          "additionalProperties": true,
+          "properties": {
+            "entry_count": {
+              "title": "Entry Count",
+              "type": "integer"
+            },
+            "native_scope": {
+              "enum": [
+                "archive",
+                "selected_module"
+              ],
+              "title": "Native Scope",
+              "type": "string"
+            },
+            "native_library_count": {
+              "title": "Native Library Count",
+              "type": "integer"
+            },
+            "native_abis": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Native Abis",
+              "type": "array"
+            },
+            "native_abi_count": {
+              "title": "Native Abi Count",
+              "type": "integer"
+            },
+            "native_abis_truncated": {
+              "title": "Native Abis Truncated",
+              "type": "boolean"
+            },
+            "manifest": {
+              "$ref": "#/$defs/ManifestHeader"
+            }
+          },
+          "required": [
+            "entry_count",
+            "native_scope",
+            "native_library_count",
+            "native_abis",
+            "native_abi_count",
+            "native_abis_truncated",
+            "manifest"
+          ],
+          "title": "ArtifactSummary",
+          "type": "object"
+        },
         "Entry": {
           "additionalProperties": true,
           "properties": {
@@ -375,6 +425,124 @@
             "size_bytes"
           ],
           "title": "Entry",
+          "type": "object"
+        },
+        "ManifestHeader": {
+          "additionalProperties": true,
+          "properties": {
+            "status": {
+              "enum": [
+                "ok",
+                "error",
+                "not_applicable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "entry": {
+              "title": "Entry",
+              "type": "string"
+            },
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "message": {
+              "title": "Message",
+              "type": "string"
+            },
+            "xml_format": {
+              "enum": [
+                "text_xml",
+                "android_binary_xml"
+              ],
+              "title": "Xml Format",
+              "type": "string"
+            },
+            "decoding_warnings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Decoding Warnings",
+              "type": "array"
+            },
+            "package_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Package Name"
+            },
+            "version_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Name"
+            },
+            "version_code": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Code"
+            },
+            "min_sdk": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Sdk"
+            },
+            "target_sdk": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Sdk"
+            },
+            "application_name": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Application Name"
+            },
+            "resource_values_resolved": {
+              "const": false,
+              "title": "Resource Values Resolved",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "entry"
+          ],
+          "title": "ManifestHeader",
           "type": "object"
         },
         "Source": {
@@ -583,6 +751,9 @@
           },
           "title": "Items",
           "type": "array"
+        },
+        "summary": {
+          "$ref": "#/$defs/ArtifactSummary"
         }
       },
       "required": [

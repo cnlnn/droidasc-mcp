@@ -7,6 +7,27 @@ and verified before withdrawal under artifacts/reissue-023-20261023/backup.
 This consolidation does not close the overall performance, workflow/source-comparison
 or accuracy objectives. Workflow completeness and ergonomics remain mandatory criteria.
 Release notes follow the established Highlights / Acceptance / Install / Limits format.
+The consolidation is published at commit 12a4fc51ba36a64a54bc3623dc348a499f466ac9;
+CI 39939932398 passed all 25 jobs, including Linux/Windows Python 3.10-3.13 source,
+canonical-sdist and exact native-wheel acceptance. Release assets and retained/withdrawn
+versions were read back; see VALIDATION.md. New workflow changes remain on a separate
+development branch and have no publication approval from those earlier receipts.
+
+## Current workflow candidate
+
+On codex/workflow-triage-next, artifact inspection can optionally return a compact,
+hash-bound manifest header, entry count and native ABI inventory in one call. Method
+trace prompts now accept exact class/name selectors and optional overload prototypes,
+using the existing query validator and preserving full-descriptor handoff.
+Local Linux Python 3.13 source regression passes 1213 tests, zero failures/errors/skips:
+artifacts/workflow-triage-20261023/source-full.xml. This includes real stdio/HTTP triage,
+prompt selector handoff, invalid-selector recovery and binary-manifest summary checks.
+scripts/verify_artifact_summary.py passes the separate original-ZIP and pinned-competitor
+summary oracle for all three private Taobao, WeChat and Douyin APKs. The final receipt is
+artifacts/workflow-triage-20261023/large-summary-parity-final.json, with unchanged input,
+runtime and verifier hashes. This is summary parity, not a speed or DEX-accuracy claim.
+This candidate is not published; its Windows and clean-package gates remain pending.
+The broader workflow exercise and startup/memory/graph/concurrency criteria below stay open.
 
 ## Competitor workflow closure
 

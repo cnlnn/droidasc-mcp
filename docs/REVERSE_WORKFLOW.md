@@ -9,6 +9,18 @@ Call `asc_inspect_artifact(artifact_path=...)` before opening unfamiliar contain
 It hashes the original file and pages sorted capability entries. Capability flags are
 separate from entry inventory: a `.class` filename is not verified JVM bytecode.
 
+`include_summary=true` adds entry count, bounded native ABI inventory and a compact
+manifest header to that same hash-bound response. It reads only the selected manifest,
+not DEX bodies or all component details. Header values remain raw declarations, including
+resource references; `resource_values_resolved=false`. Inspect `summary.manifest.status`
+and its diagnostics independently of the successful capability inventory. Missing manifests
+are `not_applicable`; malformed, oversized or unsupported XML is an explicit error.
+AAB summaries select the same module as DEX routing; protobuf XML is not decoded.
+`native_abi_count` and `native_abis_truncated` distinguish a bounded list from complete
+inventory. These are packaged library paths, not verified native binaries. With `compare_to`,
+the summary describes the original input artifact, while the diff describes both revisions.
+Expanded manifest bytes share `max_uncompressed_bytes` with nested JAR reads.
+
 | Input | DEX analysis coverage | Other contents |
 | --- | --- | --- |
 | APK / JAR / ZIP | Any directly embedded `.dex` path, case-insensitive suffix | No recursive nested-archive extraction |

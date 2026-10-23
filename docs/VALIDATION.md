@@ -10,7 +10,18 @@ The original release metadata/assets and tag objects are backed up and hash-veri
 artifacts/reissue-023-20261023/backup. v0.2.2 and earlier remain unchanged. Current runtime
 sources are retained from 159a6f39b0764f44e27c05203ab53573cd344dc4; version metadata and
 release documentation are updated. Fresh Linux/Windows Python 3.10-3.13, canonical-sdist,
-native-wheel, signing, Rust and stability acceptance is required for the consolidated build.
+native-wheel, signing, Rust and stability acceptance passed on the consolidated release commit
+`12a4fc51ba36a64a54bc3623dc348a499f466ac9`:
+[CI 39939932398](https://github.com/cnlnn/droidasc-mcp/actions/runs/39939932398), all 25 jobs.
+Each source OS/Python cell passed 1184 tests with zero errors, failures or skips; all eight
+distribution cells tested both the canonical sdist and their exact native wheel, each with
+1184 passing tests. Four package jobs, two Rust jobs, two stability jobs and the fixture job
+also passed. The six release assets were downloaded again and checked against local and
+server SHA-256 values; main and the annotated release tag target the same accepted commit.
+Release metadata, asset hashes, preserved older releases and withdrawn tags were read back
+under artifacts/reissue-0.2.3-ci-39939932398/{acceptance-summary,published-readback}.json.
+The [consolidated release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3) is published.
+These receipts cover that frozen release, not subsequent development-branch changes.
 
 ## Historical v0.2.x native-query evidence
 

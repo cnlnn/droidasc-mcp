@@ -26,7 +26,7 @@
 | `asc_query_dex_session` | 查询指定会话，保留原始哈希和 DEX 来源 |
 | `asc_close_dex_session` | 关闭会话并释放私有文件 |
 | `asc_signing_inventory` | 签名容器与证书指纹清单，不执行密码学验签 |
-| `asc_inspect_artifact` | APK/JAR/ZIP/AAR/AAB/APKS/XAPK 的 DEX、JVM 与 split 能力清单 |
+| `asc_inspect_artifact` | 容器能力清单，可选一并返回 Manifest 头部与 native ABI 摘要 |
 | `asc_open_artifact_session` | 将所选容器中的直接 DEX 接入现有会话工作流 |
 | `asc_diff_dex_sessions` | 对比哈希绑定版本的类、方法与字段声明身份 |
 | `asc_secret_candidates` | 固定模式检索 DEX 字符串，返回脱敏候选与精确位置 |
@@ -43,6 +43,11 @@
 资源字节续页、Manifest/类资源模板、版本对比提示和候选密钥原值的显式开关。
 [逐项源码对照表](docs/COMPETITOR_API_AUDIT.md) 覆盖竞品全部 25 个工具、2 个资源、3 个提示及
 87 个参数，同时列出接口差异和限制。功能工作流对齐不代表所有性能指标都优于竞品。
+
+`asc_inspect_artifact(include_summary=true)` 在同一份哈希绑定响应中补充条目数、ABI 清单和
+Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断状态单独返回，不读取 DEX 正文。
+`trace_exact_method` 提示可直接接收 `class_name` 与 `method_name`，用可选的
+`target_descriptor` 指定重载原型，也保留完整 `method_descriptor` 入口。
 
 ## 安装
 

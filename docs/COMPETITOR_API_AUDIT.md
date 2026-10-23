@@ -20,7 +20,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `load_artifact` | `path` | Raw DEX: asc_open_dex_session; archive: asc_inspect_artifact then asc_open_artifact_session when dex_analysis=true. Inventory-only inputs need no retained handle. SHA-256 and capability fields accompany results. | tests/test_dex.py; tests/test_containers.py; tests/test_dex_container.py |
 | tool | `close_artifact` | `analysis_id` | asc_close_dex_session releases immutable preparations; stateless archive inventory needs no close. | tests/test_sessions.py; tests/test_integration.py |
 | tool | `server_status` | `` | asc_ping reports effective roots, process/session limits, open_count, active_queries and opening_count. Capacity is supervised fresh workers, not a resident process pool. | tests/test_server.py; tests/test_sessions.py; tests/test_integration.py |
-| tool | `apk_get_summary` | `analysis_id` | asc_apk_info for APK hash/size/DEX; asc_manifest_summary for package/version/SDK declarations; asc_inspect_artifact for generic capabilities; asc_list_apk_entries(kind=native) for ABI/size. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
+| tool | `apk_get_summary` | `analysis_id` | asc_inspect_artifact(include_summary=true) returns hash/size, container capabilities, selected DEX, entry count, bounded native ABIs and compact manifest package/version/SDK declarations in one response. Manifest status and ABI truncation/count are explicit; AAB selects one module. asc_manifest_summary adds component details; entry tools add library sizes. | tests/test_artifact_summary.py; tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_get_manifest` | `analysis_id,include_xml` | asc_manifest_summary plus paged decoded manifest resource. Preserve declared versus effective permissions; XML is opt-in through resource/read tool rather than duplicating it in every summary. | tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_list_classes` | `analysis_id,prefix,query,cursor,limit` | DEX list_classes or search_classes(value=query,case_sensitive=false,prefix=prefix); JVM inventory asc_inspect_artifact(class_query,class_prefix). Both dotted and Dalvik class names/prefixes, literal substring, offset/limit pagination. Manifest component names can be passed directly; results keep exact Dalvik identities. | tests/test_structure.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_get_class_outline` | `analysis_id,class_name` | get_class_outline: flags/superclass, paged interfaces, fields with types/storage and methods with complete identities/flags/code/dispatch. | tests/test_structure.py; tests/test_integration.py |
@@ -45,7 +45,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | resource | `artifact://{analysis_id}/manifest.xml` | `analysis_id` | droidasc://artifact/manifest{?apk_path,offset,limit}, allowed-root checks and hash-bound paged JSON XML envelope. Percent-encode URI query values. | tests/test_integration.py |
 | resource | `artifact://{analysis_id}/class/{class_name}` | `analysis_id,class_name` | droidasc://session/{session_id}/class{?class_name,offset,limit}, immutable session source with pagination/provenance. | tests/test_integration.py |
 | prompt | `artifact_triage` | `analysis_id` | triage_apk plus common analysis-guide routing, capabilities and evidence boundaries. | tests/test_server.py; tests/test_integration.py |
-| prompt | `trace_behavior` | `analysis_id,class_name,method_name` | Resolve an exact full identity, then trace_exact_method; outline/source/disassembly/call-site workflow and uncertainty guidance. | tests/test_server.py; tests/test_integration.py |
+| prompt | `trace_behavior` | `analysis_id,class_name,method_name` | trace_exact_method accepts class_name plus method_name directly, with optional target_descriptor prototype or a full method_descriptor. Selector validation/normalization uses the same query path; ambiguity resolution, source/disassembly/call-site and exact-page handoff are explicit. | tests/test_server.py; tests/test_integration.py |
 | prompt | `compare_artifacts` | `left_analysis_id,right_analysis_id` | compare_versions includes declaration/body/manifest/resource/signing follow-up and untrusted-input quoting. | tests/test_server.py; tests/test_integration.py |
 
 ## Parameter And Format Rules
@@ -57,7 +57,8 @@ check is not a substitute for the behavioral tests linked in each row.
   string/body search is intentionally rejected rather than returning every pool/instruction row.
 - Method/field exact_name=false and fuzzy_class workflows use the single-pass `search_refs`
   union, including omitted member names and exact prototype/type filtering. Exact-reference
-  operations still require complete identities; fuzzy results retain exact per-site identities.
+  operations resolve a unique declared definition for class/name selectors, or accept the
+  complete identity directly; fuzzy results retain exact per-site identities.
 - Competitor evidence offsets are caller-relative **bytes**; ours are **16-bit code units**.
   Multiply ours by two only when comparing the same instruction stream. Source token spans
   are Unicode code points; resource offsets are bytes. None is an absolute DEX file address.
@@ -76,6 +77,13 @@ check is not a substitute for the behavioral tests linked in each row.
   identity checks are retained rather than copied from the competitor's weaker boundaries.
 
 ## Acceptance Status
+
+The development-branch compact-summary and direct trace-prompt additions pass the local
+1213-test source suite on Linux Python 3.13, including real stdio/HTTP handoff and error
+recovery. scripts/verify_artifact_summary.py compares real-MCP summary fields with the
+pinned competitor and original ZIP/hash evidence on the private large-APK corpus.
+These additions are separate from the frozen, published v0.2.3 acceptance; Windows and
+clean-package acceptance for this candidate remain pending.
 
 `test_complete_investigation_handoffs_without_java[stdio/http]` exercises one connected
 investigation, rather than independent calls with every descriptor hard-coded: capability

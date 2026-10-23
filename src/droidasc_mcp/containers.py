@@ -177,7 +177,9 @@ def inspect(archive, entries, kind, query):
     budget = query.get("max_uncompressed_bytes", 128 * 1024**2)
     if type(budget) is not int or not 1 <= budget <= 2 * 1024**3:
         raise ArchiveError("invalid_query", "Expansion budget must be within 1 byte and 2 GiB")
-    metadata, rows, nested, _, _, _ = capabilities(
+    if type(query.get("include_summary", False)) is not bool:
+        raise ArchiveError("invalid_query", "include_summary must be a boolean")
+    metadata, rows, nested, _, _, used = capabilities(
         archive, entries, kind, query.get("module"), budget
     )
     try:
@@ -195,6 +197,12 @@ def inspect(archive, entries, kind, query):
             **metadata,
             **page(inventory, query.get("offset", 0), query.get("limit", 100)),
         }
+        if query.get("include_summary", False):
+            from .artifact_summary import summarize
+
+            result["summary"] = summarize(
+                archive, entries, kind, metadata["selected_module"], budget - used
+            )
         if query.get("compare_to"):
             from pathlib import Path
 

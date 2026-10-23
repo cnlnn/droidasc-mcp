@@ -21,7 +21,7 @@ structured data instead of unbounded terminal output.
 | `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML |
 | `asc_manifest_summary` | Page structured components, filters and permission provenance |
 | `asc_signing_inventory` | Inspect signature-container presence and certificate fingerprints, without signature verification |
-| `asc_inspect_artifact` | Page DEX/JVM/split capabilities in APK/JAR/ZIP/AAR/AAB/APKS/XAPK |
+| `asc_inspect_artifact` | Page container capabilities; optional compact manifest/native summary |
 | `asc_open_artifact_session` | Snapshot selected container DEX into the existing session workflow |
 | `asc_diff_dex_sessions` | Compare sorted class/member identities between hash-bound revisions |
 | `asc_secret_candidates` | Search fixed DEX string patterns with redacted source locations |
@@ -443,6 +443,9 @@ full build. Stop servers before manually removing the dedicated cache directory.
 
 The server also exposes initialization instructions, `droidasc://analysis-guide`, and
 `triage_apk` / `trace_exact_method` prompts. Artifact contents remain untrusted query data.
+`trace_exact_method` accepts either a full `method_descriptor` or exact `class_name` plus
+`method_name`; optional `target_descriptor` selects an overload prototype. It normalizes
+selectors for direct query handoff and keeps ambiguous names explicit until resolved.
 See the [source-backed competitor comparison](docs/AIMARD_COMPARISON.md) for remaining gaps.
 
 ### Optional Rust ASC

@@ -166,7 +166,7 @@ def build_server(
             Field(
                 ge=1,
                 le=2147483648,
-                description="Nested classes.jar byte budget; server input limit also applies",
+                description="Nested JAR and optional manifest byte budget; input limit applies",
             ),
         ] = 134217728,
         offset: Annotated[
@@ -185,12 +185,20 @@ def build_server(
         class_prefix: Annotated[
             str | None, Field(description="JVM class prefix in dotted or Dalvik form")
         ] = None,
+        include_summary: Annotated[
+            bool,
+            Field(
+                description="Include compact manifest header, entry count and native ABI inventory"
+            ),
+        ] = False,
     ) -> ArtifactResult:
         """Inspect container capabilities before selecting a DEX analysis workflow.
 
         JVM classes and nested APK splits are inventory-only. First-level JAR class names
         are included. compare_to compares JVM identities; DEX declarations use session diff.
         AAB selects one module's direct DEX; nested APKs are not reconstructed.
+        include_summary describes the input artifact, including when compare_to is set.
+        Manifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.
         """
         return service.inspect_artifact(
             artifact_path,
@@ -201,6 +209,7 @@ def build_server(
             compare_to=compare_to,
             class_query=class_query,
             class_prefix=class_prefix,
+            include_summary=include_summary,
         )
 
     @registry.tool(annotations=SESSION_STATE)
