@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "a96cc310958f05633f835245dc1e35eb4391f8e418439ef77cdc39ea9db1b134",
+  "source_sha256": "5b7708472fc3823978cef2e83083a9919d1d8c1295c5b541757438c17364c11d",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "0beeb28d6ec88c99aec8cf661a4330fa94192dcd8bfd11e3a869ddded522357b",
+  "records_sha256": "c372ac6baaa21ef5806381cba7ef971b1b266ccede85171cb9dc68aca93fac83",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -716,7 +716,7 @@
       "is_async": false
     },
     "asc_analyze_dex": {
-      "description": "Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.\n\nReturns status=ok, error, or not_applicable. Errors carry a diagnostic code;\nduplicate class definitions are rejected. Manifest is not applicable to DEX.\nCoverage is limited to supplied files; this tool does not unpack applications.\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nExplicit source_format=java alone selects the optional compatibility backend.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nUse a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nfind_type_refs reports exact type operands, declarations and annotation types/values.\nbuild_xref_index builds a bounded complete static index; one-shot indexes are temporary.\nget_call_graph builds/reuses the index for bounded multi-hop static exploration.\nGraph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.\nsearch_members scans declarations without building an index; kind=method/field.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nsource_format=auto uses ASC exact-method Smali without Java/JADX;\nsource_format=java explicitly opts into the optional JADX compatibility backend.\njava never silently falls back, smali always disassembles that exact method.",
+      "description": "Analyze 1-64 standard DEX files with source hashes and per-DEX provenance.\n\nReturns status=ok, error, or not_applicable. Errors carry a diagnostic code;\nduplicate class definitions are rejected. Manifest is not applicable to DEX.\nCoverage is limited to supplied files; this tool does not unpack applications.\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nExplicit source_format=java alone selects the optional compatibility backend.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nUse a full method_descriptor, e.g. Lpkg/C;->name(I)Ljava/lang/String;.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nfind_type_refs reports exact type operands, declarations and annotation types/values.\nbuild_xref_index builds a bounded complete static index; one-shot indexes are temporary.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nGraph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.\nsearch_members scans declarations without building an index; kind=method/field.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nsource_format=auto uses ASC exact-method Smali without Java/JADX;\nsource_format=java explicitly opts into the optional JADX compatibility backend.\njava never silently falls back, smali always disassembles that exact method.",
       "parameters": {
         "properties": {
           "dex_paths": {
@@ -731,7 +731,7 @@
           },
           "operation": {
             "default": "info",
-            "description": "Static DEX operation; exact member/graph tools need full descriptors",
+            "description": "Static DEX operation; method selection preserves exact overload identity",
             "enum": [
               "info",
               "list_classes",
@@ -974,7 +974,7 @@
           },
           "depth": {
             "default": 2,
-            "description": "Graph hop bound; first use builds a calls-only index.",
+            "description": "Graph hop bound; bounded frontiers or an on-demand calls-only index.",
             "maximum": 5,
             "minimum": 1,
             "title": "Depth",
@@ -1050,7 +1050,7 @@
       "is_async": false
     },
     "asc_query_dex_session": {
-      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph builds/reuses it for bounded multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
+      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
       "parameters": {
         "properties": {
           "session_id": {
@@ -1060,7 +1060,7 @@
           },
           "operation": {
             "default": "info",
-            "description": "Session operation; first indexed graph/type query builds the index",
+            "description": "Session operation; graph frontiers and type indexes run on demand",
             "enum": [
               "info",
               "list_classes",
@@ -1303,7 +1303,7 @@
           },
           "depth": {
             "default": 2,
-            "description": "Hop bound; first use builds a calls-only index, then reuses it.",
+            "description": "Hop bound; bounded frontiers or an on-demand calls-only index.",
             "maximum": 5,
             "minimum": 1,
             "title": "Depth",

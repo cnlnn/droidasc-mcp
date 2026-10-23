@@ -523,7 +523,7 @@ def build_server(
                 "get_class_source_metadata",
             ],
             Field(
-                description="Static DEX operation; exact member/graph tools need full descriptors"
+                description="Static DEX operation; method selection preserves exact overload identity"
             ),
         ] = "info",
         prefix: Prefix = None,
@@ -560,7 +560,7 @@ def build_server(
             Field(
                 ge=1,
                 le=5,
-                description="Graph hop bound; first use builds a calls-only index.",
+                description="Graph hop bound; bounded frontiers or an on-demand calls-only index.",
             ),
         ] = 2,
         max_nodes: Annotated[
@@ -590,7 +590,7 @@ def build_server(
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         find_type_refs reports exact type operands, declarations and annotation types/values.
         build_xref_index builds a bounded complete static index; one-shot indexes are temporary.
-        get_call_graph builds/reuses the index for bounded multi-hop static exploration.
+        get_call_graph uses bounded frontiers or an index for multi-hop static exploration.
         Graph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.
         search_members scans declarations without building an index; kind=method/field.
         find_string_refs accepts a literal value and returns const-string/jumbo use sites.
@@ -685,7 +685,7 @@ def build_server(
                 "disassemble_method",
                 "get_class_source_metadata",
             ],
-            Field(description="Session operation; first indexed graph/type query builds the index"),
+            Field(description="Session operation; graph frontiers and type indexes run on demand"),
         ] = "info",
         prefix: Prefix = None,
         class_name: OptionalClass = None,
@@ -721,7 +721,7 @@ def build_server(
             Field(
                 ge=1,
                 le=5,
-                description="Hop bound; first use builds a calls-only index, then reuses it.",
+                description="Hop bound; bounded frontiers or an on-demand calls-only index.",
             ),
         ] = 2,
         max_nodes: Annotated[
@@ -749,7 +749,7 @@ def build_server(
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
         build_xref_index persists an atomic static index for this session's lifetime.
-        get_call_graph builds/reuses it for bounded multi-hop static exploration.
+        get_call_graph uses bounded frontiers or an index for multi-hop static exploration.
         Inspect truncation_reasons and unresolved_sites; graph edges are declared operands.
         An optional configured durable cache restores matching indexes across server restarts.
         find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.

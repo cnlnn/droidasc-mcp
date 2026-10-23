@@ -68,8 +68,8 @@ member names, use search_refs(kind=method/field, class_name, fuzzy_class, value,
 member_match, target_descriptor) in one pass; do not enumerate overloads and scan each separately.
 find_type_refs distinguishes instruction,
 declaration and annotation relationships. build_xref_index is optional and costs time/disk upfront;
-get_call_graph builds/reuses a call-only index for incoming/outgoing/both multi-hop exploration,
-or reuses an existing full index. Index creation time and disk usage remain explicit.
+get_call_graph uses bounded frontiers for incoming/outgoing/both multi-hop exploration,
+or reuses/builds a call-only/full index when needed. Index creation time and disk usage remain explicit.
 It preserves individual call sites and reports depth/node/edge/byte truncation explicitly.
 Inspect returned nodes' unresolved dynamic sites; expand a boundary method as a new root or
 raise graph budgets within their limits. Graph limits are separate from ordinary page limits.
