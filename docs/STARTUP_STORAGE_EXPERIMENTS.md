@@ -7,6 +7,95 @@ used the workflow candidate at
 reader addition. That addition does not replace the stored preparation/query path.
 These receipts neither approve publication nor close the startup/storage objective.
 
+## Output Schema Validation, 2026-10-24
+
+After selected-set reuse removed repeated scans, profiles still showed host page work
+and per-row client validation. A 500-site page from the actual Taobao response takes
+median 0.0484 seconds to validate against the original schema versus 0.0330 seconds
+with primitive type unions, over ten direct validation iterations. This is one-page
+diagnostic evidence, not an end-to-end or competitor result. Inlining the row reference
+adds little in that probe and is not retained. Profiles are diagnostic only: Python
+3.13 cross-thread cumulative times are not additive wall-time budgets.
+
+Production uses Pydantic's primitive_type_array schema generation when available;
+older Pydantic versions keep their original schema generator. The runtime output
+TypedDict contracts, strict validation, fields, values, paging and byte limits are
+unchanged. Only unconstrained primitive unions become type arrays; constrained unions
+retain their branches. JSON Schema supports this equivalent union representation:
+[type arrays](https://json-schema.org/understanding-json-schema/reference/type) and
+[anyOf](https://json-schema.org/understanding-json-schema/reference/combining).
+The source-bound input cache and output schemas are regenerated. Tests compare every
+generated primitive union against the original, preserve all other schema structure,
+reject invalid runtime values and exercise the older-generator fallback.
+
+The targeted gate passes 203 tests with zero skips, with 52 other integration cases
+deliberately deselected: schema-types-transport-final.xml under
+artifacts/selected-reference-cache-20261024/. It includes real stdio/HTTP references,
+fuzzy queries, call graphs and resource views. No full cross-platform/package gate
+is claimed for this runtime.
+
+An actual frozen a1d4137 source tree, including the identical native extension, alternates
+with the new runtime over three fresh-server rounds per input. Both use the same Python,
+four logical CPUs/workers, complete method collections and external resource caps.
+Medians in seconds are below; first query starts after open. Receipt:
+schema-paired-runtime/report.json under the same evidence root.
+
+| Input | First complete query before / after | Repeat complete query before / after |
+| --- | --- | --- |
+| Taobao | 4.4838 / 3.9295 | 3.7685 / 3.4210 |
+| WeChat | 4.9884 / 4.5201 | 4.1774 / 3.5540 |
+| Douyin | 9.5429 / 8.4443 | 7.9218 / 6.5970 |
+
+These are shared-host observations, not a dedicated-host benchmark. One Taobao pair
+regresses; the targeted suite also overlaps part of that input's trials. The separate
+fresh competitor batch starts after those tests. None of the medians implies that
+every query, client, round or startup workload improves.
+
+The earlier compact-text and duplicate-page-cache-bypass prototypes are not adopted.
+Their Taobao-only three-round pilot has variable first/repeat results and does not
+establish a robust overall gain. Their private report and failed profiling setup
+attempts are preserved separately, rather than silently replacing production evidence.
+Fresh current-runtime original-byte and competitor checks are recorded separately under
+schema-types/; the preceding bounded-retry/ receipts below remain historical.
+
+That fresh batch is complete. schema-types/summary.json binds 203 targeted tests,
+all 98581 independently checked original sites/200 pages, 36 matched trials and 72
+independent collection replays. All 36 product collections pass; the six competitor
+Taobao field collections still have 97 extra sites each. The separate
+schema-paired-runtime/accuracy.json also checks all 36 before/after collections against
+the independently accepted current complete response, including ordered duplicates,
+diagnostics and provenance rather than only counts.
+
+The new competitor medians below use the same interpreter/dependencies, four logical
+CPUs/workers, 4096-MiB descendant RSS and 8192-MiB temporary-file caps, three alternating
+fresh-server rounds, two complete collections and retained OS caches. They are separate
+from the preceding before/after trial batch: absolute values across the two batches
+are not a controlled causal comparison.
+
+| Input | First complete method query ours / competitor | Repeat complete method query ours / competitor | Startup to complete method collection ours / competitor |
+| --- | --- | --- | --- |
+| Taobao | 5.4374 / 7.1089 | 5.0951 / 4.3342 | 7.8807 / 8.2831 |
+| WeChat | 5.8857 / 8.2558 | 5.2029 / 4.9130 | 9.1925 / 9.7442 |
+| Douyin | 12.2119 / 18.0429 | 11.2637 / 8.3020 | 18.6406 / 20.5192 |
+
+First successful method pages from process start are 3.6549 / 4.3366, 4.5723 / 5.3781
+and 9.0797 / 12.9147 seconds, respectively. The field first-complete-query medians are
+0.5845 / 1.9895 seconds for WeChat and 1.9237 / 6.9684 seconds for Douyin. WeChat field
+startup still loses at 3.8342 / 3.4198 seconds; Douyin field startup is 8.4537 / 9.7439.
+Taobao field timings are not an equal-correct-result comparison and are excluded.
+
+All three complete method repeats remain slower than the competitor in this new
+batch, despite the separate before/after improvement. This leaves a measured repeat
+deficit as well as WeChat field startup; favorable first-query medians do not close them.
+All 1182 successful product method pages reuse the complete selected set. Process-RSS
+maxima over the three method trials are 117698560 / 121647104 / 137367552 product bytes
+versus 839954432 / 962154496 / 1110908928 competitor bytes. Product temporary regular-file
+peaks are 125277477 / 189118848 / 491522624 bytes, separate from RSS; /tmp is tmpfs on
+this host. The competitor records no regular files in its measured temporary root.
+Sampling is a lower bound and does not prove whole-system RAM superiority. Startup,
+storage, broader workflows/graphs and fresh full Linux/Windows/package gates remain
+open. No new release is approved.
+
 ## Selected Reference Cache Implementation, 2026-10-24
 
 The development runtime now implements selected-set streaming and host pagination in

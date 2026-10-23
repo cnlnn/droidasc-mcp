@@ -45,8 +45,17 @@ def schemas_digest(schemas):
     ).hexdigest()
 
 
+def contract_schema(contract):
+    options = (
+        {"union_format": "primitive_type_array"}
+        if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters
+        else {}
+    )
+    return TypeAdapter(contract).json_schema(**options)
+
+
 def schema_document():
-    schemas = {name: TypeAdapter(contract).json_schema() for name, contract in OUTPUT_TYPES.items()}
+    schemas = {name: contract_schema(contract) for name, contract in OUTPUT_TYPES.items()}
     return {
         "schema": 1,
         "contracts_sha256": contracts_digest(),
@@ -99,7 +108,7 @@ class ToolRegistry:
                 )
             name = contract.__name__
             if name not in self.schemas:
-                self.schemas[name] = TypeAdapter(contract).json_schema()
+                self.schemas[name] = contract_schema(contract)
             # The SDK still owns input parsing, Context injection, cancellation,
             # serialization and strict output validation. Only schema generation
             # moves to build time; the SDK creates/reuses its adapter on first call.

@@ -53,6 +53,25 @@ new release; the current startup/storage experiments are separate and remain iso
 
 ## Complete MCP Reference Pages
 
+The subsequent output-schema-only increment uses Pydantic's equivalent primitive type
+unions, retaining strict runtime contracts and all result fields. Its focused gate passes
+203 tests, zero skips, with 52 deliberately deselected other integration cases:
+artifacts/selected-reference-cache-20261024/schema-types-transport-final.xml.
+All generated nullable leaves and retained constrained unions are checked against the
+original schemas, including the older-Pydantic fallback. Both real MCP transports cover
+references, fuzzy queries, graphs and resource views. See STARTUP_STORAGE_EXPERIMENTS.md
+for the separate frozen-source three-APK before/after trial scope. This is not a new
+full Linux/Windows or canonical-package gate; the following 196-test cache run is historical.
+Fresh current-runtime receipts under schema-types/summary.json independently pass all
+98581 selected original sites/200 pages and all 36 product collection replays across
+36 matched trials. Six competitor Taobao field replays fail with the same 97 extra
+sites each; the other 30 comparator collections pass. The separate frozen before/after
+trial's 36 complete collections match accepted current responses, including order,
+duplicates and full diagnostics: schema-paired-runtime/accuracy.json. The source,
+inputs, benchmark and independent oracle identities are bound and unchanged. All three
+method-repeat medians and WeChat field startup still lose in this fresh comparator
+batch. See STARTUP_STORAGE_EXPERIMENTS.md for exact timings, resources and batch limits.
+
 Implementation follow-up, 2026-10-24: the development runtime now has a session-accounted
 complete-selected-set cache and bounded host paging. It differs from e3f3819. The targeted
 suite passes 196 tests, zero skips and 56 intentional other-integration deselections:

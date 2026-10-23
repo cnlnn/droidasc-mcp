@@ -157,6 +157,24 @@ Evidence: artifacts/selected-reference-cache-20261024/bounded-retry/summary.json
 This is concrete progress, not completion of the remaining startup, transport, graph,
 workflow and cross-platform/package criteria below.
 
+The subsequent output-schema increment reduces client nullable-field validation using
+Pydantic's equivalent primitive type arrays, retaining the original strict runtime
+contracts and falling back to original generation on older Pydantic versions. The
+targeted transport/cache/contract gate passes 203 cases with zero skips and 52 deliberate
+other-integration deselections. Three alternating frozen-source before/after rounds
+per real APK reduce first/repeat complete-query medians in this corpus; one Taobao
+pair regresses, so the change is not a universal-speed claim. See
+STARTUP_STORAGE_EXPERIMENTS.md and artifacts/selected-reference-cache-20261024/.
+Fresh original-byte and competitor comparisons are separate from the historical
+bounded-retry/ run; the new runtime still needs its full cross-platform/package gates.
+The schema-types/summary.json batch is complete: all 98581 original selected sites,
+200 pages and 36 product collection replays pass; six comparator field replays retain
+97 extra Taobao sites each. All 36 frozen before/after collections also match accepted
+current full responses. First complete method queries and method startup favor the
+product in this batch, but all three complete method-repeat medians and WeChat field
+startup still lose. Those residuals, storage cost, broader workflow/graph comparisons
+and new full cross-platform/package gates remain open.
+
 ## Competitor workflow closure
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
@@ -185,8 +203,8 @@ workflow and cross-platform/package criteria below.
   Revalidate all affected workflows, cleanup and resource boundaries after any such refactor.
 - [ ] Re-measure repeated queries and fix any confirmed residual latency regression while
   keeping host caches bounded and not retaining a full-APK analysis object or worker pool.
-  Include complete multipage collection: unseen pages currently repeat the scan path, while
-  exact-page cache hits alone do not establish good full-collection cost.
+  Include complete multipage collection and byte-limit recovery: complete selected sets
+  now avoid rescans, but the measured full-collection paging/transport deficit remains.
 - [ ] Freeze alternating cold/warm/concurrent and bounded-large-graph comparisons. Include
   both two/four-worker budgets, additional APK workloads, complete-result accuracy and
   separate process RSS versus index disk/tmpfs usage. Report failures and truncation plainly.

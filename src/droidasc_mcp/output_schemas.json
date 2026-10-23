@@ -2,7 +2,7 @@
   "schema": 1,
   "contracts_sha256": "e6f3875bbeb54d7b6bda70650d4325428abfdeec84e3cc36aff890db819537b1",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "9aa72a585b32a58bd1867110f1c41c979bbf2b3897050dec119d5b1a525ef813",
+  "schemas_sha256": "b5fb6ddc1df2ed9c31d82a3b068c076cda1b5b04a4ce73d60949886167fd1a46",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -70,15 +70,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -205,15 +201,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -266,15 +258,11 @@
           "type": "integer"
         },
         "next_byte_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Byte Offset"
+          "title": "Next Byte Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "content_complete": {
           "title": "Content Complete",
@@ -413,15 +401,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -472,70 +456,46 @@
               "type": "array"
             },
             "package_name": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Package Name"
+              "title": "Package Name",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "version_name": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Version Name"
+              "title": "Version Name",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "version_code": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Version Code"
+              "title": "Version Code",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "min_sdk": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Min Sdk"
+              "title": "Min Sdk",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "target_sdk": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Sdk"
+              "title": "Target Sdk",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "application_name": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Application Name"
+              "title": "Application Name",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "resource_values_resolved": {
               "const": false,
@@ -664,15 +624,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -699,15 +655,11 @@
           "type": "string"
         },
         "selected_module": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Selected Module"
+          "title": "Selected Module",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "modules": {
           "items": {
@@ -829,26 +781,18 @@
               "type": "string"
             },
             "instruction_offset": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instruction Offset"
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "offset_unit": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset Unit"
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "opcode": {
               "title": "Opcode",
@@ -883,15 +827,11 @@
               "type": "string"
             },
             "target_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Dex Entry"
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "parameter_types": {
               "items": {
@@ -968,26 +908,18 @@
               "type": "string"
             },
             "dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Dex Entry"
+              "title": "Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "without_code": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Without Code"
+              "title": "Without Code",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "expansion_status": {
               "title": "Expansion Status",
@@ -1238,15 +1170,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -1283,15 +1211,11 @@
           "type": "string"
         },
         "superclass": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Superclass"
+          "title": "Superclass",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "access_flags": {
           "title": "Access Flags",
@@ -1541,26 +1465,18 @@
               "type": "string"
             },
             "old_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Old Dex Entry"
+              "title": "Old Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "new_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "New Dex Entry"
+              "title": "New Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -1687,15 +1603,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -1833,26 +1745,18 @@
               "type": "string"
             },
             "instruction_offset": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instruction Offset"
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "offset_unit": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset Unit"
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "opcode": {
               "title": "Opcode",
@@ -1887,15 +1791,11 @@
               "type": "string"
             },
             "target_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Dex Entry"
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "parameter_types": {
               "items": {
@@ -2072,15 +1972,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -2137,26 +2033,18 @@
               "type": "string"
             },
             "name": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Name"
+              "title": "Name",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "target_activity": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Activity"
+              "title": "Target Activity",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "declarations": {
               "additionalProperties": {
@@ -2166,41 +2054,29 @@
               "type": "object"
             },
             "exported": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Exported"
+              "title": "Exported",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "exported_status": {
               "title": "Exported Status",
               "type": "string"
             },
             "enabled": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Enabled"
+              "title": "Enabled",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "effective_enabled": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Effective Enabled"
+              "title": "Effective Enabled",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "effective_permission": {
               "$ref": "#/$defs/Permission"
@@ -2284,15 +2160,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -2351,15 +2223,11 @@
           "additionalProperties": true,
           "properties": {
             "value": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Value"
+              "title": "Value",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "source": {
               "title": "Source",
@@ -2494,15 +2362,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -2526,15 +2390,11 @@
           "$ref": "#/$defs/Entry"
         },
         "package_name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Package Name"
+          "title": "Package Name",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "declarations": {
           "additionalProperties": {
@@ -2829,15 +2689,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -3076,15 +2932,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -3185,15 +3037,11 @@
               "type": "string"
             },
             "public_key_bits": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Public Key Bits"
+              "title": "Public Key Bits",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "public_key_sha256": {
               "title": "Public Key Sha256",
@@ -3301,15 +3149,11 @@
               "type": "string"
             },
             "container_present": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Container Present"
+              "title": "Container Present",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "signers": {
               "items": {
@@ -3456,15 +3300,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",

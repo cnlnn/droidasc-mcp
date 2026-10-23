@@ -102,9 +102,9 @@ from response_limit, every successful continuation and scanner diagnostics. Inde
 original DEX enumeration prevents the oracle from inheriting a missing source entry.
 The final three receipts cover 98581 rows and 200 successful pages, with immutable
 input/runtime/oracle identity and temporary cleanup; see VALIDATION.md. This is not a
-full collection-latency comparison or all-query coverage. Current exact-page caches retain
-offset/limit in their keys, so a new page still takes the scan path; that amplification
-needs its own matched competitor measurement before claiming paging superiority.
+full collection-latency comparison or all-query coverage. Before selected-set reuse,
+exact-page caches retained offset/limit in their keys and each unseen page rescanned
+the input; the separate complete-collection baseline below measures that amplification.
 
 The 2026-10-24 development implementation now adds complete selected-set reuse across
 reference page offsets, within the existing global session disk budget. Exact-page reuse
@@ -116,16 +116,31 @@ intentional other-integration deselections. Fresh large-input measurements and i
 accuracy must use this new runtime; the earlier baseline/prototype and e3f3819 CI results
 remain historical rather than new release approval. See STARTUP_STORAGE_EXPERIMENTS.md.
 The final selected-cache corpus verifies 98581 original-byte sites/200 real-MCP pages
-and 36 product collection replays, with 36 matched timing trials. Current selected
+and 36 product collection replays, with 36 matched timing trials. In that run, selected
 first complete query medians favor the product, but all three repeat medians and
 Taobao/WeChat startup-to-complete still lose. The six competitor Taobao field replays
 retain the 97-extra-site failure. Full evidence and exact scope are bound in
 artifacts/selected-reference-cache-20261024/bounded-retry/summary.json.
 
-The subsequent complete-collection pilot does that measurement: all selected method sites
+The subsequent output-schema increment keeps every runtime contract and result field,
+using equivalent primitive type arrays to reduce nullable-field client validation.
+All generated primitive unions retain the original validation outcomes; constrained
+branches and other schema structure remain unchanged. Its focused gate passes 203 tests,
+zero skips, with 52 deliberate deselections. Fresh original-byte checks pass all 98581
+sites/200 pages; all 36 product collection replays pass in 36 new matched timing trials.
+The comparator's six Taobao field replays still fail with 97 extra sites each. The
+separate frozen-source before/after trial has 36 complete responses matching independent
+current acceptance. In the fresh comparator batch all three first complete method query
+and method startup medians favor the product, but all three complete method repeats
+and WeChat field startup remain slower. Exact scope, timings and resources are in
+STARTUP_STORAGE_EXPERIMENTS.md and
+artifacts/selected-reference-cache-20261024/schema-types/summary.json. These results do
+not establish all-query superiority or replace the remaining cross-platform/package gate.
+
+The earlier complete-collection baseline pilot measures the original paging deficit: all selected method sites
 match the independent original-byte scanner across the three large APKs, while complete
-product pagination is substantially slower than the pinned competitor. All second full
-collections also miss the current exact-page LRU. The Taobao competitor field collection
+product pagination was substantially slower than the pinned competitor. All second full
+collections also missed the then-current exact-page LRU. The Taobao competitor field collection
 fails independent parity with 97 extra sites (429 versus 332). Androguard verifies that five
 listed examples lie beyond their named caller's instruction stream; InsnLocator's bucket
 association tracks starts but lacks precise method-end checks. WeChat/Douyin method and

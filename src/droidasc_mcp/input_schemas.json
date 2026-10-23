@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "source_sha256": "caa00bfcbeb9d1e60bbc8d9b1d87f53b31ffae87f546d0fcce18f0cb4dc6c074",
+  "source_sha256": "9a3680ff1f806bfd4b5083cdbb4580069b0354103454a22d8f232af77f767f3f",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
   "records_sha256": "f24466058da4cbc0cc07609778c66e1a99980d505aeac346c589440632d8f858",
