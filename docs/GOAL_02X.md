@@ -77,6 +77,12 @@ local Linux Python 3.13 suite passes 1264 tests in 207.20 seconds, zero failures
 artifacts/startup-next-20261023/source-full-entry-oracle-driver.xml.
 CI 39962833696 is bound to f144c0849eb3bab878b79d8fe6472ef1c87b7d25, before those
 two driver regressions; it must not be described as a 1264-test gate or release approval.
+Its Windows live log reveals setup/teardown errors: automatic IDs embedded the complete
+large XML parameters in PYTEST_CURRENT_TEST, exceeding Windows' 32767-character limit.
+The seven manifest diagnostic cases now use fixed short IDs and assert a bounded node ID;
+their original payloads and parser assertions are unchanged. All 31 summary/driver tests
+pass locally without skips: artifacts/startup-next-20261023/windows-id-fixed-targeted.xml.
+The failing first attempt remains evidence, not acceptance; a new complete matrix is required.
 
 ## Competitor workflow closure
 

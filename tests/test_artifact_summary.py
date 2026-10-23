@@ -146,8 +146,18 @@ def test_aab_summary_matches_selected_module_only(tmp_path, module):
         (b"<manifest>" + b"<a/>" * 20_001 + b"</manifest>", "xml_limit"),
         (b"x" * (worker.MAX_XML_BYTES + 1), "xml_limit"),
     ],
+    ids=[
+        "invalid-xml",
+        "invalid-root",
+        "duplicate-application",
+        "duplicate-sdk",
+        "entity-declaration",
+        "node-limit",
+        "byte-limit",
+    ],
 )
-def test_manifest_diagnostics_do_not_hide_available_inventory(tmp_path, manifest, code):
+def test_manifest_diagnostics_do_not_hide_available_inventory(tmp_path, manifest, code, request):
+    assert len(request.node.nodeid) < 256
     path = artifact(tmp_path, {"AndroidManifest.xml": manifest, "classes.dex": b"inventory"})
     result = inspect(path, include_summary=True)
     assert result["status"] == "ok" and result["dex_entries"] == ["classes.dex"]
