@@ -14,6 +14,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .memory_cache import PageCache
+from .reference_cache import (
+    MAX_SESSION_BYTES,
+    MIN_ENTRY_BYTES,
+    OPERATIONS,
+    ReferenceCache,
+    selector,
+)
 from .runner import _check_cancelled
 
 
@@ -32,6 +39,7 @@ class Entry:
     closing: bool = False
     index_lock: threading.Lock = field(default_factory=threading.Lock)
     pages: PageCache = field(default_factory=PageCache)
+    references: ReferenceCache | None = None
     query_locks: tuple = field(default_factory=lambda: tuple(threading.Lock() for _ in range(32)))
 
 
@@ -194,7 +202,12 @@ class DexSessions:
                 # stripe; only index publication needs the session-wide builder lock.
                 stripe = (
                     int.from_bytes(
-                        hashlib.sha256(json.dumps(query, sort_keys=True).encode()).digest()[:2],
+                        hashlib.sha256(
+                            json.dumps(
+                                selector(query) if query.get("operation") in OPERATIONS else query,
+                                sort_keys=True,
+                            ).encode()
+                        ).digest()[:2],
                         "big",
                     )
                     % 32
@@ -205,7 +218,24 @@ class DexSessions:
                     root = Path(entry.storage.name)
 
                     def execute():
-                        return self.runner.query_dex_session(root, query)
+                        cache = self._reference_cache(entry, root, query)
+                        if cache is None:
+                            return self.runner.query_dex_session(root, query)
+                        cached = cache.read(query)
+                        if cached is not None:
+                            return cached
+                        ticket = cache.begin(query)
+                        if ticket is None:
+                            return self.runner.query_dex_session(root, query)
+                        publish = False
+                        try:
+                            result = self.runner.query_dex_session(
+                                root, query, reference_cache=ticket
+                            )
+                            publish = True
+                            return result
+                        finally:
+                            cache.finish(ticket, publish=publish)
 
                     result = (
                         execute()
@@ -222,6 +252,25 @@ class DexSessions:
                 entry.order = next(self.order)
                 if entry.closing and not entry.users:
                     self._drop(key)
+
+    def _reference_cache(self, entry, root, query):
+        if query.get("operation") not in OPERATIONS:
+            return None
+        with self.lock:
+            if entry.references is None:
+                if not (root / "prepared.json").is_file():
+                    return None
+                budget = min(
+                    MAX_SESSION_BYTES,
+                    self.settings.max_dex_session_bytes
+                    - self.reserved
+                    - sum(e.size for e in self.entries.values()),
+                )
+                if budget < MIN_ENTRY_BYTES:
+                    return None
+                entry.references = ReferenceCache(self.settings, root, budget)
+                entry.size += budget
+            return entry.references
 
     def close(self, key):
         with self.lock:

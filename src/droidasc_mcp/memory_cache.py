@@ -26,7 +26,7 @@ def signature(settings, root):
     ]
     if java:
         paths.append(Path(java))
-    for name in ("xrefs.sqlite", "calls.sqlite"):
+    for name in ("analysis.apk", "prepared.json", "owners.sqlite", "xrefs.sqlite", "calls.sqlite"):
         index = root / name
         if index.exists():
             paths.append(index)

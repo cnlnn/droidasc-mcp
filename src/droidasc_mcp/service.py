@@ -7,6 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from . import __version__
 from .config import Settings
+from .reference_cache import MAX_ENTRY_BYTES, MAX_SESSION_BYTES
 from .runner import DroidAscRunner, ReferenceKind
 from .rust_backend import LIMITATION, TESTED_COMMIT, RustAscRunner
 from .sessions import DexSessions
@@ -196,6 +197,12 @@ class DroidAscService:
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
                 "memory_page_cache_bytes_per_session": 4 * 1024**2,
                 "memory_page_cache_max_entries": 32,
+                "selected_reference_cache": {
+                    "enabled": True,
+                    "max_bytes": MAX_SESSION_BYTES,
+                    "max_entry_bytes": MAX_ENTRY_BYTES,
+                    "scope": "session_selected_reference_sets_within_session_disk_budget",
+                },
                 "durable_index_cache": {
                     "enabled": self.settings.xref_cache_dir is not None,
                     "max_bytes": self.settings.max_xref_cache_bytes,

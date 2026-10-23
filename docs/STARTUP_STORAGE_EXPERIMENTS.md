@@ -1,10 +1,95 @@
 # Startup And Storage Experiments
 
-Development evidence, 2026-10-23. None of the experimental storage/runtime changes below
-is retained. The comparisons used the workflow candidate at
+Development evidence, 2026-10-23, with a separate implementation follow-up on 2026-10-24.
+The earlier experimental storage/runtime changes below were not retained. Those comparisons
+used the workflow candidate at
 `b02c18092c7d5283a215b2d96fa441f2fe30ded0`, before the separate standalone-DEX entry
 reader addition. That addition does not replace the stored preparation/query path.
 These receipts neither approve publication nor close the startup/storage objective.
+
+## Selected Reference Cache Implementation, 2026-10-24
+
+The development runtime now implements selected-set streaming and host pagination in
+reference_spool.py/reference_cache.py; the sequential private prototype is not copied as
+the session storage manager. Before a worker writes, the session store reserves up to
+32 MiB from remaining global session capacity. Completed and pending sets share that
+quota; a build leases at most 16 MiB. SQLite pages and receipt files fit within the lease.
+Insufficient space or cache errors fall back to normal analysis, without truncating rows.
+
+Equal selectors share a query stripe across page offsets. Different selectors can build
+concurrently in private leased directories; only complete scans with matching row counts,
+bounded metadata, input/backend identity and a verified whole-file digest are published.
+Readers preserve order, duplicates, resolution/provenance and scanner diagnostics. They
+bound page bytes, recheck file and input identities, and close SQLite handles explicitly.
+Cancellation discards only its owned lease; failed deletion retains its disk reservation.
+Session close waits for pinned users and removes all session-owned files.
+
+The first regression reproduced a new-page full-worker scan before implementation.
+The current targeted suite passes 196 tests, zero skips, with 56 deliberately deselected
+other integration cases:
+artifacts/selected-reference-cache-20261024/focused-transport-bounded-retry-final.xml.
+It includes real stdio/HTTP exact method/field and fuzzy pagination, cached-versus-uncached
+full responses for six selector forms, concurrent same-selector pages, cancelled waiters,
+concurrent publication, quotas, corruption, invalidation, and cleanup/error paths.
+This is not a fresh full Linux/Windows/package gate.
+
+The first large-input batch passed complete Taobao/WeChat references but then failed a
+Douyin MCP timeout. Those receipts are retained under artifacts/selected-reference-cache-20261024.
+The live host load average was 117.47 on 16 logical CPUs when inspected after the failure;
+this coincided with the failure and does not establish causation. No unrelated processes
+were stopped. A SQLite setup-error connection-close regression was also fixed before the
+separate final corpus/comparison run under that evidence root's final/ directory.
+Current benchmark results must identify this implementation, not the historical prototype.
+
+That first implemented-cache run completed all three independent full-page checks and
+36 matched method/field trials (three alternating rounds, two complete collections).
+All product collections pass independent replay. The competitor's Taobao fields still
+contain the same 97 extra sites; the failed comparison-accuracy receipt is retained.
+Review then found that an oversized request against a complete cached set unnecessarily
+fell back to a worker just to return response_limit. The follow-up returns the same
+bounded error directly after file/input checks. Optional cache diagnostics cannot reject
+a page that would otherwise fit. It changes neither requested offsets nor the response
+byte cap, and smaller retries still reuse the complete set. Current-runtime repeated
+accuracy/comparison evidence is under bounded-retry/, separately from the first final/ run.
+
+The bounded-retry run is complete. Its summary.json binds all input/runtime/oracle,
+benchmark/accuracy and targeted-test receipts. Independent original-byte stdio checks
+pass all 98581 selected sites and 200 successful pages, including full diagnostics and
+cleanup. The matched corpus has 36 trials and 72 independently replayed collections;
+all 36 product collections pass. The six competitor Taobao field collections fail with
+exactly 97 extra sites each, so their field timings are not equal-correct-result evidence.
+
+Same Python 3.13.11/dependencies, four logical CPUs/workers, 4096-MiB descendant RSS and
+8192-MiB temporary-file caps, three alternating fresh-server rounds per input, two
+complete collections per query. OS caches are retained. The table contains medians in
+seconds for the exact String.equals method query, not all queries or a stable benchmark
+on a dedicated idle host. First query starts after open; startup includes open/imports.
+
+| Input | First complete query ours / competitor | Repeat complete query ours / competitor | Startup to complete collection ours / competitor |
+| --- | --- | --- | --- |
+| Taobao | 4.3847 / 4.9030 | 3.6695 / 3.1422 | 6.1017 / 5.7369 |
+| WeChat | 5.7758 / 6.3954 | 5.6156 / 4.1881 | 8.9115 / 7.4784 |
+| Douyin | 11.4069 / 17.5069 | 9.0887 / 7.0085 | 16.9105 / 19.7155 |
+
+Every successful product method page uses selected_reference_set: 1182 pages across
+these repetitions, rather than full-input rescans or exact-page LRU hits. Repeated
+oversized requests return response_limit in median 0.0213 / 0.0237 / 0.0150 seconds
+for Taobao/WeChat/Douyin. The response cap remains 256 KiB. The separate original-byte
+verifier replays every resulting continuation, including those bounded-error retries.
+
+Peak descendant RSS maxima over the three method trials are respectively
+117850112 / 121630720 / 135688192 product bytes versus
+848683008 / 997163008 / 1090572288 competitor bytes. Product temporary regular-file
+peaks are 125277477 / 189117508 / 491522447 bytes; the competitor creates no regular
+files inside its measured temporary root. These sampled file costs are separate from
+RSS, and /tmp is memory-backed on this host. They do not establish whole-system RAM use.
+
+First complete queries now favor the product on these observations, but all three
+repeat collections remain slower; Taobao/WeChat startup-to-complete also remain slower.
+The WeChat field startup median is 3.7489 versus 3.6576 seconds. The next performance
+work must measure remaining preparation and per-page/transport costs instead of claiming
+that eliminating repeated scans closes every gap. Broader graph/workflow comparison,
+full cross-platform suites and canonical-package gates remain open. No new publication.
 
 The pre-entry-reader Linux Python 3.13 source suite passes 1,231 tests in 190.59 seconds,
 zero failures, errors or skips: `source-full-retained-runtime.xml` under the evidence

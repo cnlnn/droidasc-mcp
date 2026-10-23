@@ -57,8 +57,10 @@ class Capabilities(Object, total=False):
     max_index_bytes_per_session: int
     memory_page_cache_bytes_per_session: int
     memory_page_cache_max_entries: int
+    selected_reference_cache: "Capabilities"
     durable_index_cache: "Capabilities"
     max_bytes: int
+    max_entry_bytes: int
     scope: str
 
 
@@ -321,6 +323,8 @@ class QueryCache(Object, total=False):
     hit: Required[bool]
     stored: bool
     scope: Required[str]
+    budget_bytes: int
+    stored_bytes: int
 
 
 class GraphNode(Object, total=False):

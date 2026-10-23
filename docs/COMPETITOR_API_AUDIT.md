@@ -1,7 +1,7 @@
 # Competitor API Source Audit
 
 Baseline: aimardcr/asc-mcp commit `848c711f1d80a1c2577283f1fa5f475ff734aa40`,
-rechecked against GitHub main on 2026-10-23. This is a functional workflow map,
+rechecked against GitHub main on 2026-10-24. This is a functional workflow map,
 not a drop-in API-name compatibility promise or a blanket performance claim.
 
 Read the actual [server](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/server.py),
@@ -105,6 +105,22 @@ input/runtime/oracle identity and temporary cleanup; see VALIDATION.md. This is 
 full collection-latency comparison or all-query coverage. Current exact-page caches retain
 offset/limit in their keys, so a new page still takes the scan path; that amplification
 needs its own matched competitor measurement before claiming paging superiority.
+
+The 2026-10-24 development implementation now adds complete selected-set reuse across
+reference page offsets, within the existing global session disk budget. Exact-page reuse
+remains separate. The six cached-versus-uncached selector regressions compare whole
+responses, including named-method selection metadata and declared-target resolution;
+real stdio/HTTP reference/fuzzy pagination and concurrent/cancellation/quota/invalidation
+regressions also pass. The focused selection has 196 passing tests, zero skips and 56
+intentional other-integration deselections. Fresh large-input measurements and independent
+accuracy must use this new runtime; the earlier baseline/prototype and e3f3819 CI results
+remain historical rather than new release approval. See STARTUP_STORAGE_EXPERIMENTS.md.
+The final selected-cache corpus verifies 98581 original-byte sites/200 real-MCP pages
+and 36 product collection replays, with 36 matched timing trials. Current selected
+first complete query medians favor the product, but all three repeat medians and
+Taobao/WeChat startup-to-complete still lose. The six competitor Taobao field replays
+retain the 97-extra-site failure. Full evidence and exact scope are bound in
+artifacts/selected-reference-cache-20261024/bounded-retry/summary.json.
 
 The subsequent complete-collection pilot does that measurement: all selected method sites
 match the independent original-byte scanner across the three large APKs, while complete

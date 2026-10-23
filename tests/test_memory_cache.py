@@ -89,3 +89,12 @@ def test_signature_tracks_implementation_and_index(settings, tmp_path, monkeypat
     first = memory_cache.signature(settings, tmp_path)
     (tmp_path / "xrefs.sqlite").write_bytes(b"index")
     assert memory_cache.signature(settings, tmp_path) != first
+
+
+@pytest.mark.parametrize("name", ["analysis.apk", "prepared.json", "owners.sqlite"])
+def test_signature_tracks_prepared_input_replacement(settings, tmp_path, name):
+    path = tmp_path / name
+    path.write_bytes(b"one")
+    before = memory_cache.signature(settings, tmp_path)
+    path.write_bytes(b"two")
+    assert memory_cache.signature(settings, tmp_path) != before

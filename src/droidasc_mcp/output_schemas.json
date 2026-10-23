@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "d71d5917bb09b45cc9d0912b846a2b4e5b8e4c4f3a891102c3fb2a69723fc941",
+  "contracts_sha256": "e6f3875bbeb54d7b6bda70650d4325428abfdeec84e3cc36aff890db819537b1",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "211474764e3ee43b5a427ddfea143e7f7805bd582829bf66b0347942f2e92c4d",
+  "schemas_sha256": "9aa72a585b32a58bd1867110f1c41c979bbf2b3897050dec119d5b1a525ef813",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -1065,6 +1065,14 @@
             "scope": {
               "title": "Scope",
               "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
             }
           },
           "required": [
@@ -2688,11 +2696,18 @@
               "title": "Memory Page Cache Max Entries",
               "type": "integer"
             },
+            "selected_reference_cache": {
+              "$ref": "#/$defs/Capabilities"
+            },
             "durable_index_cache": {
               "$ref": "#/$defs/Capabilities"
             },
             "max_bytes": {
               "title": "Max Bytes",
+              "type": "integer"
+            },
+            "max_entry_bytes": {
+              "title": "Max Entry Bytes",
               "type": "integer"
             },
             "scope": {

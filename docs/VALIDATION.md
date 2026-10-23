@@ -53,9 +53,27 @@ new release; the current startup/storage experiments are separate and remain iso
 
 ## Complete MCP Reference Pages
 
-The later complete-collection benchmark and isolated selected-result spool experiments are
-recorded in STARTUP_STORAGE_EXPERIMENTS.md. The production runtime still matches e3f3819;
-neither prototype is adopted or approved for release. The new benchmark/normalization/replay
+Implementation follow-up, 2026-10-24: the development runtime now has a session-accounted
+complete-selected-set cache and bounded host paging. It differs from e3f3819. The targeted
+suite passes 196 tests, zero skips and 56 intentional other-integration deselections:
+artifacts/selected-reference-cache-20261024/focused-transport-bounded-retry-final.xml. It covers real
+stdio/HTTP reference/fuzzy pages, full cached response equality, quotas, concurrent fills,
+cancelled page waiters, corruption, input changes and lease/file cleanup. Fresh full
+Linux/Windows and canonical-package gates remain open for this new runtime. See
+STARTUP_STORAGE_EXPERIMENTS.md for failed attempts and exact large-input receipt scope.
+The final new-runtime summary is
+artifacts/selected-reference-cache-20261024/bounded-retry/summary.json: all 98581
+selected original-byte sites and 200 pages pass, as do all 36 product collection
+replays. All 36 matched benchmark trials complete; six competitor Taobao field
+collections fail independent equality (97 extra sites each). Those failures are not
+rewritten as passing accuracy or equal-correct-result timing. First complete query
+latency improves relative to the paired competitor in this corpus, while repeat and
+startup deficits remain explicit. Source/runtime and helper identities are unchanged
+through the final run; the earlier failed timeout and pre-bounded-retry run stay separate.
+
+The preceding complete-collection benchmark and isolated selected-result spool experiments are
+recorded in STARTUP_STORAGE_EXPERIMENTS.md. At those experiments the runtime still matched
+e3f3819; neither private prototype was adopted or approved for release. The benchmark/normalization/replay
 selection passes 95 local tests without skips: full-page-benchmark-targeted-final.xml under
 artifacts/startup-next-20261023. This is distinct from the earlier 95-test container/reference
 selection below and does not raise the exact e3f3819 CI count.

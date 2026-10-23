@@ -172,9 +172,11 @@ class DroidAscRunner:
         )
         return self._run_dex_request(request, root)
 
-    def query_dex_session(self, root: Path, query: dict) -> dict:
+    def query_dex_session(self, root: Path, query: dict, *, reference_cache=None) -> dict:
         request = self._dex_request([], query)
         request["prepared_root"] = str(root)
+        if reference_cache is not None:
+            request["reference_cache"] = reference_cache
         with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
             return self._run_dex_request(request, Path(temporary))
 

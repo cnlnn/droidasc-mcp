@@ -422,6 +422,14 @@ unvalidated data behind a successful response or start background whole-program 
 A resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
 page). It avoids worker startup for repeated exact pages, and invalidates on implementation,
 engine or index-file identity changes. It never retains parsed DEX or worker processes.
+Selected method, field, outgoing-call and fuzzy-reference queries also stream complete
+matched site sets to private session storage. Later pages reuse that checked set rather
+than scanning the input again. This cache reserves at most 32 MiB per session, with a
+16-MiB entry/build limit, within `DROIDASC_MCP_MAX_DEX_SESSION_BYTES`. Reservation is lazy;
+insufficient space, oversized sets or cache failures preserve the normal scan path.
+First-query cost includes writing and checking the complete selected set. Reuse reports
+`query_cache.scope=selected_reference_set`, its reserved budget and retained bytes.
+Input/backend changes invalidate reuse; session close/expiry removes the stored sets.
 All 18 tools expose typed MCP output schemas, including nested result rows and diagnostics.
 
 Index construction costs time/disk upfront. Default per-session index quota is 512 MiB of disk, reserved
@@ -478,7 +486,7 @@ Both engines share scope/concurrency/process-tree budgets. See [backend details]
 | `DROIDASC_MCP_MAX_PARALLEL` | `2` | Maximum concurrent ASC subprocesses |
 | `DROIDASC_MCP_MAX_DEX_SESSIONS` | `4` | Maximum open/preparing DEX sessions |
 | `DROIDASC_MCP_DEX_SESSION_TTL_SECONDS` | `1800` | Idle session expiry |
-| `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage plus concurrent preparation reservations |
+| `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage, index/reference-cache budgets and concurrent preparation reservations |
 | `DROIDASC_MCP_JADX_HOME` | unset | Optional JADX 1.5.5 distribution directory |
 | `DROIDASC_MCP_DEXLIB_HOME` | unset | Standalone Google Smali 3.0.9 JAR directory, for DEX 041 normalization only |
 | `DROIDASC_MCP_JAVA` | `java` on PATH | Optional JDK 17+ executable |

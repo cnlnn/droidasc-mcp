@@ -138,6 +138,25 @@ paired competitor at complete-result startup and on repeat; combined session res
 concurrent publication, invalidation, corruption and cancellation remain implementation work.
 The private prototype and receipts are preserved in STARTUP_STORAGE_EXPERIMENTS.md.
 
+The 2026-10-24 development runtime now implements selected-result streaming and host
+pagination, with session-accounted 32-MiB quotas, 16-MiB pending/completed entry leases,
+same-selector page scheduling, concurrent private publication, whole-file verification,
+invalidation, cancellation and cleanup. Oversized sets and unavailable cache space retain
+the normal scan path. The focused suite passes 196 cases with zero skips, including real
+stdio/HTTP reference/fuzzy pages; 56 other integration cases were deliberately deselected.
+Evidence: artifacts/selected-reference-cache-20261024/focused-transport-bounded-retry-final.xml.
+The earlier claim that production still matches e3f3819 is historical, before this change.
+Final large-input and comparative receipts belong to the new implementation; prototype
+timings and the older e3f3819 Windows/package gates do not approve it for release.
+The final bounded-retry corpus passes all 98581 independent selected sites/200 pages,
+36 product collection replays and all 36 matched benchmark trials. The competitor's
+six Taobao field replays still fail with 97 extra sites each; the other comparison
+collections pass. Current first complete method query medians favor the product, but
+all three repeat collections and Taobao/WeChat startup-to-complete remain slower.
+Evidence: artifacts/selected-reference-cache-20261024/bounded-retry/summary.json.
+This is concrete progress, not completion of the remaining startup, transport, graph,
+workflow and cross-platform/package criteria below.
+
 ## Competitor workflow closure
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource

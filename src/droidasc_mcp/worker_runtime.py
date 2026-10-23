@@ -27,6 +27,7 @@ class WorkerRuntime:
     def __init__(self, settings):
         self.settings = settings
         self.cli = None
+        self.reference_spool = None
 
     def _page_bounds(self, offset, limit):
         return page_bounds(offset, limit, self.settings.max_page_size)
