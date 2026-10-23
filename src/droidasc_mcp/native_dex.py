@@ -464,14 +464,14 @@ def page_result(result, query, settings):
     }
 
 
-def query_references(settings, bundle, query):
+def query_references(settings, bundle, query, *, emit=None):
     try:
-        return page_result(_references(bundle, query, settings), query, settings)
+        return page_result(_references(bundle, query, settings, emit=emit), query, settings)
     except (InvalidDex, struct.error, UnicodeError) as exc:
         raise DroidAscError("Invalid DEX instruction scan: " + str(exc)) from exc
 
 
-def _references(bundle, query, settings):
+def _references(bundle, query, settings, *, emit=None):
     operation = query["operation"]
     fuzzy = operation == "search_refs"
     fields = query.get("kind") == "field" if fuzzy else operation == "find_field_refs"
@@ -637,7 +637,8 @@ def _references(bundle, query, settings):
                         )
                         if not fields or access in {"all", field_access}:
                             totals[callee] += 1
-                            if offset <= total < offset + limit:
+                            on_page = offset <= total < offset + limit
+                            if on_page or (emit is not None and emit.enabled):
                                 row = {
                                     "caller": caller,
                                     "field_descriptor" if fields else "callee": callee,
@@ -653,7 +654,10 @@ def _references(bundle, query, settings):
                                     )
                                 if op in {0xFA, 0xFB}:
                                     row["call_site_prototype"] = dex.proto(dex.u16(position + 6))
-                                items.append(row)
+                                if emit is not None:
+                                    emit(row)
+                                if on_page:
+                                    items.append(row)
                             total += 1
                     if op in {0xFA, 0xFB, 0xFC, 0xFD, 0xFE}:
                         dynamic_count += not incoming
@@ -730,4 +734,6 @@ def _references(bundle, query, settings):
             "backend": base["backend"],
             "backend_version": base["backend_version"],
         }
+    if emit is not None:
+        emit.scanned(definitions)
     return base

@@ -47,16 +47,35 @@ def inherited(element, name, fallback, source="component"):
     return permission(value, source) if value is not None else fallback
 
 
-def summarize(root, offset, limit):
-    from .archive_worker import ArchiveError, page
+def _header_elements(root):
+    from .archive_errors import ArchiveError
 
     if root.tag != "manifest":
         raise ArchiveError("invalid_manifest", "Root element must be manifest")
     apps = root.findall("application")
     if len(apps) > 1 or len(root.findall("uses-sdk")) > 1:
         raise ArchiveError("invalid_manifest", "Manifest has ambiguous application or SDK elements")
+    return apps[0] if apps else None, root.find("uses-sdk")
+
+
+def header(root):
+    app, sdk = _header_elements(root)
+    return {
+        "package_name": root.get("package"),
+        "version_name": attr(root, "versionName"),
+        "version_code": attr(root, "versionCode"),
+        "min_sdk": attr(sdk, "minSdkVersion"),
+        "target_sdk": attr(sdk, "targetSdkVersion"),
+        "application_name": attr(app, "name"),
+        "resource_values_resolved": False,
+    }
+
+
+def summarize(root, offset, limit):
+    from .archive_worker import ArchiveError, page
+
+    app, _ = _header_elements(root)
     package = root.get("package")
-    app = apps[0] if apps else None
     app_permission = permission(attr(app, "permission"), "application")
     if attr(app, "permission") is None:
         app_permission["source"] = "none"

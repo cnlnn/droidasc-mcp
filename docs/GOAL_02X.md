@@ -1,5 +1,33 @@
 # 0.2.x incremental completion goal
 
+## 0.2.4 candidate and version gate
+
+The next increment preserves the six unpublished commits through `b439b47` and adds
+three reproduced workflow fixes: dotted class-prefix handoffs, exact Java-name type
+references (including external types), and arbitrary root-level DEX entry classification.
+It also strengthens nullable-schema semantics and independent whole-call-index acceptance
+before graph replay. The focused workflow gate passes 290 tests with no skips; fresh full
+source/package gates and the original-corpus rerun must use this candidate, not older CI.
+The pinned competitor is still `848c711f1d80a1c2577283f1fa5f475ff734aa40`; its 25 tools,
+two resources, three prompts and 87 parameters are inventory coverage, not automatic
+behavioral closure. `VALIDATION.md` separates current candidate evidence from history.
+
+**Version policy:** publish 0.3.0 only when evidence establishes superiority over the
+competitor in every required dimension. Otherwise, accepted coherent increments remain
+0.2.x. Tool/category presence, one successful query or selected fast cases cannot meet
+that gate. The overall completion goal remains active after an incremental release.
+
+The documented losing/open dimensions remain: Taobao/Douyin complete-method repeats,
+Taobao method startup-to-complete, WeChat field startup, four-CPU Douyin repeated complete
+concurrency, and retained snapshot/tmpfs storage cost. Repeat frozen alternating rounds
+on the same three original inputs with two/four CPU budgets, equal interpreters/limits,
+complete result sets and separate preparation/query RSS plus logical/allocated storage.
+Preserve worse and failing rounds. A comparator timeout or incorrect field set is not an
+equal-success performance win. Independent complete index operands do not prove runtime
+dispatch, an independent graph traversal policy, or DEX 041 normalization accuracy.
+
+## Consolidated release history
+
 Status: active. On 2026-10-23 the maintainer requested consolidation of v0.2.3-v0.2.9
 into a freshly built and accepted v0.2.3, preserving all current source improvements and
 v0.2.2 and earlier releases. The seven releases, assets and tag objects were backed up
@@ -7,8 +35,205 @@ and verified before withdrawal under artifacts/reissue-023-20261023/backup.
 This consolidation does not close the overall performance, workflow/source-comparison
 or accuracy objectives. Workflow completeness and ergonomics remain mandatory criteria.
 Release notes follow the established Highlights / Acceptance / Install / Limits format.
+The consolidation is published at commit 12a4fc51ba36a64a54bc3623dc348a499f466ac9;
+CI 39939932398 passed all 25 jobs, including Linux/Windows Python 3.10-3.13 source,
+canonical-sdist and exact native-wheel acceptance. Release assets and retained/withdrawn
+versions were read back; see VALIDATION.md. New workflow changes remain on a separate
+development branch and have no publication approval from those earlier receipts.
+
+## Current workflow candidate
+
+On codex/workflow-triage-next, artifact inspection can optionally return a compact,
+hash-bound manifest header, entry count and native ABI inventory in one call. Method
+trace prompts now accept exact class/name selectors and optional overload prototypes,
+using the existing query validator and preserving full-descriptor handoff.
+Local Linux Python 3.13 source regression passes 1213 tests, zero failures/errors/skips:
+artifacts/workflow-triage-20261023/source-full.xml. This includes real stdio/HTTP triage,
+prompt selector handoff, invalid-selector recovery and binary-manifest summary checks.
+scripts/verify_artifact_summary.py passes the separate original-ZIP and pinned-competitor
+summary oracle for all three private Taobao, WeChat and Douyin APKs. The final receipt is
+artifacts/workflow-triage-20261023/large-summary-parity-final.json, with unchanged input,
+runtime and verifier hashes. This is summary parity, not a speed or DEX-accuracy claim.
+This candidate is not published. The final e3f3819 runtime passes the refreshed
+cross-platform/source/package gates recorded below; earlier local counts are historical.
+The broader workflow exercise and startup/memory/graph/concurrency criteria below stay open.
+
+Startup/storage experiments on this candidate are recorded in
+STARTUP_STORAGE_EXPERIMENTS.md. Larger SQLite batches, native key encoding, ordinary
+Deflate recompression and two cursor micro-optimizations did not establish a robust
+cross-input benefit and are not retained. LZ4 component measurements alone do not approve
+a production format or dependency. The original-compressed-payload/two-slot inflation
+prototype also remains isolated: all 27 three-APK/four-CPU direct trials preserve complete
+owners, metadata, expanded DEX hashes and first field pages, but first use and repeats slow
+down while query RSS increases. Retained files fall 57-60%, not an all-resource or latency
+win. No production replacement is adopted; byte-budgeted large-member, Windows, 041 and
+source-handoff acceptance are not claimed from this rejected pilot.
+At d356da3 the runtime was unchanged from b02c180; the added opcode boundary/counter
+regressions increased the complete local Linux Python 3.13 suite to 1231 passing tests,
+zero failures/errors/skips: artifacts/startup-next-20261023/source-full-retained-runtime.xml.
+This is not a new Windows or canonical-distribution gate.
+
+The real stdio/HTTP parameter exercise now covers all four exact/fuzzy owner/name
+combinations for two method overloads and same-named I/J fields, exact prototype/type,
+omitted member names, case-sensitive misses, complete one-row pagination and beyond-end
+pages. A discovered archive path is also followed through nine bounded content pages to
+reconstruct 1,048,832 exact original bytes, then an EOF and invalid-offset recovery check.
+The targeted four transport cases pass without skips:
+artifacts/startup-next-20261023/workflow-parameters-targeted-fixed.xml.
+This strengthens specific workflow evidence, not an assertion that all parameter behavior
+or the final cross-platform release gate is closed.
+
+Reading the competitor's raw-file entry branches exposed a concrete remaining gap.
+The candidate now accepts standalone DEX paths in the two entry tools, using the existing
+supervised worker, input roots/size limits and full before/after identity/hash checks.
+Pages retain original bytes/basenames, including physical 041 headers, and do not invent
+ZIP CRC or code-validation metadata. Archive inventory/session routing stays unchanged.
+The entry/archive/container/schema/real-transport selection passes 178 cases, zero skips:
+artifacts/startup-next-20261023/raw-dex-targeted-zero-skips.xml.
+The full current Linux Python 3.13 source suite passes 1262 tests in 212.53 seconds,
+zero failures/errors/skips, including both transports and the regenerated input/output
+schemas: artifacts/startup-next-20261023/source-full-raw-dex-entry.xml.
+Candidate-branch Windows and canonical-package acceptance must identify this new runtime;
+the earlier b02c180/d356da3 receipts are not reused for it.
+
+Fresh current-runtime field comparisons, full original class-owner/snapshot checks and
+the selected full-reference oracle are recorded in STARTUP_STORAGE_EXPERIMENTS.md.
+WeChat still loses 0.5736 seconds at process-start-to-first-result; lower query RSS does
+not remove the tmpfs-backed preparation-file cost. These remain explicit open gaps.
+The oracle driver now constructs Path in its native child command; two regressions
+execute that command against a path-checking stub. With this test-driver-only fix, the
+local Linux Python 3.13 suite passes 1264 tests in 207.20 seconds, zero failures/errors/skips:
+artifacts/startup-next-20261023/source-full-entry-oracle-driver.xml.
+CI 39962833696 is bound to f144c0849eb3bab878b79d8fe6472ef1c87b7d25, before those
+two driver regressions; it must not be described as a 1264-test gate or release approval.
+Its Windows live log reveals setup/teardown errors: automatic IDs embedded the complete
+large XML parameters in PYTEST_CURRENT_TEST, exceeding Windows' 32767-character limit.
+The seven manifest diagnostic cases now use fixed short IDs and assert a bounded node ID;
+their original payloads and parser assertions are unchanged. All 31 summary/driver tests
+pass locally without skips: artifacts/startup-next-20261023/windows-id-fixed-targeted.xml.
+The failing first attempt remains evidence, not acceptance. The corrected candidate at
+e3f381927c98976d4b2052ec29e0d86136e47c48 passes CI 39967501671: all 25 jobs,
+1264 tests with zero failures/errors/skips in each Linux/Windows Python 3.10-3.13 source
+cell and for each canonical-sdist/exact-wheel installation. Seven signing variants per
+source cell, Rust and stability gates also pass. The downloaded ZIP digests, 24 extracted
+files, packaged runtime source and installed-wheel identity are verified in
+artifacts/workflow-entry-ci-39967501671/acceptance-summary.json.
+The exact Linux CI wheel independently passes every original class/owner and snapshot byte
+across Taobao/WeChat/Douyin (884805 identities), and all selected Taobao method/field rows
+and diagnostics over three rounds: wheel-original-accuracy.json under the same evidence root.
+The source worktree, wheel bytes, installed runtime and verifier remain unchanged throughout.
+These gates do not close the startup/storage or broader comparative-workflow criteria, and
+do not approve a new publication. main and the existing v0.2.3 tag remain at 12a4fc5.
+
+A fresh 27-trial 64/128/256-KiB prefetch sweep suggested preparation gains, but the actual
+18-trial real-stdio before/after comparison did not preserve them at first result: WeChat
+and Douyin each regress in two of three pairs. The change is removed; production remains
+byte-identical to e3f3819. The separate bounded-memory compact pilot also remains rejected
+as a default. See STARTUP_STORAGE_EXPERIMENTS.md for complete receipts and resource costs.
+Two new full-queue abandonment regressions pass alongside all container/directory cases
+(68 tests, zero skips); these are test-only additions, not a new full cross-platform gate.
+
+The current three-APK concurrent corpus now has 36 passing real-stdio trials across two/four
+CPU budgets, three alternating rounds each, with equal 4096-MiB aggregate RSS and 8192-MiB
+temporary-file caps. All cold/first-complete-batch/repeat medians favor the product for
+these method+field pairs; see STARTUP_STORAGE_EXPERIMENTS.md. Inputs, both runtimes and
+harnesses remain unchanged. This does not close the separate single-field startup deficit,
+storage cost, broader graph comparison or all-query accuracy.
+
+Complete real-MCP reference pagination additionally matches an independently inventoried
+original-byte JVM oracle for 98581 method/field sites across all three APKs, 200 successful
+pages and full scan diagnostics. Final receipts: current-reference-pages-corpus-final.json
+and its three per-APK final reports under artifacts/startup-next-20261023. Failed attempts
+and the verifier's missing-DEX/swapped-mapping regressions remain separate evidence.
+The final verifier/container/directory selection passes 95 tests, zero skips; no runtime
+change or new full cross-platform gate is implied. The existing exact-page cache key includes
+offset/limit and unseen pages rescan instructions. Measure full-collection scan amplification
+against the competitor rather than inferring paging performance from first-page timings.
+
+The complete-collection pilot now confirms that deficit on all three inputs. First method
+collection is 27.1845/36.6546/158.3533 seconds versus the competitor's
+5.3954/6.6087/14.4882; second full collections still miss every product page-cache entry.
+Every method site matches an independent original-byte oracle for both implementations.
+The competitor's Taobao field result instead has 97 extra sites; five independently decoded
+examples exceed their named caller's instruction stream. This is not an accuracy target to
+copy. See STARTUP_STORAGE_EXPERIMENTS.md for one-round scope, complete receipts, resources
+and exact distinctions from earlier first-page/concurrent comparisons. Query-wide selective
+result reuse and its host paging path now have priority over cursor micro-optimizations.
+An isolated streamed-SQLite/host-reader pilot reduces those first collection observations
+to 4.9700/5.2038/10.4062 seconds, with every product row and diagnostic independently equal.
+It is not production code or final before/after acceptance: Taobao/Douyin still lose to the
+paired competitor at complete-result startup and on repeat; combined session reservations,
+concurrent publication, invalidation, corruption and cancellation remain implementation work.
+The private prototype and receipts are preserved in STARTUP_STORAGE_EXPERIMENTS.md.
+
+The 2026-10-24 development runtime now implements selected-result streaming and host
+pagination, with session-accounted 32-MiB quotas, 16-MiB pending/completed entry leases,
+same-selector page scheduling, concurrent private publication, whole-file verification,
+invalidation, cancellation and cleanup. Oversized sets and unavailable cache space retain
+the normal scan path. The focused suite passes 196 cases with zero skips, including real
+stdio/HTTP reference/fuzzy pages; 56 other integration cases were deliberately deselected.
+Evidence: artifacts/selected-reference-cache-20261024/focused-transport-bounded-retry-final.xml.
+The earlier claim that production still matches e3f3819 is historical, before this change.
+Final large-input and comparative receipts belong to the new implementation; prototype
+timings and the older e3f3819 Windows/package gates do not approve it for release.
+The final bounded-retry corpus passes all 98581 independent selected sites/200 pages,
+36 product collection replays and all 36 matched benchmark trials. The competitor's
+six Taobao field replays still fail with 97 extra sites each; the other comparison
+collections pass. Current first complete method query medians favor the product, but
+all three repeat collections and Taobao/WeChat startup-to-complete remain slower.
+Evidence: artifacts/selected-reference-cache-20261024/bounded-retry/summary.json.
+This is concrete progress, not completion of the remaining startup, transport, graph,
+workflow and cross-platform/package criteria below.
+
+The subsequent output-schema increment reduces client nullable-field validation using
+Pydantic's equivalent primitive type arrays, retaining the original strict runtime
+contracts and falling back to original generation on older Pydantic versions. The
+targeted transport/cache/contract gate passes 203 cases with zero skips and 52 deliberate
+other-integration deselections. Three alternating frozen-source before/after rounds
+per real APK reduce first/repeat complete-query medians in this corpus; one Taobao
+pair regresses, so the change is not a universal-speed claim. See
+STARTUP_STORAGE_EXPERIMENTS.md and artifacts/selected-reference-cache-20261024/.
+Fresh original-byte and competitor comparisons are separate from the historical
+bounded-retry/ run; the new runtime still needs its full cross-platform/package gates.
+The schema-types/summary.json batch is complete: all 98581 original selected sites,
+200 pages and 36 product collection replays pass; six comparator field replays retain
+97 extra Taobao sites each. All 36 frozen before/after collections also match accepted
+current full responses. First complete method queries and method startup favor the
+product in this batch, but all three complete method-repeat medians and WeChat field
+startup still lose. Those residuals, storage cost, broader workflow/graph comparisons
+and new full cross-platform/package gates remain open.
 
 ## Competitor workflow closure
+
+Complete-concurrency follow-up, 2026-10-24: all 72 product method/field collections
+pass independent original-byte replay over three APKs and two/four CPUs. Twelve of 72
+comparator collections retain the Taobao-field 97-extra-site failure. Four-CPU Douyin
+repeated complete concurrency still loses at 7.5007 / 6.2604 seconds median, despite
+favorable first-page results. The first graph batch also exposed a cancellation deadline
+overrun; it is preserved as rejected timing evidence. The harness now enforces deadlines
+with a separate owned-child watchdog and passes 110 focused tests with zero skips.
+These are harness/acceptance improvements, not a production performance fix or closure of
+the remaining workflow, storage, graph-completeness and cross-platform/package criteria.
+The corrected same-budget graph batch now verifies all 24 measured bounded product
+graphs against a fresh original-byte full index, plus independent emitted-site decoding.
+All comparator trials time out around 30 seconds; no equal-success graph ratio is claimed.
+Every product graph explicitly reaches its output-byte bound. This does not independently
+prove full-corpus graph completeness. The final receipts are bound in
+artifacts/graph-concurrent-20261024/summary.json, including the separately resumed offline
+Douyin verification after a host reboot. No additional release is approved.
+
+Latest paging increment, 2026-10-24: reference queries now return byte-bounded complete
+prefixes at the original 256-KiB ceiling, retain the requested maximum limit and continue
+at the exact next_offset. The targeted gate passes 288 cases with zero skips and 52
+deliberate deselections. Fresh independent checks accept all 98581 selected sites over
+148 pages and all 36 product collection replays; all 36 frozen before/after collections
+also match complete accepted responses. Six comparator Taobao-field replays retain the
+97-extra-site failure. The same three-APK timing batch has zero product reference retries,
+but Taobao/Douyin complete-method repeats, Taobao method startup-to-complete and WeChat
+field startup still lose. Paired before/after effects are also mixed, so fewer pages alone
+do not close the performance goal. See STARTUP_STORAGE_EXPERIMENTS.md and
+artifacts/adaptive-reference-pages-20261024/accepted/summary.json. Full workflow/graph,
+storage and fresh cross-platform/package gates remain open; no new release is approved.
 
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
   templates, three prompts and 87 non-context parameters against implemented equivalents.
@@ -36,6 +261,8 @@ Release notes follow the established Highlights / Acceptance / Install / Limits 
   Revalidate all affected workflows, cleanup and resource boundaries after any such refactor.
 - [ ] Re-measure repeated queries and fix any confirmed residual latency regression while
   keeping host caches bounded and not retaining a full-APK analysis object or worker pool.
+  Include complete multipage collection and byte-limit recovery: complete selected sets
+  now avoid rescans, but the measured full-collection paging/transport deficit remains.
 - [ ] Freeze alternating cold/warm/concurrent and bounded-large-graph comparisons. Include
   both two/four-worker budgets, additional APK workloads, complete-result accuracy and
   separate process RSS versus index disk/tmpfs usage. Report failures and truncation plainly.

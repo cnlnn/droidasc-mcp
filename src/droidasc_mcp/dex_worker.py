@@ -299,7 +299,15 @@ def analyze(request: dict, root: Path) -> dict:
             common = metadata["common"]
             if common["engine_version"] != engine_version(request):
                 raise DexInputError("engine_changed", "Reopen the session with the current engine")
-            return query_prepared(runner, prepared / "analysis.apk", common, query, root)
+            from .reference_spool import ReferenceSpool
+
+            with ReferenceSpool(
+                request.get("reference_cache"), prepared, settings.max_output_bytes
+            ) as spool:
+                runner.reference_spool = spool
+                result = query_prepared(runner, prepared / "analysis.apk", common, query, root)
+                spool.finish(result)
+                return result
         if request.get("prepare"):
             preparation_progress(root, 0, None, "Validating and snapshotting input")
         from .preparation_directory import PreparationDirectory
@@ -357,6 +365,15 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, query, workspace):
+    from .reference_page import OPERATIONS, reference_page
+
+    result = _select_query_prepared(runner, bundle, common, query, workspace)
+    if query["operation"] in OPERATIONS:
+        return reference_page(result, runner.settings.max_output_bytes)
+    return result
+
+
+def _select_query_prepared(runner, bundle, common, query, workspace):
     if query["operation"] in OWNER_OPERATIONS or query.get("method_name") is not None:
         from .class_directory import ClassDirectory
 
@@ -423,7 +440,10 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
     if operation in {"find_method_refs", "get_method_calls", "find_field_refs", "search_refs"}:
         from .native_dex import query_references
 
-        return {**common, **query_references(runner.settings, bundle, query)}
+        return {
+            **common,
+            **query_references(runner.settings, bundle, query, emit=runner.reference_spool),
+        }
     if operation in DISCOVERY_OPERATIONS:
         from .native_discovery import query_discovery
 
@@ -541,17 +561,13 @@ def asc_method_smali(runner, bundle, entry, query):
 
 
 def main():
+    from .worker_errors import response_limit
+
     request_path = Path(sys.argv[1])
     result = analyze(json.loads(request_path.read_text(encoding="utf-8")), request_path.parent)
     encoded = json.dumps(result)
     if len(encoded.encode()) > 256 * 1024:
-        encoded = json.dumps(
-            {
-                "status": "error",
-                "code": "response_limit",
-                "message": "DEX response exceeds budget; reduce limit or narrow the query",
-            }
-        )
+        encoded = json.dumps(response_limit())
     print(encoded)
 
 

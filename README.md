@@ -17,11 +17,11 @@ structured data instead of unbounded terminal output.
 | --- | --- |
 | `asc_ping` | Show adapter/engine versions and effective runtime limits |
 | `asc_apk_info` | Return size, SHA-256, manifest presence, and DEX entries |
-| `asc_list_apk_entries` | Page APK contents, resources, assets and native ABIs |
-| `asc_read_apk_entry` | Read bounded UTF-8/base64 content and decode binary XML |
+| `asc_list_apk_entries` | Page archive contents or inventory a standalone DEX file |
+| `asc_read_apk_entry` | Read bounded archive/DEX bytes and decode binary XML |
 | `asc_manifest_summary` | Page structured components, filters and permission provenance |
 | `asc_signing_inventory` | Inspect signature-container presence and certificate fingerprints, without signature verification |
-| `asc_inspect_artifact` | Page DEX/JVM/split capabilities in APK/JAR/ZIP/AAR/AAB/APKS/XAPK |
+| `asc_inspect_artifact` | Page container capabilities; optional compact manifest/native summary |
 | `asc_open_artifact_session` | Snapshot selected container DEX into the existing session workflow |
 | `asc_diff_dex_sessions` | Compare sorted class/member identities between hash-bound revisions |
 | `asc_secret_candidates` | Search fixed DEX string patterns with redacted source locations |
@@ -36,7 +36,7 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Version 0.2.3 provides checked native DEX references, discovery, structural views and lazy
+Version 0.2.4 provides checked native DEX references, discovery, structural views and lazy
 indexes. An optional C accelerator has an independent Python fallback; ASC remains the public
 Smali engine. The [native-query validation](docs/NATIVE_QUERY_VALIDATION.md) records accuracy,
 workload-specific cold-query improvements and the remaining startup/first-result cost.
@@ -47,7 +47,11 @@ strict DEX 041 imports, first-level JVM JAR inventory/diffs, resumable archive b
 manifest/class resource templates, `compare_versions` and opt-in secret candidate values.
 The [complete competitor source map](docs/COMPETITOR_API_AUDIT.md) records all 25 tools,
 two resources, three prompts and 87 parameters, including intentional interface differences.
-Functional parity does not establish universal performance superiority.
+The source inventory is not blanket behavioral or performance acceptance. Version 0.2.4
+also fixes dotted class-prefix/type handoffs and inventories arbitrary root-level DEX names;
+complete reference collections reuse bounded selected sets and adapt pages to the response
+byte limit. See [current validation and limits](docs/VALIDATION.md). The 0.3.0 gate requires
+evidence of superiority in every comparison dimension; partial improvements stay in 0.2.x.
 
 Container, signing and review workflows and their support boundaries are described in
 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md). Release gates cover cross-platform,
@@ -64,22 +68,23 @@ CPython 3.11+ on x86-64 Linux:
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+ on Windows (PowerShell):
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
 ```
 
 For CPython 3.10, create the environment with `python3.10` or `py -3.10` and replace
 `cp311-abi3` in the wheel URL with `cp310-cp310`. The stable-ABI wheels support CPython 3.11
 and newer; the Linux wheels require glibc 2.34 or newer. The canonical source archive is
-`droidasc_mcp-0.2.3.tar.gz`. Source installation retains the Python fallback if no compiler is
-available. macOS remains unverified. If you installed a withdrawn 0.2.3-0.2.9 package,
-use `--force-reinstall --no-cache-dir` to replace it with the consolidated 0.2.3 build.
+`droidasc_mcp-0.2.4.tar.gz`. Source installation retains the Python fallback if no compiler is
+available. macOS remains unverified. Older 0.2.3-0.2.9 artifacts withdrawn during the
+0.2.3 consolidation are not the new 0.2.4 build. Use `--force-reinstall --no-cache-dir`
+to replace an older artifact with the accepted asset from the current release.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 
@@ -153,6 +158,12 @@ defaults to 16 KiB, with a 128 KiB maximum before UTF-8/base64 encoding. XML dec
 only complete inputs up to 4 MiB. `decoded`, `decoding_status`, `decoding_warnings`,
 `truncated`, `content_complete` and `crc_verified` distinguish successful decoding, decoder
 warnings, output truncation and incomplete raw reads. Resource-table values remain unresolved.
+
+These two entry tools also accept a standalone `.dex` path. Use its returned basename as
+`entry_path`, then follow `next_byte_offset` with `byte_offset` for subsequent pages. Results
+retain `artifact_sha256` and original bytes, including physical DEX 041 bytes. Raw files have
+no ZIP CRC fields; `format_validation=not_performed` distinguishes byte reads from validated
+code analysis through `asc_open_dex_session`.
 
 `asc_manifest_summary` preserves raw namespaced declarations and component order, intent
 filters, metadata, provider path/URI-grant rules, and permission inheritance sources. Explicit
@@ -320,8 +331,12 @@ instructions or decoding failures return an error rather than partial results ma
 
 Only explicit Java source queries start the optional JVM (512 MiB maximum heap), sharing the
 worker's timeout, aggregate memory, output and cancellation limits. Other JADX versions are rejected.
-Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
-responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
+Reference pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`.
+For method references, field references, outgoing calls and fuzzy member references, `limit`
+is a maximum: a page can stop earlier at the same 256-KiB encoded DEX-response budget.
+Such pages report `page_limited_by="response_bytes"` and `response_byte_limit`; follow
+`next_offset`, not `offset + limit`, to retain every site. A complete row or metadata that
+cannot fit still returns `response_limit`. The API takes DEX inputs/sessions, not an APK path.
 
 ### Indexed investigation
 
@@ -416,6 +431,14 @@ unvalidated data behind a successful response or start background whole-program 
 A resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
 page). It avoids worker startup for repeated exact pages, and invalidates on implementation,
 engine or index-file identity changes. It never retains parsed DEX or worker processes.
+Selected method, field, outgoing-call and fuzzy-reference queries also stream complete
+matched site sets to private session storage. Later pages reuse that checked set rather
+than scanning the input again. This cache reserves at most 32 MiB per session, with a
+16-MiB entry/build limit, within `DROIDASC_MCP_MAX_DEX_SESSION_BYTES`. Reservation is lazy;
+insufficient space, oversized sets or cache failures preserve the normal scan path.
+First-query cost includes writing and checking the complete selected set. Reuse reports
+`query_cache.scope=selected_reference_set`, its reserved budget and retained bytes.
+Input/backend changes invalidate reuse; session close/expiry removes the stored sets.
 All 18 tools expose typed MCP output schemas, including nested result rows and diagnostics.
 
 Index construction costs time/disk upfront. Default per-session index quota is 512 MiB of disk, reserved
@@ -443,6 +466,9 @@ full build. Stop servers before manually removing the dedicated cache directory.
 
 The server also exposes initialization instructions, `droidasc://analysis-guide`, and
 `triage_apk` / `trace_exact_method` prompts. Artifact contents remain untrusted query data.
+`trace_exact_method` accepts either a full `method_descriptor` or exact `class_name` plus
+`method_name`; optional `target_descriptor` selects an overload prototype. It normalizes
+selectors for direct query handoff and keeps ambiguous names explicit until resolved.
 See the [source-backed competitor comparison](docs/AIMARD_COMPARISON.md) for remaining gaps.
 
 ### Optional Rust ASC
@@ -469,7 +495,7 @@ Both engines share scope/concurrency/process-tree budgets. See [backend details]
 | `DROIDASC_MCP_MAX_PARALLEL` | `2` | Maximum concurrent ASC subprocesses |
 | `DROIDASC_MCP_MAX_DEX_SESSIONS` | `4` | Maximum open/preparing DEX sessions |
 | `DROIDASC_MCP_DEX_SESSION_TTL_SECONDS` | `1800` | Idle session expiry |
-| `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage plus concurrent preparation reservations |
+| `DROIDASC_MCP_MAX_DEX_SESSION_BYTES` | `4294967296` | Session storage, index/reference-cache budgets and concurrent preparation reservations |
 | `DROIDASC_MCP_JADX_HOME` | unset | Optional JADX 1.5.5 distribution directory |
 | `DROIDASC_MCP_DEXLIB_HOME` | unset | Standalone Google Smali 3.0.9 JAR directory, for DEX 041 normalization only |
 | `DROIDASC_MCP_JAVA` | `java` on PATH | Optional JDK 17+ executable |

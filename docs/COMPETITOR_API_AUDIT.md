@@ -1,7 +1,7 @@
 # Competitor API Source Audit
 
 Baseline: aimardcr/asc-mcp commit `848c711f1d80a1c2577283f1fa5f475ff734aa40`,
-rechecked against GitHub main on 2026-10-23. This is a functional workflow map,
+rechecked against GitHub main on 2026-10-24. This is a functional workflow map,
 not a drop-in API-name compatibility promise or a blanket performance claim.
 
 Read the actual [server](https://github.com/aimardcr/asc-mcp/blob/848c711f1d80a1c2577283f1fa5f475ff734aa40/asc_mcp/server.py),
@@ -13,6 +13,31 @@ All public tools, resource templates, prompts and non-context parameter names ar
 and commit, failing on missing, extra, duplicate or changed parameter entries. This inventory
 check is not a substitute for the behavioral tests linked in each row.
 
+## 0.2.4 behavioral follow-through
+
+A fresh source audit still matches the pinned public inventory. Exercising actual handoffs
+found three concrete inconsistencies that this candidate fixes, with 58 regressions in
+`tests/test_workflow_discovery_handoffs.py`: dotted prefixes now work in class listing as
+well as search; exact dotted/default-package type names normalize without requiring a
+local class definition; and root-level arbitrary/uppercase `.dex` names appear in the DEX
+inventory just as they do in session loading. Real stdio and HTTP workflows read complete
+original bytes, open the discovered DEX, follow every class/type page and preserve external
+type declarations. Nested asset/resource categories and invalid/pattern selector rejection
+remain unchanged. The combined related suite passes 290 tests without skips.
+
+Structured discovery/reference matching is literal/exact where documented. The competitor
+accepts regex in some owner/type searches; this is an intentional semantic difference,
+not evidence that all 87 parameter combinations are interchangeable. The legacy CLI route
+retains its separately documented best-effort matching semantics.
+
+The strengthened call-index oracle now compares complete invocation/method/dynamic-row
+multisets and binds canonical original sources before graph replay. It supports ordinary
+pre-041 top-level APK DEX files; graph traversal/budget policy still uses shared product
+logic. This is stronger than emitted-site validity alone, but is not a universal graph,
+DEX 041 or performance proof. New release acceptance must bind the final candidate;
+all counts and receipts in the historical acceptance section below retain their original
+runtime scope.
+
 ## Complete Public Surface
 
 | Kind | Competitor name | Parameters excluding ctx | Our equivalent workflow | Behavioral evidence |
@@ -20,7 +45,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `load_artifact` | `path` | Raw DEX: asc_open_dex_session; archive: asc_inspect_artifact then asc_open_artifact_session when dex_analysis=true. Inventory-only inputs need no retained handle. SHA-256 and capability fields accompany results. | tests/test_dex.py; tests/test_containers.py; tests/test_dex_container.py |
 | tool | `close_artifact` | `analysis_id` | asc_close_dex_session releases immutable preparations; stateless archive inventory needs no close. | tests/test_sessions.py; tests/test_integration.py |
 | tool | `server_status` | `` | asc_ping reports effective roots, process/session limits, open_count, active_queries and opening_count. Capacity is supervised fresh workers, not a resident process pool. | tests/test_server.py; tests/test_sessions.py; tests/test_integration.py |
-| tool | `apk_get_summary` | `analysis_id` | asc_apk_info for APK hash/size/DEX; asc_manifest_summary for package/version/SDK declarations; asc_inspect_artifact for generic capabilities; asc_list_apk_entries(kind=native) for ABI/size. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
+| tool | `apk_get_summary` | `analysis_id` | asc_inspect_artifact(include_summary=true) returns hash/size, container capabilities, selected DEX, entry count, bounded native ABIs and compact manifest package/version/SDK declarations in one response. Manifest status and ABI truncation/count are explicit; AAB selects one module. asc_manifest_summary adds component details; entry tools add library sizes. | tests/test_artifact_summary.py; tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_get_manifest` | `analysis_id,include_xml` | asc_manifest_summary plus paged decoded manifest resource. Preserve declared versus effective permissions; XML is opt-in through resource/read tool rather than duplicating it in every summary. | tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_list_classes` | `analysis_id,prefix,query,cursor,limit` | DEX list_classes or search_classes(value=query,case_sensitive=false,prefix=prefix); JVM inventory asc_inspect_artifact(class_query,class_prefix). Both dotted and Dalvik class names/prefixes, literal substring, offset/limit pagination. Manifest component names can be passed directly; results keep exact Dalvik identities. | tests/test_structure.py; tests/test_containers.py; tests/test_integration.py |
 | tool | `apk_get_class_outline` | `analysis_id,class_name` | get_class_outline: flags/superclass, paged interfaces, fields with types/storage and methods with complete identities/flags/code/dispatch. | tests/test_structure.py; tests/test_integration.py |
@@ -36,8 +61,8 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `apk_disassemble_method` | `analysis_id,class_name,method_name,descriptor` | disassemble_method accepts exact class_name plus method_name directly; target_descriptor optionally filters the prototype. Only a unique declared definition executes; ambiguous_method and candidate_count preserve ambiguity. Full method_descriptor remains available, including from list_methods/get_class_outline. Paged structured opcode/operands/code-unit offsets; get_method_source uses the same selection for Smali or explicit Java. | tests/test_method_selection.py; tests/test_structure.py; tests/test_methods.py; tests/test_integration.py; scripts/verify_method_selection.py |
 | tool | `apk_get_class_hierarchy` | `analysis_id,class_name` | get_class_hierarchy reports superclass chain, direct interfaces/subclasses/implementors, external definitions and cycle diagnostics. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_get_call_graph` | `analysis_id,class_name,method_name,descriptor,depth` | get_call_graph accepts full method_descriptor or exact class_name plus method_name, with optional target_descriptor prototype; ambiguous selection fails before indexing/scanning. direction=both and depth 1-5 include competitor's 1-3. Independent node/edge/output caps preserve call-site offsets, external roots and unresolved dynamic sites. Bounded frontiers avoid mandatory full-index materialization; existing-index and dense-frontier fallback costs remain explicit. | tests/test_method_selection.py; tests/test_call_graph.py; tests/test_native_graph.py; tests/test_integration.py |
-| tool | `apk_list_entries` | `analysis_id,kind,cursor,limit` | asc_list_apk_entries works for all supported archives, category/prefix/offset/limit. AndroidManifest.xml is our separate manifest category, not silently grouped under metadata. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
-| tool | `apk_get_resource_content` | `analysis_id,path,max_bytes` | asc_read_apk_entry works for generic archives, bounded text/XML/base64. 128-KiB pages plus byte_offset/next_byte_offset reconstruct content larger than competitor's 1-MiB response cap; bounded XML decoding and CRC status remain explicit. | tests/test_archive.py; tests/test_containers.py; tests/test_integration.py |
+| tool | `apk_list_entries` | `analysis_id,kind,cursor,limit` | asc_list_apk_entries works for supported archives and standalone DEX, category/prefix/offset/limit. Standalone entries retain the original basename, size and whole-file hash, without ZIP CRC metadata or code-validation claims. AndroidManifest.xml is our separate manifest category. | tests/test_archive.py; tests/test_containers.py; tests/test_raw_dex_entries.py; tests/test_integration.py |
+| tool | `apk_get_resource_content` | `analysis_id,path,max_bytes` | asc_read_apk_entry supports generic archives and original standalone DEX bytes, including physical 041 bytes, with bounded text/XML/base64. 128-KiB pages plus byte_offset/next_byte_offset reconstruct content larger than competitor's 1-MiB response cap; XML decoding and CRC status remain explicit. | tests/test_archive.py; tests/test_containers.py; tests/test_raw_dex_entries.py; tests/test_integration.py |
 | tool | `apk_list_native_libraries` | `analysis_id` | asc_list_apk_entries(kind=native), all pages, ABI/original and compressed sizes. Archive inventory, not native-code disassembly. | tests/test_archive.py; tests/test_integration.py |
 | tool | `apk_get_signing_info` | `analysis_id` | asc_signing_inventory: v1/v2/v3 certificate metadata and v3.1 presence; cryptographic_verification=not_performed. Do not convert mere block presence into valid signatures. | tests/test_signing.py; scripts/verify_signing.py; tests/test_integration.py |
 | tool | `apk_scan_secrets` | `analysis_id,include_values,limit` | asc_secret_candidates covers the competitor's five pattern families plus GitHub tokens, include_values=false by default, explicit opt-in matched values, pages/fingerprints/source locations and scan limits. No automatic credential use. | tests/test_review.py; tests/test_structure.py; tests/test_integration.py |
@@ -45,19 +70,27 @@ check is not a substitute for the behavioral tests linked in each row.
 | resource | `artifact://{analysis_id}/manifest.xml` | `analysis_id` | droidasc://artifact/manifest{?apk_path,offset,limit}, allowed-root checks and hash-bound paged JSON XML envelope. Percent-encode URI query values. | tests/test_integration.py |
 | resource | `artifact://{analysis_id}/class/{class_name}` | `analysis_id,class_name` | droidasc://session/{session_id}/class{?class_name,offset,limit}, immutable session source with pagination/provenance. | tests/test_integration.py |
 | prompt | `artifact_triage` | `analysis_id` | triage_apk plus common analysis-guide routing, capabilities and evidence boundaries. | tests/test_server.py; tests/test_integration.py |
-| prompt | `trace_behavior` | `analysis_id,class_name,method_name` | Resolve an exact full identity, then trace_exact_method; outline/source/disassembly/call-site workflow and uncertainty guidance. | tests/test_server.py; tests/test_integration.py |
+| prompt | `trace_behavior` | `analysis_id,class_name,method_name` | trace_exact_method accepts class_name plus method_name directly, with optional target_descriptor prototype or a full method_descriptor. Selector validation/normalization uses the same query path; ambiguity resolution, source/disassembly/call-site and exact-page handoff are explicit. | tests/test_server.py; tests/test_integration.py |
 | prompt | `compare_artifacts` | `left_analysis_id,right_analysis_id` | compare_versions includes declaration/body/manifest/resource/signing follow-up and untrusted-input quoting. | tests/test_server.py; tests/test_integration.py |
 
 ## Parameter And Format Rules
 
 - Competitor cursor strings encode integer offsets; our next_offset is an integer. Follow pages,
   not tool-count equivalence. Default page sizes differ; both accept explicit bounded limits.
+- Our DEX worker also caps encoded responses at 256 KiB. Method/field references, outgoing
+  calls and fuzzy member-reference queries now return a complete prefix when the requested
+  maximum row count would exceed that cap. page_limited_by=response_bytes explains a short
+  page; next_offset advances by the actual row count, not the requested limit. No site is
+  discarded. Unpageable rows/metadata and other oversized operations still return
+  response_limit. The complete-reference verifier checks adaptive continuations, encoded
+  byte bounds and the remaining explicit-error recovery path independently.
 - Our empty member queries enumerate declarations; the competitor rejects them. Empty class
   queries use list_classes; an empty
   string/body search is intentionally rejected rather than returning every pool/instruction row.
 - Method/field exact_name=false and fuzzy_class workflows use the single-pass `search_refs`
   union, including omitted member names and exact prototype/type filtering. Exact-reference
-  operations still require complete identities; fuzzy results retain exact per-site identities.
+  operations resolve a unique declared definition for class/name selectors, or accept the
+  complete identity directly; fuzzy results retain exact per-site identities.
 - Competitor evidence offsets are caller-relative **bytes**; ours are **16-bit code units**.
   Multiply ours by two only when comparing the same instruction stream. Source token spans
   are Unicode code points; resource offsets are bytes. None is an absolute DEX file address.
@@ -76,6 +109,131 @@ check is not a substitute for the behavioral tests linked in each row.
   identity checks are retained rather than copied from the competitor's weaker boundaries.
 
 ## Acceptance Status
+
+The subsequent full-concurrency/bounded-graph harness increment verifies all 72 complete
+product collections over two/four CPUs and all 24 measured product graphs. Twelve of 72
+comparator collections retain the Taobao-field 97-extra-site failure; four-CPU Douyin
+repeated complete concurrency remains slower. Comparator graphs time out around the
+enforced 30-second budget, without an equal successful graph for a speed comparison.
+All product graphs explicitly report output-byte truncation. Fresh original-byte full-index
+replay plus independent emitted-site decoding do not establish independent full-graph
+completeness. The focused harness gate passes 110 cases with zero skips; inventory audit
+still matches 25 tools, two resources, three prompts and 87 parameters. See
+artifacts/graph-concurrent-20261024/summary.json and STARTUP_STORAGE_EXPERIMENTS.md.
+This is not a production performance fix, full behavioral closure or release approval.
+
+The latest adaptive reference-page increment passes 288 focused tests, zero skips, with
+52 deliberately deselected integration cases. Both transports collect all 2000 generated
+DEX call sites twice without failed-page retries. Fresh independent original-byte checks
+accept all 98581 selected sites/148 pages and 36 product collection replays; all 36 frozen
+before/after complete collections also match accepted current responses. The same six
+competitor Taobao-field replays retain 97 extra sites each. Fresh latency effects remain
+mixed: Taobao/Douyin method repeats, Taobao complete-method startup and WeChat field
+startup still lose. See artifacts/adaptive-reference-pages-20261024/accepted/summary.json
+and STARTUP_STORAGE_EXPERIMENTS.md. The public inventory audit still matches the pinned
+25 tools, two resources, three prompts and 87 parameters, but broader behavioral closure
+and new full cross-platform/package gates remain open. Subsequent paragraphs retain the
+earlier candidate history, not acceptance for the latest runtime.
+
+The development-branch compact-summary and direct trace-prompt additions pass the local
+1213-test source suite on Linux Python 3.13, including real stdio/HTTP handoff and error
+recovery. scripts/verify_artifact_summary.py compares real-MCP summary fields with the
+pinned competitor and original ZIP/hash evidence on the private large-APK corpus.
+These additions are separate from the frozen, published v0.2.3 acceptance. The subsequent
+workflow/raw-DEX candidate e3f381927c98976d4b2052ec29e0d86136e47c48 passes CI
+39967501671: all 25 jobs, Linux/Windows Python 3.10-3.13, 1264 source tests per cell
+with zero failures/errors/skips, and the same count for each canonical-sdist/native-wheel
+installation. Downloaded package/source identity and signing variants are checked separately.
+The exact Linux wheel also independently verifies all 884805 original class/owner identities
+and snapshot bytes across the three private APKs, plus every selected Taobao method/field
+reference row and diagnostic over three rounds. Receipts are under
+artifacts/workflow-entry-ci-39967501671. These are candidate gates, not release approval or
+evidence of universal workflow/performance superiority.
+
+The later real-stdio complete-reference exercise verifies all ordered method/field sites
+for two selected identities across Taobao, WeChat and Douyin, including adaptive recovery
+from response_limit, every successful continuation and scanner diagnostics. Independent
+original DEX enumeration prevents the oracle from inheriting a missing source entry.
+The final three receipts cover 98581 rows and 200 successful pages, with immutable
+input/runtime/oracle identity and temporary cleanup; see VALIDATION.md. This is not a
+full collection-latency comparison or all-query coverage. Before selected-set reuse,
+exact-page caches retained offset/limit in their keys and each unseen page rescanned
+the input; the separate complete-collection baseline below measures that amplification.
+
+The 2026-10-24 development implementation now adds complete selected-set reuse across
+reference page offsets, within the existing global session disk budget. Exact-page reuse
+remains separate. The six cached-versus-uncached selector regressions compare whole
+responses, including named-method selection metadata and declared-target resolution;
+real stdio/HTTP reference/fuzzy pagination and concurrent/cancellation/quota/invalidation
+regressions also pass. The focused selection has 196 passing tests, zero skips and 56
+intentional other-integration deselections. Fresh large-input measurements and independent
+accuracy must use this new runtime; the earlier baseline/prototype and e3f3819 CI results
+remain historical rather than new release approval. See STARTUP_STORAGE_EXPERIMENTS.md.
+The final selected-cache corpus verifies 98581 original-byte sites/200 real-MCP pages
+and 36 product collection replays, with 36 matched timing trials. In that run, selected
+first complete query medians favor the product, but all three repeat medians and
+Taobao/WeChat startup-to-complete still lose. The six competitor Taobao field replays
+retain the 97-extra-site failure. Full evidence and exact scope are bound in
+artifacts/selected-reference-cache-20261024/bounded-retry/summary.json.
+
+The subsequent output-schema increment keeps every runtime contract and result field,
+using equivalent primitive type arrays to reduce nullable-field client validation.
+All generated primitive unions retain the original validation outcomes; constrained
+branches and other schema structure remain unchanged. Its focused gate passes 203 tests,
+zero skips, with 52 deliberate deselections. Fresh original-byte checks pass all 98581
+sites/200 pages; all 36 product collection replays pass in 36 new matched timing trials.
+The comparator's six Taobao field replays still fail with 97 extra sites each. The
+separate frozen-source before/after trial has 36 complete responses matching independent
+current acceptance. In the fresh comparator batch all three first complete method query
+and method startup medians favor the product, but all three complete method repeats
+and WeChat field startup remain slower. Exact scope, timings and resources are in
+STARTUP_STORAGE_EXPERIMENTS.md and
+artifacts/selected-reference-cache-20261024/schema-types/summary.json. These results do
+not establish all-query superiority or replace the remaining cross-platform/package gate.
+
+The earlier complete-collection baseline pilot measures the original paging deficit: all selected method sites
+match the independent original-byte scanner across the three large APKs, while complete
+product pagination was substantially slower than the pinned competitor. All second full
+collections also missed the then-current exact-page LRU. The Taobao competitor field collection
+fails independent parity with 97 extra sites (429 versus 332). Androguard verifies that five
+listed examples lie beyond their named caller's instruction stream; InsnLocator's bucket
+association tracks starts but lacks precise method-end checks. WeChat/Douyin method and
+field collections pass full parity for both implementations. The failed Taobao field receipt
+is retained rather than labelled a passing timing comparison. See the complete-collection
+baseline in STARTUP_STORAGE_EXPERIMENTS.md; these one-round pilots are not final gates.
+
+The 2026-10-23 parameter exercise reads the pinned server's forwarding of `fuzzy_class`,
+`exact_name`, `descriptor`/`field_type`, `cursor` and `limit` and checks the corresponding
+selectors over both real transports. `test_native_fuzzy_references_without_java` now
+checks all four exact/fuzzy owner/name combinations against exact-site responses for
+both `pick` overloads and both `value:I`/`value:J` fields. It also checks omitted names,
+case-sensitive misses, prefix-plus-substring class selection, complete one-row pagination
+and beyond-end pages. This exercises combinations rather than counting parameter names.
+
+`test_resource_content_continuation_over_transport` follows an inventory `next_offset`
+to a path containing spaces and a plus sign, then follows nine `next_byte_offset` values
+to reconstruct all 1,048,832 original binary bytes. Every page is bounded and hash-bound;
+EOF, invalid-offset recovery, no retained session and unchanged input are checked. This
+exercises the documented paged alternative to the competitor's larger single response,
+not a same-call `max_bytes` compatibility claim. The four targeted stdio/HTTP cases pass,
+zero skips: `artifacts/startup-next-20261023/workflow-parameters-targeted-fixed.xml`.
+The initial resource-test failure was an incorrect test assumption about inventory order;
+the final test follows the returned cursor instead. No runtime change was required.
+
+Further source inspection of `service.py:list_entries/resource_content` identified an
+actual standalone-DEX gap, not covered by archive-only equivalence. The candidate now
+routes those two entry operations through the existing supervised worker and original
+before/after file identity/hash checks. The file read is bounded to a page plus one
+sentinel byte; inventory does not normalize 041 or validate code. Missing names,
+unsafe paths, unsupported archive capabilities, invalid page selectors and changed inputs
+fail explicitly. ZIP CRC fields are absent for a raw file. `asc_inspect_artifact` and archive
+session loading retain their existing archive policy; raw analysis still opens DEX paths.
+The targeted entry/archive/container/schema/real-transport selection passes 178 cases,
+zero skips and 56 deliberate transport deselections:
+`artifacts/startup-next-20261023/raw-dex-targeted-zero-skips.xml`.
+The full current Linux Python 3.13 suite subsequently passes 1262 cases in 212.53 seconds,
+zero failures/errors/skips: `artifacts/startup-next-20261023/source-full-raw-dex-entry.xml`.
+Windows and canonical-package gates for this new runtime are separate from that local result.
 
 `test_complete_investigation_handoffs_without_java[stdio/http]` exercises one connected
 investigation, rather than independent calls with every descriptor hard-coded: capability

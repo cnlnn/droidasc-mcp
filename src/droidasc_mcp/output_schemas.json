@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "b36b1950ac9343a8b0a939910af73caf6d1ca45742bfbe96fc4b2273e0fb0134",
+  "contracts_sha256": "ad48a46a3394fe8cbe0b418634af84e2ee39a82958d90bd5c8fa8880c04dc212",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "7e772623d43d0dc34b8dc8ddbc653efa44963c44f96cc1afa225bab7a64cfeac",
+  "schemas_sha256": "0b19a1cdbede28c1a37ac184d236d64a5da1f94256ab47263ab4fb142ce3be4e",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -70,15 +70,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -205,15 +201,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -225,6 +217,11 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "format_validation": {
+          "const": "not_performed",
+          "title": "Format Validation",
+          "type": "string"
         },
         "items": {
           "items": {
@@ -261,15 +258,11 @@
           "type": "integer"
         },
         "next_byte_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Byte Offset"
+          "title": "Next Byte Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "content_complete": {
           "title": "Content Complete",
@@ -330,6 +323,56 @@
           "title": "ArtifactDifference",
           "type": "object"
         },
+        "ArtifactSummary": {
+          "additionalProperties": true,
+          "properties": {
+            "entry_count": {
+              "title": "Entry Count",
+              "type": "integer"
+            },
+            "native_scope": {
+              "enum": [
+                "archive",
+                "selected_module"
+              ],
+              "title": "Native Scope",
+              "type": "string"
+            },
+            "native_library_count": {
+              "title": "Native Library Count",
+              "type": "integer"
+            },
+            "native_abis": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Native Abis",
+              "type": "array"
+            },
+            "native_abi_count": {
+              "title": "Native Abi Count",
+              "type": "integer"
+            },
+            "native_abis_truncated": {
+              "title": "Native Abis Truncated",
+              "type": "boolean"
+            },
+            "manifest": {
+              "$ref": "#/$defs/ManifestHeader"
+            }
+          },
+          "required": [
+            "entry_count",
+            "native_scope",
+            "native_library_count",
+            "native_abis",
+            "native_abi_count",
+            "native_abis_truncated",
+            "manifest"
+          ],
+          "title": "ArtifactSummary",
+          "type": "object"
+        },
         "Entry": {
           "additionalProperties": true,
           "properties": {
@@ -358,15 +401,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -375,6 +414,100 @@
             "size_bytes"
           ],
           "title": "Entry",
+          "type": "object"
+        },
+        "ManifestHeader": {
+          "additionalProperties": true,
+          "properties": {
+            "status": {
+              "enum": [
+                "ok",
+                "error",
+                "not_applicable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "entry": {
+              "title": "Entry",
+              "type": "string"
+            },
+            "code": {
+              "title": "Code",
+              "type": "string"
+            },
+            "message": {
+              "title": "Message",
+              "type": "string"
+            },
+            "xml_format": {
+              "enum": [
+                "text_xml",
+                "android_binary_xml"
+              ],
+              "title": "Xml Format",
+              "type": "string"
+            },
+            "decoding_warnings": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Decoding Warnings",
+              "type": "array"
+            },
+            "package_name": {
+              "title": "Package Name",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "version_name": {
+              "title": "Version Name",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "version_code": {
+              "title": "Version Code",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "min_sdk": {
+              "title": "Min Sdk",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target_sdk": {
+              "title": "Target Sdk",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "application_name": {
+              "title": "Application Name",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "resource_values_resolved": {
+              "const": false,
+              "title": "Resource Values Resolved",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "status",
+            "entry"
+          ],
+          "title": "ManifestHeader",
           "type": "object"
         },
         "Source": {
@@ -491,15 +624,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -526,15 +655,11 @@
           "type": "string"
         },
         "selected_module": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Selected Module"
+          "title": "Selected Module",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "modules": {
           "items": {
@@ -583,6 +708,9 @@
           },
           "title": "Items",
           "type": "array"
+        },
+        "summary": {
+          "$ref": "#/$defs/ArtifactSummary"
         }
       },
       "required": [
@@ -653,26 +781,18 @@
               "type": "string"
             },
             "instruction_offset": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instruction Offset"
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "offset_unit": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset Unit"
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "opcode": {
               "title": "Opcode",
@@ -707,15 +827,11 @@
               "type": "string"
             },
             "target_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Dex Entry"
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "parameter_types": {
               "items": {
@@ -792,26 +908,18 @@
               "type": "string"
             },
             "dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Dex Entry"
+              "title": "Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "without_code": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Without Code"
+              "title": "Without Code",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "expansion_status": {
               "title": "Expansion Status",
@@ -889,6 +997,14 @@
             "scope": {
               "title": "Scope",
               "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
             }
           },
           "required": [
@@ -1054,15 +1170,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -1074,6 +1186,15 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "page_limited_by": {
+          "const": "response_bytes",
+          "title": "Page Limited By",
+          "type": "string"
+        },
+        "response_byte_limit": {
+          "title": "Response Byte Limit",
+          "type": "integer"
         },
         "member_references": {
           "items": {
@@ -1099,15 +1220,11 @@
           "type": "string"
         },
         "superclass": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Superclass"
+          "title": "Superclass",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "access_flags": {
           "title": "Access Flags",
@@ -1357,26 +1474,18 @@
               "type": "string"
             },
             "old_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Old Dex Entry"
+              "title": "Old Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "new_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "New Dex Entry"
+              "title": "New Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -1503,15 +1612,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -1649,26 +1754,18 @@
               "type": "string"
             },
             "instruction_offset": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Instruction Offset"
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "offset_unit": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Offset Unit"
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "opcode": {
               "title": "Opcode",
@@ -1703,15 +1800,11 @@
               "type": "string"
             },
             "target_dex_entry": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Dex Entry"
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "parameter_types": {
               "items": {
@@ -1888,15 +1981,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -1953,26 +2042,18 @@
               "type": "string"
             },
             "name": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Name"
+              "title": "Name",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "target_activity": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Target Activity"
+              "title": "Target Activity",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "declarations": {
               "additionalProperties": {
@@ -1982,41 +2063,29 @@
               "type": "object"
             },
             "exported": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Exported"
+              "title": "Exported",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "exported_status": {
               "title": "Exported Status",
               "type": "string"
             },
             "enabled": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Enabled"
+              "title": "Enabled",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "effective_enabled": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Effective Enabled"
+              "title": "Effective Enabled",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "effective_permission": {
               "$ref": "#/$defs/Permission"
@@ -2100,15 +2169,11 @@
               "type": "boolean"
             },
             "abi": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Abi"
+              "title": "Abi",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -2167,15 +2232,11 @@
           "additionalProperties": true,
           "properties": {
             "value": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Value"
+              "title": "Value",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "source": {
               "title": "Source",
@@ -2310,15 +2371,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -2342,15 +2399,11 @@
           "$ref": "#/$defs/Entry"
         },
         "package_name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Package Name"
+          "title": "Package Name",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "declarations": {
           "additionalProperties": {
@@ -2512,11 +2565,18 @@
               "title": "Memory Page Cache Max Entries",
               "type": "integer"
             },
+            "selected_reference_cache": {
+              "$ref": "#/$defs/Capabilities"
+            },
             "durable_index_cache": {
               "$ref": "#/$defs/Capabilities"
             },
             "max_bytes": {
               "title": "Max Bytes",
+              "type": "integer"
+            },
+            "max_entry_bytes": {
+              "title": "Max Entry Bytes",
               "type": "integer"
             },
             "scope": {
@@ -2638,15 +2698,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -2885,15 +2941,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",
@@ -2994,15 +3046,11 @@
               "type": "string"
             },
             "public_key_bits": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Public Key Bits"
+              "title": "Public Key Bits",
+              "type": [
+                "integer",
+                "null"
+              ]
             },
             "public_key_sha256": {
               "title": "Public Key Sha256",
@@ -3110,15 +3158,11 @@
               "type": "string"
             },
             "container_present": {
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Container Present"
+              "title": "Container Present",
+              "type": [
+                "boolean",
+                "null"
+              ]
             },
             "signers": {
               "items": {
@@ -3265,15 +3309,11 @@
           "type": "boolean"
         },
         "next_offset": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Next Offset"
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "coverage": {
           "title": "Coverage",

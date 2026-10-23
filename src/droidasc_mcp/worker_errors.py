@@ -5,6 +5,14 @@ class DroidAscError(RuntimeError):
     """Raised when Droid ASC fails or violates an adapter limit."""
 
 
+def response_limit():
+    return {
+        "status": "error",
+        "code": "response_limit",
+        "message": "DEX response exceeds budget; reduce limit or narrow the query",
+    }
+
+
 def page_bounds(offset, limit, maximum):
     if offset < 0:
         raise ValueError("offset must be zero or greater")

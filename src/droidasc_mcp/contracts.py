@@ -57,8 +57,10 @@ class Capabilities(Object, total=False):
     max_index_bytes_per_session: int
     memory_page_cache_bytes_per_session: int
     memory_page_cache_max_entries: int
+    selected_reference_cache: "Capabilities"
     durable_index_cache: "Capabilities"
     max_bytes: int
+    max_entry_bytes: int
     scope: str
 
 
@@ -107,6 +109,7 @@ class Entry(Object, total=False):
 
 class ArchiveResult(Result, total=False):
     status: Required[Literal["ok", "partial", "error", "not_applicable"]]
+    format_validation: Literal["not_performed"]
     items: list[Entry]
     entry: Entry
     entry_path: str
@@ -225,6 +228,32 @@ class ArtifactDifference(Object, total=False):
     change: Required[Literal["added", "removed"]]
 
 
+class ManifestHeader(Object, total=False):
+    status: Required[Literal["ok", "error", "not_applicable"]]
+    entry: Required[str]
+    code: str
+    message: str
+    xml_format: Literal["text_xml", "android_binary_xml"]
+    decoding_warnings: list[str]
+    package_name: str | None
+    version_name: str | None
+    version_code: str | None
+    min_sdk: str | None
+    target_sdk: str | None
+    application_name: str | None
+    resource_values_resolved: Literal[False]
+
+
+class ArtifactSummary(Object, total=False):
+    entry_count: Required[int]
+    native_scope: Required[Literal["archive", "selected_module"]]
+    native_library_count: Required[int]
+    native_abis: Required[list[str]]
+    native_abi_count: Required[int]
+    native_abis_truncated: Required[bool]
+    manifest: Required[ManifestHeader]
+
+
 class ArtifactResult(Result, total=False):
     status: Required[Literal["ok", "error"]]
     artifact_kind: Literal["apk", "jar", "aar", "aab", "apks", "xapk", "zip"]
@@ -237,6 +266,7 @@ class ArtifactResult(Result, total=False):
     jvm_decompilation: bool
     split_reconstruction: bool
     items: list[Entry | ArtifactDifference]
+    summary: ArtifactSummary
 
 
 class DexRow(Object, total=False):
@@ -293,6 +323,8 @@ class QueryCache(Object, total=False):
     hit: Required[bool]
     stored: bool
     scope: Required[str]
+    budget_bytes: int
+    stored_bytes: int
 
 
 class GraphNode(Object, total=False):
@@ -315,6 +347,8 @@ class SourceReference(Object, total=False):
 
 
 class DexResult(Result, total=False):
+    page_limited_by: Literal["response_bytes"]
+    response_byte_limit: int
     member_references: list[SourceReference]
     source_sha256: str
     source_start: int

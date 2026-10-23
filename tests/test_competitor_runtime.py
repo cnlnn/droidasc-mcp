@@ -110,6 +110,213 @@ def test_string_scenario_uses_literal_api_with_the_same_value(benchmark, impleme
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("implementation", ["ours", "competitor"])
+@pytest.mark.parametrize("count", [0, 1, 5])
+async def test_full_reference_collection_follows_every_cursor(benchmark, implementation, count):
+    calls = []
+    rows = [{"value": i} for i in range(count)]
+
+    async def call(label, tool, params, **kwargs):
+        calls.append((label, params))
+        ours = implementation == "ours"
+        offset = params["offset"] if ours else int(params["cursor"] or 0)
+        page = rows[offset : offset + params["limit"]]
+        more = offset + len(page) < count
+        if ours:
+            return {
+                "status": "ok",
+                "items": page,
+                "total": count,
+                "offset": offset,
+                "limit": params["limit"],
+                "has_more": more,
+                "truncated": more,
+                "next_offset": offset + len(page) if more else None,
+                "scanned_instructions": 100,
+                "query_cache": {"hit": bool(offset)},
+            }
+        return {
+            "hits": page,
+            "total": count,
+            "next_cursor": str(offset + len(page)) if more else None,
+        }
+
+    result, pages, recoveries = await benchmark.collect_reference_pages(
+        call, implementation, "tool", {}, "query:0:0", 2
+    )
+    assert result["items" if implementation == "ours" else "hits"] == rows
+    assert len(pages) == max(1, (count + 1) // 2) == len(calls)
+    assert not recoveries
+
+
+@pytest.mark.anyio
+async def test_full_reference_recovery_preserves_offset_and_retry_cost(benchmark):
+    calls = []
+
+    async def call(label, tool, params, **kwargs):
+        offset, limit = params["offset"], params["limit"]
+        calls.append((offset, limit))
+        if (offset, limit) == (2, 2):
+            return {"status": "error", "code": "response_limit"}
+        items = list(range(offset, min(offset + limit, 5)))
+        more = offset + len(items) < 5
+        return {
+            "status": "ok",
+            "items": items,
+            "total": 5,
+            "offset": offset,
+            "limit": limit,
+            "has_more": more,
+            "truncated": more,
+            "next_offset": offset + len(items) if more else None,
+        }
+
+    result, pages, recoveries = await benchmark.collect_reference_pages(
+        call, "ours", "tool", {}, "query:0:0", 2
+    )
+    assert result["items"] == list(range(5)) and len(pages) == 4
+    assert recoveries == [{"offset": 2, "limit": 2}]
+    assert calls == [(0, 2), (2, 2), (2, 1), (3, 1), (4, 1)]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("damage", ["cursor", "total", "diagnostic", "empty", "error", "limit"])
+async def test_full_reference_collection_rejects_incomplete_or_changed_pages(benchmark, damage):
+    async def call(label, tool, params, **kwargs):
+        offset = params["offset"]
+        result = {
+            "status": "ok",
+            "items": [offset],
+            "total": 3,
+            "offset": offset,
+            "limit": 1,
+            "has_more": offset < 2,
+            "truncated": offset < 2,
+            "next_offset": offset + 1 if offset < 2 else None,
+            "scan_errors": 0,
+        }
+        if offset:
+            if damage == "cursor":
+                result["next_offset"] = 0
+            elif damage == "total":
+                result["total"] = 2
+            elif damage == "diagnostic":
+                result["scan_errors"] = 1
+            elif damage == "empty":
+                result["items"] = []
+            elif damage == "error":
+                result = {"status": "error", "code": "timeout"}
+            elif damage == "limit":
+                result["items"] = [1, 2]
+        return result
+
+    with pytest.raises(AssertionError):
+        await benchmark.collect_reference_pages(call, "ours", "tool", {}, "q", 1)
+
+
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
+@pytest.mark.parametrize("scenario", ["full_method", "full_field"])
+def test_full_reference_scenarios_preserve_exact_target(benchmark, implementation, scenario):
+    full = benchmark.queries(implementation, "key", scenario, benchmark.GRAPH_ROOT, 3)
+    normal = benchmark.queries(
+        implementation, "key", scenario.removeprefix("full_"), benchmark.GRAPH_ROOT, 3
+    )
+    assert full == normal
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
+async def test_full_reference_trial_measures_last_response_and_all_recovery_attempts(
+    benchmark, tmp_path, monkeypatch, implementation
+):
+    calls = []
+    ours = implementation == "ours"
+
+    class Client:
+        def __init__(self, endpoint):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def call_tool(self, name, params, **kwargs):
+            await asyncio.sleep(0.01)
+            calls.append((name, params))
+            if name in {"asc_open_artifact_session", "load_artifact"}:
+                result = {"status": "ok", "session_id": "s", "analysis_id": "s"}
+            elif name in {"asc_close_dex_session", "close_artifact"}:
+                result = {"status": "ok"}
+            elif ours and params["limit"] == 2:
+                result = {"status": "error", "code": "response_limit"}
+            else:
+                offset = params["offset"] if ours else int(params["cursor"] or 0)
+                rows = list(range(offset, min(offset + params["limit"], 3)))
+                more = offset + len(rows) < 3
+                result = (
+                    {
+                        "status": "ok",
+                        "items": rows,
+                        "total": 3,
+                        "offset": offset,
+                        "limit": params["limit"],
+                        "has_more": more,
+                        "truncated": more,
+                        "next_offset": offset + len(rows) if more else None,
+                    }
+                    if ours
+                    else {
+                        "hits": rows,
+                        "total": 3,
+                        "next_cursor": str(offset + len(rows)) if more else None,
+                    }
+                )
+            return SimpleNamespace(is_error=False, structured_content=result)
+
+    monkeypatch.setattr(benchmark, "Client", Client)
+    args = SimpleNamespace(
+        cpu_affinity=[0, 1],
+        workers=2,
+        apk=tmp_path / "fixture.apk",
+        timeout=5,
+        session_disk_mib=8192,
+        expanded_mib=128,
+        memory_mib=4096,
+        graph_root=benchmark.GRAPH_ROOT,
+        graph_depth=3,
+        repeats=2,
+        page_size=2,
+    )
+    report = {"trials": []}
+
+    def save():
+        assert calls[-1][0] == ("asc_close_dex_session" if ours else "close_artifact")
+
+    await benchmark.trial(args, implementation, "full_method", 0, report, save)
+    metric = report["trials"][0]
+    assert metric["status"] == "passed", metric
+    assert len(metric["reference_collections"]) == len(metric["batch_seconds"]) == 2
+    first_collection = metric["reference_collections"][0]
+    first_ops = [op for op in metric["operations"] if op["label"].startswith("query:0:0:")]
+    assert len(first_collection["page_labels"]) == (3 if ours else 2)
+    assert len(first_ops) == (4 if ours else 2)
+    assert (
+        metric["first_result_from_process_start_seconds"]
+        == first_ops[-1]["response_from_process_start_seconds"]
+    )
+    assert (
+        metric["first_result_from_process_start_seconds"]
+        > first_ops[0]["response_from_process_start_seconds"]
+    )
+    assert metric["batch_seconds"][0] >= sum(op["seconds"] for op in first_ops) - 0.001
+    assert first_collection["response_limit_recoveries"] == (
+        [{"offset": 0, "limit": 2}] if ours else []
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
 @pytest.mark.parametrize("scenario", ["method", "concurrent"])
 @pytest.mark.parametrize("disk_limited", [False, True])
 async def test_full_receipt_only_saved_after_measured_responses(

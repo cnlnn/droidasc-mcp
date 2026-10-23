@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.4
+
+- Complete artifact-to-query handoffs for dotted class prefixes and exact Java type names,
+  including external types. Classify arbitrary root-level `.dex` names consistently with
+  session loading, preserving nested resource categories and exact original-byte reads.
+- Add bounded complete selected-reference reuse across page offsets and adaptive response-byte
+  paging, preserving every ordered site, diagnostics, provenance and quota fallback behavior.
+- Carry forward compact artifact summaries, direct method-trace selectors and standalone DEX
+  entry reads from the unpublished workflow branch without replacing its source history.
+- Independently accept every persisted call site, method/scan counter and dynamic record before
+  graph replay; bind original sources, runtime, decoder and accepted index hashes. Add omission,
+  duplicate, provenance and equal-count corruption rejection for ordinary pre-041 APK DEX files.
+- Validate compact nullable wire schemas by accepted/rejected values and strict SDK conversion,
+  rather than depending on one equivalent JSON Schema spelling. Expand real stdio/HTTP handoff
+  regressions and require the new acceptance tests in canonical source distributions.
+- Keep larger-input startup, complete-repeat/concurrency and retained-storage gaps explicit.
+  This is a 0.2.x increment, not evidence of all-dimension superiority or a 0.3.0 release.
+
 ## 0.2.3
 
 - Add checked native DEX references, declaration/string discovery, class outlines,

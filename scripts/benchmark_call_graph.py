@@ -169,9 +169,12 @@ def verify_sites(args):
 
 
 def emitted_edges(report):
+    return graph_edges(report[name] for name in ("graph", "fanout_graph"))
+
+
+def graph_edges(graphs):
     combined = []
-    for name in ("graph", "fanout_graph"):
-        graph = report[name]
+    for graph in graphs:
         edges = graph["edges"]
         identities = {(row["dex_entry"], row["caller"], row["instruction_offset"]) for row in edges}
         assert graph["edge_count"] == len(edges), "Graph edge count differs from emitted rows"
@@ -181,10 +184,6 @@ def emitted_edges(report):
 
 
 def _verify_sites(args, report):
-    from androguard.core.dex import DEX
-    from loguru import logger
-
-    logger.remove()
     assert report["status"] == "passed", "Transport benchmark did not pass"
     assert sha256(args.apk) == report["apk_sha256"]
     assert report["runtime_sha256"] == runtime_identity(), "Runtime differs from measured graph"
@@ -192,12 +191,33 @@ def _verify_sites(args, report):
     assert report["oracle_sha256"] == sha256(
         Path(__file__).with_name("verify_fuzzy_references.py")
     ), "Oracle changed after measurement"
-    edges = emitted_edges(report)
+    result = verify_sites_in_graphs(
+        args.apk, report["sources"], (report["graph"], report["fanout_graph"])
+    )
+    assert sha256(args.apk) == report["apk_sha256"], "Input changed during verification"
+    assert report["runtime_sha256"] == runtime_identity(), "Runtime changed during verification"
+    assert report["verifier_sha256"] == sha256(Path(__file__)), (
+        "Verifier changed during verification"
+    )
+    assert report["oracle_sha256"] == sha256(
+        Path(__file__).with_name("verify_fuzzy_references.py")
+    ), "Oracle changed during verification"
+    return result
+
+
+def verify_sites_in_graphs(apk, sources, graphs):
+    """Decode emitted sites independently; completeness needs a separate graph oracle."""
+    from androguard.core.dex import DEX
+    from loguru import logger
+
+    logger.remove()
+    edges = graph_edges(graphs)
     wanted = {(e["dex_entry"], e["caller"]) for e in edges}
-    source_entries = {row["dex_entry"]: row for row in report["sources"]}
-    assert len(source_entries) == len(report["sources"]), "Duplicate canonical source entry"
+    source_entries = {row["dex_entry"]: row for row in sources}
+    assert len(source_entries) == len(sources), "Duplicate canonical source entry"
+    assert all(entry in source_entries for entry, _ in wanted), "Missing graph source mapping"
     oracle = set()
-    with zipfile.ZipFile(args.apk) as archive:
+    with zipfile.ZipFile(apk) as archive:
         for name, source in source_entries.items():
             if not any(entry == name for entry, _ in wanted):
                 continue
@@ -250,14 +270,6 @@ def _verify_sites(args, report):
         for e in edges
     }
     assert expected <= oracle, sorted(expected - oracle)[:5]
-    assert sha256(args.apk) == report["apk_sha256"], "Input changed during verification"
-    assert report["runtime_sha256"] == runtime_identity(), "Runtime changed during verification"
-    assert report["verifier_sha256"] == sha256(Path(__file__)), (
-        "Verifier changed during verification"
-    )
-    assert report["oracle_sha256"] == sha256(
-        Path(__file__).with_name("verify_fuzzy_references.py")
-    ), "Oracle changed during verification"
     return {
         "status": "passed",
         "backend": "androguard sequential method instruction decoding",

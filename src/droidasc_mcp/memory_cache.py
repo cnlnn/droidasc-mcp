@@ -7,6 +7,8 @@ from collections import OrderedDict
 from importlib.metadata import version
 from pathlib import Path
 
+from .reference_page import OPERATIONS, reference_page
+
 MAX_BYTES = 4 * 1024**2
 MAX_PAGE_BYTES = 256 * 1024
 MAX_ENTRIES = 32
@@ -26,7 +28,7 @@ def signature(settings, root):
     ]
     if java:
         paths.append(Path(java))
-    for name in ("xrefs.sqlite", "calls.sqlite"):
+    for name in ("analysis.apk", "prepared.json", "owners.sqlite", "xrefs.sqlite", "calls.sqlite"):
         index = root / name
         if index.exists():
             paths.append(index)
@@ -77,6 +79,8 @@ class PageCache:
             self.pages[key] = encoded
             result = json.loads(encoded)
             result["query_cache"] = {"hit": True, "scope": "exact_query_page"}
+            if query.get("operation") in OPERATIONS:
+                result = reference_page(result, settings.max_output_bytes)
             return result, identity, key
         return None, identity, key
 

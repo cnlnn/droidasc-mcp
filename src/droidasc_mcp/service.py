@@ -7,6 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from . import __version__
 from .config import Settings
+from .reference_cache import MAX_ENTRY_BYTES, MAX_SESSION_BYTES
 from .runner import DroidAscRunner, ReferenceKind
 from .rust_backend import LIMITATION, TESTED_COMMIT, RustAscRunner
 from .sessions import DexSessions
@@ -40,6 +41,8 @@ class DroidAscService:
 
         path = self.settings.validate_artifact(artifact_path)
         validate_budget(query.get("max_uncompressed_bytes", 128 * 1024**2), self.settings)
+        if type(query.get("include_summary", False)) is not bool:
+            raise ValueError("include_summary must be a boolean")
         if query.get("compare_to"):
             query["compare_to"] = str(self.settings.validate_artifact(query["compare_to"]))
             if query.get("class_query") is not None or query.get("class_prefix") is not None:
@@ -47,8 +50,8 @@ class DroidAscService:
         for key in ("class_query", "class_prefix"):
             if query.get(key) is not None and not isinstance(query[key], str):
                 raise ValueError(f"{key} must be a literal string")
-        if query.get("class_prefix") and not query["class_prefix"].startswith("L"):
-            query["class_prefix"] = "L" + query["class_prefix"].replace(".", "/")
+        if query.get("class_prefix"):
+            query["class_prefix"] = _normalize_class_prefix(query["class_prefix"])
         return self.runner.query_archive(path, {"operation": "artifact_inventory", **query})
 
     def open_artifact_session(
@@ -194,6 +197,12 @@ class DroidAscService:
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
                 "memory_page_cache_bytes_per_session": 4 * 1024**2,
                 "memory_page_cache_max_entries": 32,
+                "selected_reference_cache": {
+                    "enabled": True,
+                    "max_bytes": MAX_SESSION_BYTES,
+                    "max_entry_bytes": MAX_ENTRY_BYTES,
+                    "scope": "session_selected_reference_sets_within_session_disk_budget",
+                },
                 "durable_index_cache": {
                     "enabled": self.settings.xref_cache_dir is not None,
                     "max_bytes": self.settings.max_xref_cache_bytes,
@@ -208,7 +217,7 @@ class DroidAscService:
         return self.runner.apk_info(apk, include_sha256)
 
     def query_archive(self, apk_path: str, **query) -> dict[str, object]:
-        apk = self.settings.validate_artifact(apk_path)
+        apk = self.settings.validate_entry_input(apk_path)
         return self.runner.query_archive(apk, query)
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
@@ -239,7 +248,7 @@ class DroidAscService:
         apk = self.settings.validate_apk(apk_path)
         page = self._backend(backend).list_classes(
             apk,
-            prefix=prefix,
+            prefix=_normalize_class_prefix(prefix),
             threads=threads,
             offset=offset,
             limit=limit,
@@ -398,9 +407,8 @@ def _normalize_dex_query(query):
             raise ValueError(f"{operation} requires a nonempty literal value")
         if query.get("method_descriptor") or query.get("fuzzy_class"):
             raise ValueError(f"{operation} uses literal value and optional exact class_name")
-    if operation == "search_classes" and query.get("prefix"):
-        prefix = query["prefix"]
-        query["prefix"] = prefix if prefix.startswith("L") else "L" + prefix.replace(".", "/")
+    if operation in {"list_classes", "search_classes"} and query.get("prefix"):
+        query["prefix"] = _normalize_class_prefix(query["prefix"])
     if query.get("operation") == "get_call_graph":
         for key, default, maximum in (
             ("depth", 2, 5),
@@ -445,8 +453,19 @@ def _normalize_dex_query(query):
             raise ValueError("search_members uses literal value and optional exact class_name")
     if query.get("operation") == "find_type_refs":
         descriptor = query.get("type_descriptor")
-        if not descriptor or not re.fullmatch(r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)", descriptor):
-            raise ValueError("type_descriptor requires an exact DEX type, not a fuzzy name")
+        if (
+            isinstance(descriptor, str)
+            and descriptor not in {"V", "Z", "B", "C", "S", "I", "J", "F", "D"}
+            and all(part.replace("$", "_").isidentifier() for part in re.split(r"[./]", descriptor))
+        ):
+            descriptor = _normalize_class_name(descriptor)
+            query["type_descriptor"] = descriptor
+        if not isinstance(descriptor, str) or not re.fullmatch(
+            r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)", descriptor
+        ):
+            raise ValueError(
+                "type_descriptor requires an exact DEX type or class name, not a pattern"
+            )
         if query.get("method_descriptor") or query.get("class_name") or query.get("fuzzy_class"):
             raise ValueError("find_type_refs uses type_descriptor only")
     elif query.get("type_descriptor") or query.get("type_relation", "all") != "all":
@@ -507,6 +526,16 @@ def _normalize_reference_value(kind: str | None, value: str | None) -> str | Non
     if kind in {"extends", "impl"} and value is not None and value != "--gui":
         return _normalize_class_name(value)
     return value
+
+
+def _normalize_class_prefix(value: str | None) -> str | None:
+    if not value:
+        return value
+    # A dot identifies Java package syntax, including names beginning with L.
+    # Preserve literal Dalvik prefixes such as L, Lpkg/ and LDefaultClass.
+    if value.startswith("L") and "." not in value:
+        return value
+    return "L" + value.replace(".", "/")
 
 
 def _normalize_class_name(value: str) -> str:

@@ -8,6 +8,11 @@ class ApkPathError(ValueError):
 
 
 class PathPolicy:
+    def validate_entry_input(self, value: str) -> Path:
+        if Path(value).expanduser().resolve().suffix.lower() == ".dex":
+            return self.validate_dex_paths([value])[0]
+        return self.validate_artifact(value)
+
     def validate_apk(self, value: str) -> Path:
         return self.validate_artifact(value, extensions={".apk"})
 

@@ -270,7 +270,7 @@ def test_string_pool_query_validation(args):
 
 
 @pytest.mark.parametrize(
-    "descriptor", [None, "Target", "V", "[V", "LTarget", "Lfoo.Bar;", "LTarget;->f:I"]
+    "descriptor", [None, "", "V", "[V", "[LTarget", "Lfoo.Bar;", "LTarget;->f:I", "foo.*"]
 )
 def test_type_query_requires_exact_identity(descriptor):
     with pytest.raises(ValueError, match="type_descriptor"):

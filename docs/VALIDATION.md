@@ -3,6 +3,63 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## 0.2.4 candidate, 2026-10-23 UTC
+
+This increment starts from the migrated `b439b47` snapshot, preserving six unpublished
+source commits. The combined workflow/schema regression passes 290 tests with zero
+failures/errors/skips, including real stdio/HTTP discovery-to-byte-read-to-DEX-query
+handoffs. Evidence: `artifacts/cloud-parity-20261023/workflow-focused.{log,xml}`.
+The nullable regression validates both equivalent wire schemas and strict SDK conversion;
+it does not remove fields, widen types or weaken malformed selector rejection.
+
+The fresh whole-call-index oracle accepts exact persisted invocation, method/counter and
+dynamic-record multisets from independent sequential Androguard decoding. It checks the
+original canonical source mapping, rejects hidden/dangling/duplicate/omitted rows, and
+binds input, runtime, decoder, verifier and index hashes. Frontier and measured graph
+replays must consume that accepted index. This gate covers ordinary top-level APK DEX
+035/037/038/039/040, not 041 normalization, other container layouts, runtime dispatch or
+an independent BFS/ordering/budget algorithm. Manual Smali graph oracles remain separate.
+`verify_call_index.py`, `verify_frontier_graph.py` and `verify_graph_benchmark.py` require
+Androguard only in the independent acceptance environment, not as a runtime dependency.
+
+Before publication, the frozen 0.2.4 SHA must pass all 25 CI jobs, including Linux/Windows
+Python 3.10-3.13 strict source cells, canonical-sdist/exact-native-wheel cells, Rust,
+signing and stability. Publish the exact successful CI assets after hash read-back;
+never rebuild after acceptance. Fresh cloud full/package results and private-corpus
+receipts accompany the handoff separately. Prior `e3f3819` and consolidated 0.2.3 gates
+are historical and cannot approve this runtime. The original-corpus rerun must retain
+complete result sets, frozen alternating rounds, equal budgets and failing/worse rounds.
+The startup/repeat/concurrency and retained-storage gaps listed in `GOAL_02X.md` remain
+open unless newly measured evidence closes them. 0.3.0 requires all-dimension superiority;
+this candidate is a 0.2.x increment only.
+
+## Complete concurrency development checks, 2026-10-24
+
+The full_concurrent harness now collects every method and field page concurrently and
+independently checks the actual request/cursor/collection inventory. The unchanged
+`3bb432d` production runtime passes all 72 complete collections across three APKs,
+two/four CPUs, three matched rounds and two repeats. Comparator replay accepts 60 of 72;
+12 Taobao field collections each have 97 extra sites, excluding those batch timings from
+equal-correct-result comparisons. Four-CPU Douyin complete repeated concurrency still
+loses: 7.5007 versus 6.2604 seconds median. First-page wins do not close that deficit.
+
+The initial graph batch exposed an async deadline/cleanup overrun and was stopped, with
+its evidence preserved. The harness now has a separate owned-child watchdog, tested with
+a blocked event loop and a real sleeping child. The focused harness gate passes 110 tests
+with zero skips in artifacts/graph-concurrent-20261024/harness-provenance-fixed.xml.
+This is not new Linux/Windows/package acceptance or publication approval. Full details
+and timing scope are in STARTUP_STORAGE_EXPERIMENTS.md.
+
+The deadline-fixed large-graph batch additionally accepts 24 measured product graphs
+against a fresh full index built from original DEX bytes and independently decodes every
+emitted call site. All graphs explicitly reach their 128-KiB output bound. The comparator's
+12 trials time out at 30.0350-30.0761 seconds, so there is no equal-success graph timing
+ratio. Eleven records show watchdog expiry and one async timeout finishes first. The
+interrupted Douyin offline replay is preserved and resumed separately; no timing batch
+was repeated. artifacts/graph-concurrent-20261024/summary.json binds the accepted receipts.
+This proves bounded output equality and emitted-site validity, not independent full-graph
+completeness or broader workflow closure.
+
 ## Consolidated v0.2.3, 2026-10-23
 
 The maintainer requested withdrawal of v0.2.3-v0.2.9 and fresh consolidation as v0.2.3.
@@ -10,7 +67,154 @@ The original release metadata/assets and tag objects are backed up and hash-veri
 artifacts/reissue-023-20261023/backup. v0.2.2 and earlier remain unchanged. Current runtime
 sources are retained from 159a6f39b0764f44e27c05203ab53573cd344dc4; version metadata and
 release documentation are updated. Fresh Linux/Windows Python 3.10-3.13, canonical-sdist,
-native-wheel, signing, Rust and stability acceptance is required for the consolidated build.
+native-wheel, signing, Rust and stability acceptance passed on the consolidated release commit
+`12a4fc51ba36a64a54bc3623dc348a499f466ac9`:
+[CI 39939932398](https://github.com/cnlnn/droidasc-mcp/actions/runs/39939932398), all 25 jobs.
+Each source OS/Python cell passed 1184 tests with zero errors, failures or skips; all eight
+distribution cells tested both the canonical sdist and their exact native wheel, each with
+1184 passing tests. Four package jobs, two Rust jobs, two stability jobs and the fixture job
+also passed. The six release assets were downloaded again and checked against local and
+server SHA-256 values; main and the annotated release tag target the same accepted commit.
+Release metadata, asset hashes, preserved older releases and withdrawn tags were read back
+under artifacts/reissue-0.2.3-ci-39939932398/{acceptance-summary,published-readback}.json.
+The [consolidated release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.3) is published.
+These receipts cover that frozen release, not subsequent development-branch changes.
+
+## Workflow candidate, 2026-10-23
+
+Candidate e3f381927c98976d4b2052ec29e0d86136e47c48 remains on
+codex/workflow-triage-next, not main or the published tag.
+[CI 39967501671](https://github.com/cnlnn/droidasc-mcp/actions/runs/39967501671) passes
+all 25 jobs: each of eight Linux/Windows Python 3.10-3.13 source cells passes 1264 tests
+without failures/errors/skips; each distribution cell passes the same 1264 tests on both
+the canonical sdist and its exact native wheel. Source cells additionally pass seven
+independent signing variants; package, Rust, stability and fixture jobs pass.
+
+The initial f144c08 run 39962833696 is not acceptance: Windows pytest setup/teardown
+failed because auto-generated test IDs contained full oversized XML payloads and exceeded
+the 32767-character environment-variable limit. Fixed short IDs retain every payload and
+assertion and explicitly bound the node ID. The failing attempt was cancelled and retained.
+
+Evidence: artifacts/workflow-entry-ci-39967501671/acceptance-summary.json verifies all
+12 downloaded artifact ZIP digests, 24 extracted files, canonical-sdist hashes in all
+eight distribution logs, packaged runtime source against the commit, four wheel identities
+and installed-byte checks. wheel-original-accuracy.json binds the exact Linux CI wheel and
+installed native extension to full independent original ownership/snapshot checks for all
+884805 classes across Taobao/WeChat/Douyin and complete selected Taobao reference/diagnostic
+comparisons (24461 method sites, 332 field sites, 12495817 instructions, three rounds each).
+The native oracle driver Path fix has two regressions executing the real child command.
+
+These receipts do not prove all-query/all-APK accuracy, lower total memory, a universal
+startup advantage or complete competitor workflow superiority. They do not authorize a
+new release; the current startup/storage experiments are separate and remain isolated.
+
+## Complete MCP Reference Pages
+
+The latest adaptive-page increment keeps the 256-KiB DEX-response ceiling and requested
+maximum row count, returning a complete prefix with explicit byte-limit hints and exact
+continuations instead of requiring a failed oversized attempt. Its focused gate passes
+288 tests, zero skips, with 52 deliberate other-integration deselections:
+artifacts/adaptive-reference-pages-20261024/targeted-complete.xml. Both real transports
+collect all 2000 individual sites from a generated DEX twice without retry; independent
+verifier regressions reject false byte hints, oversize and incorrect continuations.
+The input/output schema checks and pinned 25-tool/2-resource/3-prompt/87-parameter
+inventory audit also pass; inventory is not behavioral acceptance of all parameters.
+The new accepted/summary.json under that root binds all 98581 original selected sites
+over 148 pages, 36 matched trials and 72 independent collection replays. Every product
+collection passes. Six competitor Taobao-field replays retain the 97-extra-site failure;
+the other 30 comparator collections pass. All 36 frozen before/after complete responses
+also match independent current acceptance, including ordered duplicates and diagnostics.
+Paired latency effects are mixed, not a universal improvement. Fresh comparisons still
+lose on Taobao/Douyin method repeats, Taobao complete-method startup and WeChat field
+startup. See STARTUP_STORAGE_EXPERIMENTS.md for exact medians and separate RSS/tmpfs
+costs. Full current-runtime Linux/Windows/canonical-package gates remain outstanding;
+the following earlier counts and CI receipts are historical, not approval of this runtime.
+
+The subsequent output-schema-only increment uses Pydantic's equivalent primitive type
+unions, retaining strict runtime contracts and all result fields. Its focused gate passes
+203 tests, zero skips, with 52 deliberately deselected other integration cases:
+artifacts/selected-reference-cache-20261024/schema-types-transport-final.xml.
+All generated nullable leaves and retained constrained unions are checked against the
+original schemas, including the older-Pydantic fallback. Both real MCP transports cover
+references, fuzzy queries, graphs and resource views. See STARTUP_STORAGE_EXPERIMENTS.md
+for the separate frozen-source three-APK before/after trial scope. This is not a new
+full Linux/Windows or canonical-package gate; the following 196-test cache run is historical.
+Fresh current-runtime receipts under schema-types/summary.json independently pass all
+98581 selected original sites/200 pages and all 36 product collection replays across
+36 matched trials. Six competitor Taobao field replays fail with the same 97 extra
+sites each; the other 30 comparator collections pass. The separate frozen before/after
+trial's 36 complete collections match accepted current responses, including order,
+duplicates and full diagnostics: schema-paired-runtime/accuracy.json. The source,
+inputs, benchmark and independent oracle identities are bound and unchanged. All three
+method-repeat medians and WeChat field startup still lose in this fresh comparator
+batch. See STARTUP_STORAGE_EXPERIMENTS.md for exact timings, resources and batch limits.
+
+Implementation follow-up, 2026-10-24: the development runtime now has a session-accounted
+complete-selected-set cache and bounded host paging. It differs from e3f3819. The targeted
+suite passes 196 tests, zero skips and 56 intentional other-integration deselections:
+artifacts/selected-reference-cache-20261024/focused-transport-bounded-retry-final.xml. It covers real
+stdio/HTTP reference/fuzzy pages, full cached response equality, quotas, concurrent fills,
+cancelled page waiters, corruption, input changes and lease/file cleanup. Fresh full
+Linux/Windows and canonical-package gates remain open for this new runtime. See
+STARTUP_STORAGE_EXPERIMENTS.md for failed attempts and exact large-input receipt scope.
+The final new-runtime summary is
+artifacts/selected-reference-cache-20261024/bounded-retry/summary.json: all 98581
+selected original-byte sites and 200 pages pass, as do all 36 product collection
+replays. All 36 matched benchmark trials complete; six competitor Taobao field
+collections fail independent equality (97 extra sites each). Those failures are not
+rewritten as passing accuracy or equal-correct-result timing. First complete query
+latency improves relative to the paired competitor in this corpus, while repeat and
+startup deficits remain explicit. Source/runtime and helper identities are unchanged
+through the final run; the earlier failed timeout and pre-bounded-retry run stay separate.
+
+The preceding complete-collection benchmark and isolated selected-result spool experiments are
+recorded in STARTUP_STORAGE_EXPERIMENTS.md. At those experiments the runtime still matched
+e3f3819; neither private prototype was adopted or approved for release. The benchmark/normalization/replay
+selection passes 95 local tests without skips: full-page-benchmark-targeted-final.xml under
+artifacts/startup-next-20261023. This is distinct from the earlier 95-test container/reference
+selection below and does not raise the exact e3f3819 CI count.
+
+The development-only verifier scripts/verify_mcp_reference_pages.py reads every successful
+page for String.equals method references and Build.MODEL field references through real
+stdio. A frozen independent JVM scanner consumes original APK bytes, mapped to canonical
+names only after independently enumerating every original DEX. Missing DEX entries,
+duplicate inventories, swapped canonical mappings, altered bytes, diagnostic changes,
+same-count corruptions, wrong ordering and skipped/repeated continuation offsets fail.
+Only implementation-specific backend/backend_version labels are excluded from equality.
+
+Evidence root: artifacts/startup-next-20261023. The final batch receipt is
+current-reference-pages-corpus-final.json; its three
+current-{taobao,wechat,douyin}-mcp-full-reference-pages-final.json receipts pass:
+
+| Input | Complete method sites | Complete field sites | Successful pages | Instructions per full query |
+| --- | --- | --- | --- | --- |
+| Taobao | 24461 | 332 | 50 | 12495817 |
+| WeChat | 26184 | 110 | 54 | 21430036 |
+| Douyin | 47005 | 489 | 96 | 52547329 |
+
+All 98581 ordered rows and every scanner diagnostic agree, not just totals. Each method
+query first receives response_limit at limit=1000, records that response and retries the
+same offset at limit=500. No rows are lost by recovery. These 200 successful pages are
+not 200 distinct full instruction corpora; changing offsets currently repeats scans.
+Original input, runtime, scanner source, executable and jar hashes stay unchanged;
+original DEX inventory/canonical mapping, session/input/source provenance and complete
+owned-temporary cleanup pass. The independent JVM's explicit heap cap is 1024 MiB;
+its work/storage are accuracy-oracle costs, not product latency or RSS measurements.
+
+The initial two attempts remain failed evidence: oversized pages, then an incorrectly
+compared backend-version label; the initial Douyin scanner also exited nonzero with a
+512-MiB heap (that first receipt did not preserve stderr, so its root cause is not claimed).
+Two regressions subsequently exposed and fixed a verifier-only common-mode inventory gap:
+an omitted original DEX or swapped canonical mapping must not be accepted based solely on
+session metadata. All three complete transport checks were rerun after that fix. Earlier
+checked receipts are separate; their exact helper is retained as reference-pages-checked-verifier.py.
+
+The final verifier, container and preparation-directory selection passes 95 tests with no
+failures/errors/skips: reference-pages-and-prefetch-final-targeted.xml. This is not a
+replacement for a final full source/package/Windows matrix. Runtime code is unchanged
+from e3f3819; the added acceptance scripts/tests do not change its historical CI count.
+Full-collection performance against the competitor, additional graph inputs and the
+startup/storage gaps remain open; no new publication is approved by these receipts.
 
 ## Historical v0.2.x native-query evidence
 

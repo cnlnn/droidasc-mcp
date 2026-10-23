@@ -1,0 +1,16 @@
+name: Release request
+
+on:
+  push:
+    branches: [publish/v0.2.4]
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    if: github.repository == 'cnlnn/droidasc-mcp'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record explicit publication request
+        run: echo 'The trusted default-branch publisher will validate this request.'

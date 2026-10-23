@@ -36,7 +36,7 @@ def test_compiled_descriptions_are_stable_across_python_docstring_dedenting():
 def test_registry_reuses_schema_without_eager_output_adapter(monkeypatch):
     import mcp.server.mcpserver.utilities.func_metadata as metadata
 
-    from droidasc_mcp.tool_registry import ToolRegistry
+    from droidasc_mcp.tool_registry import ToolRegistry, contract_schema
 
     expected = Tool.from_function(output)
     original = metadata.TypeAdapter
@@ -51,7 +51,7 @@ def test_registry_reuses_schema_without_eager_output_adapter(monkeypatch):
     assert registry.tool(annotations=None)(output) is output
     tool = registry.tools[0]
     assert calls == []
-    assert tool.output_schema == expected.output_schema
+    assert tool.output_schema == contract_schema(contracts.DexResult)
     assert tool.parameters == expected.parameters
     value = output() | {"future_diagnostic": {"x": 1}}
     assert tool.fn_metadata.convert_result(value).structured_content == value
@@ -173,7 +173,12 @@ def test_input_cache_source_binding_is_newline_independent(tmp_path, monkeypatch
 
 
 def test_packaged_schemas_match_all_current_contracts():
-    from droidasc_mcp.tool_registry import OUTPUT_TYPES, SCHEMA_PATH, compiled_schemas
+    from droidasc_mcp.tool_registry import (
+        OUTPUT_TYPES,
+        SCHEMA_PATH,
+        compiled_schemas,
+        contract_schema,
+    )
 
     schemas = compiled_schemas()
     document = json.loads(SCHEMA_PATH.read_text())
@@ -182,14 +187,80 @@ def test_packaged_schemas_match_all_current_contracts():
         return
     assert schemas is not None
     for name, contract in OUTPUT_TYPES.items():
-        assert schemas[name] == TypeAdapter(contract).json_schema()
+        assert schemas[name] == contract_schema(contract)
+
+
+def test_nullable_output_types_use_equivalent_primitive_arrays():
+    import inspect
+
+    from droidasc_mcp.tool_registry import schema_document
+
+    row = schema_document()["schemas"]["DexResult"]["$defs"]["DexRow"]
+    offset = row["properties"]["instruction_offset"]
+    if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters:
+        assert offset["type"] == ["integer", "null"]
+        assert "anyOf" not in offset
+    else:
+        assert offset["anyOf"] == [{"type": "integer"}, {"type": "null"}]
+
+
+def test_compact_schema_preserves_every_nullable_leaf_and_constrained_union():
+    from jsonschema import Draft202012Validator
+
+    from droidasc_mcp.tool_registry import OUTPUT_TYPES, contract_schema
+
+    values = [None, True, False, 0, 1, -1, 1.5, "", "12", [], ["x"], {}, {"a": 1}]
+    checked = 0
+
+    def compare(original, compact):
+        nonlocal checked
+        if isinstance(original, list):
+            assert len(original) == len(compact)
+            for before, after in zip(original, compact, strict=True):
+                compare(before, after)
+        elif isinstance(original, dict):
+            alternatives = original.get("anyOf")
+            primitive = alternatives and all(set(row) == {"type"} for row in alternatives)
+            if primitive:
+                before, after = Draft202012Validator(original), Draft202012Validator(compact)
+                assert [before.is_valid(v) for v in values] == [after.is_valid(v) for v in values]
+                if "anyOf" not in compact:
+                    assert {k: v for k, v in original.items() if k != "anyOf"} == {
+                        k: v for k, v in compact.items() if k != "type"
+                    }
+                checked += 1
+            else:
+                assert set(original) == set(compact)
+                for key, value in original.items():
+                    compare(value, compact[key])
+        else:
+            assert original == compact
+
+    for contract in OUTPUT_TYPES.values():
+        compact = contract_schema(contract)
+        Draft202012Validator.check_schema(compact)
+        compare(TypeAdapter(contract).json_schema(), compact)
+    assert checked >= 30
+
+
+def test_schema_generation_falls_back_for_older_pydantic(monkeypatch):
+    from droidasc_mcp.tool_registry import contract_schema
+
+    original = TypeAdapter.json_schema
+
+    def older(self):
+        return original(self)
+
+    expected = original(TypeAdapter(contracts.DexResult))
+    monkeypatch.setattr(TypeAdapter, "json_schema", older)
+    assert contract_schema(contracts.DexResult) == expected
 
 
 @pytest.mark.parametrize(
     "fault", ["missing", "json", "source", "version", "schema", "digest", "oversize"]
 )
 def test_invalid_or_stale_schema_cache_falls_back_to_current_contract(tmp_path, fault):
-    from droidasc_mcp.tool_registry import ToolRegistry, schema_document
+    from droidasc_mcp.tool_registry import ToolRegistry, contract_schema, schema_document
 
     path = tmp_path / "output_schemas.json"
     if fault != "missing":
@@ -212,7 +283,7 @@ def test_invalid_or_stale_schema_cache_falls_back_to_current_contract(tmp_path, 
         path.write_text(encoded, encoding="utf-8")
     registry = ToolRegistry(schema_path=path)
     registry.tool(annotations=None)(output)
-    assert registry.tools[0].output_schema == Tool.from_function(output).output_schema
+    assert registry.tools[0].output_schema == contract_schema(contracts.DexResult)
     assert registry.tools[0].fn_metadata.convert_result(output()).structured_content == output()
 
 

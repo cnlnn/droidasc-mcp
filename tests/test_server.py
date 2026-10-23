@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from jsonschema import Draft202012Validator
 from mcp import Client
 from pydantic import TypeAdapter, ValidationError
 
@@ -58,12 +59,36 @@ async def test_every_tool_advertises_typed_wire_contract(settings):
     for tool in tools.tools:
         schema = tool.output_schema
         assert schema and schema["type"] == "object", tool.name
+        Draft202012Validator.check_schema(schema)
         properties = schema["properties"]
         assert len(properties) >= 5, tool.name
         if tool.name.startswith(("asc_query_dex", "asc_analyze_dex")):
             assert properties["items"]["items"]["$ref"].endswith("/DexRow")
-            assert schema["$defs"]["DexRow"]["properties"]["instruction_offset"]["anyOf"]
             assert properties["status"]["enum"] == ["ok", "partial", "error", "not_applicable"]
+            validator = Draft202012Validator(schema)
+            # Both anyOf and a primitive type array can describe a nullable
+            # integer. Exercise the advertised contract through its real $ref.
+            for offset in (None, 0, 12, -1):
+                validator.validate({"status": "ok", "items": [{"instruction_offset": offset}]})
+            for offset in (True, False, "12", "twelve", 1.5, [], {}):
+                errors = list(
+                    validator.iter_errors(
+                        {"status": "ok", "items": [{"instruction_offset": offset}]}
+                    )
+                )
+                assert any(
+                    list(error.absolute_path) == ["items", 0, "instruction_offset"]
+                    for error in errors
+                ), (tool.name, offset)
+            for status in properties["status"]["enum"]:
+                validator.validate({"status": status, "items": [{}]})
+            for invalid in (
+                {},
+                {"status": "success"},
+                {"status": "ok", "items": {}},
+                {"status": "ok", "items": [None]},
+            ):
+                assert not validator.is_valid(invalid), (tool.name, invalid)
 
 
 def test_output_contract_checks_nested_types_and_preserves_wire_shape():

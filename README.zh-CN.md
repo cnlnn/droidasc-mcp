@@ -26,7 +26,7 @@
 | `asc_query_dex_session` | 查询指定会话，保留原始哈希和 DEX 来源 |
 | `asc_close_dex_session` | 关闭会话并释放私有文件 |
 | `asc_signing_inventory` | 签名容器与证书指纹清单，不执行密码学验签 |
-| `asc_inspect_artifact` | APK/JAR/ZIP/AAR/AAB/APKS/XAPK 的 DEX、JVM 与 split 能力清单 |
+| `asc_inspect_artifact` | 容器能力清单，可选一并返回 Manifest 头部与 native ABI 摘要 |
 | `asc_open_artifact_session` | 将所选容器中的直接 DEX 接入现有会话工作流 |
 | `asc_diff_dex_sessions` | 对比哈希绑定版本的类、方法与字段声明身份 |
 | `asc_secret_candidates` | 固定模式检索 DEX 字符串，返回脱敏候选与精确位置 |
@@ -34,7 +34,7 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.2.3 提供原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
+0.2.4 提供原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
 回退，Smali 仍使用 ASC 官方 CLI。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
 冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
 
@@ -42,7 +42,15 @@
 结构化反汇编和源码 token 引用；补充 DEX 041 容器、一级嵌套 JAR 的 JVM 清单与身份对比、
 资源字节续页、Manifest/类资源模板、版本对比提示和候选密钥原值的显式开关。
 [逐项源码对照表](docs/COMPETITOR_API_AUDIT.md) 覆盖竞品全部 25 个工具、2 个资源、3 个提示及
-87 个参数，同时列出接口差异和限制。功能工作流对齐不代表所有性能指标都优于竞品。
+87 个参数，同时列出接口差异和限制。源码清单覆盖不等于全部行为或性能已验收。
+0.2.4 修复点分包名前缀、类型查询及任意根目录 DEX 文件名的衔接；完整引用集可在预算内
+复用，返回页自动适配响应字节上限。[当前验收和限制](docs/VALIDATION.md) 分开记录新旧证据。
+只有所有比较维度都有领先竞品的证据才能发布 0.3.0，否则继续发布 0.2.x 小版本。
+
+`asc_inspect_artifact(include_summary=true)` 在同一份哈希绑定响应中补充条目数、ABI 清单和
+Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断状态单独返回，不读取 DEX 正文。
+`trace_exact_method` 提示可直接接收 `class_name` 与 `method_name`，用可选的
+`target_descriptor` 指定重载原型，也保留完整 `method_descriptor` 入口。
 
 ## 安装
 
@@ -55,22 +63,23 @@ CPython 3.11+、x86-64 Linux 安装原生 wheel：
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+、Windows（PowerShell）：
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
 ```
 
 CPython 3.10 使用 `python3.10` 或 `py -3.10` 创建环境，并将 wheel URL 中的
 `cp311-abi3` 替换为 `cp310-cp310`。stable-ABI wheel 支持 CPython 3.11 及以上，
-Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.3.tar.gz`；
+Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.4.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
-已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为重新构建的合并版 0.2.3。
+合并 0.2.3 时撤回的旧 0.2.3-0.2.9 产物不等于本次新 0.2.4。若安装过旧产物，使用
+`--force-reinstall --no-cache-dir` 替换为当前发布页中经过验收的文件。
 
 `operation="find_string_refs"`：可将字符串搜索结果的 `value` 原样传入，
 按字面子串查找 `const-string` 和 `const-string/jumbo` 使用位置，无需转义正则或构建索引。
@@ -405,7 +414,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.3.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.4.tar.gz dist/*.whl
 ```
 
 ## 许可证

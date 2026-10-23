@@ -132,3 +132,17 @@ def memo_dex_files(tmp_path_factory):
 @pytest.fixture(scope="session")
 def boundary_dex_file(tmp_path_factory):
     return assemble_smali(tmp_path_factory, ("boundary",))[0]
+
+
+@pytest.fixture(scope="session")
+def large_reference_dex_file(tmp_path_factory):
+    root = tmp_path_factory.mktemp("reference-pages")
+    owner = "Lfixture/" + "LongReferenceCaller" * 8 + ";"
+    (root / "References.smali").write_text(
+        f".class public {owner}\n.super Ljava/lang/Object;\n"
+        ".method public static run()V\n.registers 0\n"
+        + "invoke-static {}, Lfixture/Target;->touch()V\n" * 2000
+        + "return-void\n.end method\n",
+        encoding="utf-8",
+    )
+    return assemble_smali(tmp_path_factory, (root,))[0]

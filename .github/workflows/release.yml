@@ -1,0 +1,61 @@
+name: Publish accepted GitHub release
+
+on:
+  workflow_run:
+    workflows: [Release request]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: github-release-v0.2.4
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: >-
+      github.repository == 'cnlnn/droidasc-mcp' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'publish/v0.2.4' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate accepted candidate, corpus receipts and exact CI bytes
+        run: python -I scripts/publish_accepted_release.py --stage release-stage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_REQUEST_RUN_ID: ${{ github.event.workflow_run.id }}
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Revalidate then publish the six exact accepted assets
+        run: python -I scripts/publish_accepted_release.py --stage release-stage --publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_CONTROL_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_REQUEST_RUN_ID: ${{ github.event.workflow_run.id }}

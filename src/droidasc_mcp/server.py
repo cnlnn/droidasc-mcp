@@ -50,7 +50,10 @@ OptionalClass = Annotated[
     str | None,
     Field(description="Exact owner class; for legacy fuzzy references, a literal owner substring"),
 ]
-Prefix = Annotated[str | None, Field(description="Literal class/package prefix, case-sensitive")]
+Prefix = Annotated[
+    str | None,
+    Field(description="Literal class/package prefix in dotted or Dalvik form, case-sensitive"),
+]
 MethodId = Annotated[
     str | None,
     Field(description="Full method identity: Lpkg/C;->name(args)return; preserves overloads"),
@@ -64,7 +67,8 @@ MethodName = Annotated[
 ]
 FieldId = Annotated[str | None, Field(description="Full field identity: Lpkg/C;->name:type")]
 TypeId = Annotated[
-    str | None, Field(description="Exact DEX type including array dimensions, for find_type_refs")
+    str | None,
+    Field(description="Exact DEX type (including arrays) or Java class name, for find_type_refs"),
 ]
 Value = Annotated[
     str | None,
@@ -80,7 +84,7 @@ Offset = Annotated[
     int, Field(description="Zero-based result offset; graph traversal requires zero")
 ]
 Limit = Annotated[
-    int, Field(description="Positive result page size in rows or source lines, server-capped")
+    int, Field(description="Maximum result page size in rows or source lines, server-capped")
 ]
 Backend = Annotated[
     Literal["droidasc", "rust_asc"],
@@ -166,7 +170,7 @@ def build_server(
             Field(
                 ge=1,
                 le=2147483648,
-                description="Nested classes.jar byte budget; server input limit also applies",
+                description="Nested JAR and optional manifest byte budget; input limit applies",
             ),
         ] = 134217728,
         offset: Annotated[
@@ -185,12 +189,20 @@ def build_server(
         class_prefix: Annotated[
             str | None, Field(description="JVM class prefix in dotted or Dalvik form")
         ] = None,
+        include_summary: Annotated[
+            bool,
+            Field(
+                description="Include compact manifest header, entry count and native ABI inventory"
+            ),
+        ] = False,
     ) -> ArtifactResult:
         """Inspect container capabilities before selecting a DEX analysis workflow.
 
         JVM classes and nested APK splits are inventory-only. First-level JAR class names
         are included. compare_to compares JVM identities; DEX declarations use session diff.
         AAB selects one module's direct DEX; nested APKs are not reconstructed.
+        include_summary describes the input artifact, including when compare_to is set.
+        Manifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.
         """
         return service.inspect_artifact(
             artifact_path,
@@ -201,6 +213,7 @@ def build_server(
             compare_to=compare_to,
             class_query=class_query,
             class_prefix=class_prefix,
+            include_summary=include_summary,
         )
 
     @registry.tool(annotations=SESSION_STATE)
@@ -335,7 +348,9 @@ def build_server(
 
     @registry.tool(annotations=READ_ONLY)
     def asc_list_apk_entries(
-        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        apk_path: Annotated[
+            str, Field(description="Archive or standalone DEX path within allowed roots")
+        ],
         kind: Annotated[
             Literal["manifest", "resource", "asset", "native", "dex", "metadata", "other"] | None,
             Field(description="Entry category; omit for all file entries"),
@@ -350,9 +365,10 @@ def build_server(
             int, Field(ge=1, le=1000, description="Page size, capped by server limits")
         ] = 100,
     ) -> ArchiveResult:
-        """List APK contents, sizes, CRC metadata and native ABIs without extracting files.
+        """List archive contents or a standalone DEX file without extracting files.
 
-        SHA-256 binds this page to the APK. CRC values here are declarations, not verification.
+        SHA-256 binds this page to the input. Standalone DEX entries use the original basename
+        and bytes, without code validation or ZIP CRC metadata. Archive CRCs are declarations.
         Native rows are an archive inventory, not ELF analysis. Follow next_offset for more.
         """
         return service.query_archive(
@@ -361,9 +377,11 @@ def build_server(
 
     @registry.tool(annotations=READ_ONLY)
     def asc_read_apk_entry(
-        apk_path: Annotated[str, Field(description="APK path within the configured allowed roots")],
+        apk_path: Annotated[
+            str, Field(description="Archive or standalone DEX path within allowed roots")
+        ],
         entry_path: Annotated[
-            str, Field(description="Exact relative ZIP entry path from inventory")
+            str, Field(description="Exact entry path or standalone DEX basename from inventory")
         ],
         max_bytes: Annotated[
             int,
@@ -381,10 +399,11 @@ def build_server(
             ),
         ] = 0,
     ) -> ArchiveResult:
-        """Read a bounded entry prefix as UTF-8 or base64, with APK hash and entry provenance.
+        """Read bounded entry bytes as UTF-8 or base64, with input hash and entry provenance.
 
         Binary XML decoding and returned-content truncation are separate statuses. Partial raw
         reads do not verify CRC. Resource IDs are not resolved; no filesystem extraction occurs.
+        Standalone DEX bytes remain original, including 041 headers; code validation is separate.
         """
         return service.query_archive(
             apk_path,
@@ -760,6 +779,7 @@ def build_server(
         class_name restricts exact owner. search_strings scans DEX string-pool values
         using a case-sensitive literal value, not instruction use sites.
         Identical discovery and non-indexed reference pages reuse a bounded session cache.
+        Reference pages can stop at the byte budget before limit; continue with next_offset.
         source_format=auto uses ASC exact-method Smali, never JADX.
         source_format=java explicitly selects the optional compatibility backend.
         """
