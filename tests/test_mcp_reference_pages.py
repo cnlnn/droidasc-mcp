@@ -141,6 +141,51 @@ def test_response_limit_recovery_keeps_every_row_and_the_current_offset(verifier
     assert result["total"] == 7 and len(result["response_limit_recoveries"]) == 3
 
 
+@pytest.mark.parametrize("fault", [None, "reason", "budget", "oversize", "continuation"])
+def test_adaptive_prefixes_are_independently_checked_without_retry(verifier, fault):
+    expected = {
+        "status": "ok",
+        "items": [{"site": i} for i in range(5)],
+        "total": 5,
+        "scanned_instructions": 42,
+    }
+    offsets = []
+
+    async def call(**query):
+        offset = query["offset"]
+        offsets.append(offset)
+        rows = expected["items"][offset : offset + 2]
+        more = offset + len(rows) < 5
+        result = {
+            **expected,
+            "items": rows,
+            "offset": offset,
+            "limit": 10,
+            "has_more": more,
+            "truncated": more,
+            "next_offset": offset + len(rows) if more else None,
+        }
+        if more:
+            result.update(page_limited_by="response_bytes", response_byte_limit=1024)
+            if fault == "reason":
+                result["page_limited_by"] = "unchecked"
+            elif fault == "budget":
+                result["response_byte_limit"] = 256 * 1024
+            elif fault == "oversize":
+                result["extra"] = "x" * 1024
+            elif fault == "continuation":
+                result["next_offset"] += 1
+        return result
+
+    if fault:
+        with pytest.raises(AssertionError):
+            asyncio.run(verifier.verify_pages(call, {}, expected, 10))
+    else:
+        result = asyncio.run(verifier.verify_pages(call, {}, expected, 10))
+        assert offsets == [0, 2, 4] and result["total"] == 5
+        assert not result["response_limit_recoveries"]
+
+
 @pytest.mark.parametrize("failure", ["response_limit", "invalid_dex"])
 def test_unrecoverable_errors_are_not_accepted_as_empty_results(verifier, failure):
     async def call(**query):

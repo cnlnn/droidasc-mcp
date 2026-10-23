@@ -13,6 +13,45 @@ def verifier(monkeypatch):
     return importlib.import_module("verify_reference_page_benchmark")
 
 
+@pytest.mark.anyio
+async def test_collector_follows_byte_limited_prefix_then_unflagged_final_page(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    benchmark = importlib.import_module("benchmark_competitor_runtime")
+    requested = []
+
+    async def call(label, tool, arguments, *, allow_response_limit):
+        assert tool == "asc_query_dex_session" and allow_response_limit
+        assert arguments["limit"] == 1000
+        offset = arguments["offset"]
+        requested.append(offset)
+        more = offset == 0
+        return {
+            "status": "ok",
+            "total": 3,
+            "scan_errors": 0,
+            "items": [{"site": 0}, {"site": 1}] if more else [{"site": 2}],
+            "offset": offset,
+            "limit": 1000,
+            "has_more": more,
+            "truncated": more,
+            "next_offset": 2 if more else None,
+            **(
+                {"page_limited_by": "response_bytes", "response_byte_limit": 262143} if more else {}
+            ),
+        }
+
+    result, pages, recoveries = await benchmark.collect_reference_pages(
+        call, "ours", "asc_query_dex_session", {}, "collection", 1000
+    )
+    assert requested == [0, 2] and len(pages) == 2 and recoveries == []
+    assert result == {
+        "status": "ok",
+        "total": 3,
+        "scan_errors": 0,
+        "items": [{"site": 0}, {"site": 1}, {"site": 2}],
+    }
+
+
 @pytest.fixture
 def sites():
     sources = [{"dex_entry": "classes2.dex", "container_entry": "classes10.dex"}]

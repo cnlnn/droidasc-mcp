@@ -37,6 +37,75 @@ from droidasc_mcp.server import build_server
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_byte_bounded_reference_pages_keep_every_site_without_retry(
+    transport, tmp_path, large_reference_dex_file, request, monkeypatch
+):
+    dex = str(shutil.copy(large_reference_dex_file, tmp_path))
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    owner = "Lfixture/" + "LongReferenceCaller" * 8 + ";"
+    expected = [
+        {
+            "caller": owner + "->run()V",
+            "callee": "Lfixture/Target;->touch()V",
+            "dex_entry": "classes.dex",
+            "instruction_offset": i * 3,
+            "offset_unit": "code_units_from_method_start",
+            "opcode": "invoke-static",
+            "target_resolution": "not_defined_in_input",
+            "target_dex_entry": None,
+        }
+        for i in range(2000)
+    ]
+    query = {"operation": "find_method_refs", "method_descriptor": "Lfixture/Target;->touch()V"}
+    async with Client(endpoint) as client:
+        once = await client.call_tool(
+            "asc_analyze_dex", {"dex_paths": [dex], "limit": 1000, **query}
+        )
+        assert not once.is_error, once
+        assert once.structured_content["page_limited_by"] == "response_bytes"
+        assert once.structured_content["items"] == expected[: len(once.structured_content["items"])]
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": [dex]})
+        key = opened.structured_content["session_id"]
+        for _ in range(2):
+            rows, offset = [], 0
+            while True:
+                reply = await client.call_tool(
+                    "asc_query_dex_session",
+                    {"session_id": key, "offset": offset, "limit": 1000, **query},
+                )
+                assert not reply.is_error, reply
+                result = reply.structured_content
+                assert result["status"] == "ok" and result["total"] == 2000, result
+                assert result["limit"] == 1000 and result["offset"] == offset
+                assert result["scanned_instructions"] == 2001
+                assert result["instruction_scan_complete"] and result["scan_errors"] == 0
+                assert json.loads(reply.content[0].text) == result
+                body = {k: v for k, v in result.items() if k != "session_id"}
+                assert len(json.dumps(body).encode()) + 1 <= 256 * 1024
+                rows.extend(result["items"])
+                if result["next_offset"] is None:
+                    assert not result["has_more"] and not result["truncated"]
+                    break
+                assert result["page_limited_by"] == "response_bytes"
+                assert result["next_offset"] == offset + len(result["items"]) > offset
+                offset = result["next_offset"]
+            assert rows == expected
+        closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+        assert closed.structured_content["status"] == "ok"
+        assert not closed.structured_content["cleanup_pending"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_competitor_parity_views_and_resource_templates(
     transport, tmp_path, smali_dex_files, request, monkeypatch
 ):

@@ -80,7 +80,7 @@ Offset = Annotated[
     int, Field(description="Zero-based result offset; graph traversal requires zero")
 ]
 Limit = Annotated[
-    int, Field(description="Positive result page size in rows or source lines, server-capped")
+    int, Field(description="Maximum result page size in rows or source lines, server-capped")
 ]
 Backend = Annotated[
     Literal["droidasc", "rust_asc"],
@@ -775,6 +775,7 @@ def build_server(
         class_name restricts exact owner. search_strings scans DEX string-pool values
         using a case-sensitive literal value, not instruction use sites.
         Identical discovery and non-indexed reference pages reuse a bounded session cache.
+        Reference pages can stop at the byte budget before limit; continue with next_offset.
         source_format=auto uses ASC exact-method Smali, never JADX.
         source_format=java explicitly selects the optional compatibility backend.
         """

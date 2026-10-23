@@ -52,9 +52,13 @@ check is not a substitute for the behavioral tests linked in each row.
 
 - Competitor cursor strings encode integer offsets; our next_offset is an integer. Follow pages,
   not tool-count equivalence. Default page sizes differ; both accept explicit bounded limits.
-- Our DEX worker also caps encoded responses at 256 KiB. A valid row limit can still return
-  response_limit; retry with a smaller limit at the same offset. The complete-reference
-  verifier exercises that recovery and all subsequent pages without weakening the byte cap.
+- Our DEX worker also caps encoded responses at 256 KiB. Method/field references, outgoing
+  calls and fuzzy member-reference queries now return a complete prefix when the requested
+  maximum row count would exceed that cap. page_limited_by=response_bytes explains a short
+  page; next_offset advances by the actual row count, not the requested limit. No site is
+  discarded. Unpageable rows/metadata and other oversized operations still return
+  response_limit. The complete-reference verifier checks adaptive continuations, encoded
+  byte bounds and the remaining explicit-error recovery path independently.
 - Our empty member queries enumerate declarations; the competitor rejects them. Empty class
   queries use list_classes; an empty
   string/body search is intentionally rejected rather than returning every pool/instruction row.
@@ -80,6 +84,19 @@ check is not a substitute for the behavioral tests linked in each row.
   identity checks are retained rather than copied from the competitor's weaker boundaries.
 
 ## Acceptance Status
+
+The latest adaptive reference-page increment passes 288 focused tests, zero skips, with
+52 deliberately deselected integration cases. Both transports collect all 2000 generated
+DEX call sites twice without failed-page retries. Fresh independent original-byte checks
+accept all 98581 selected sites/148 pages and 36 product collection replays; all 36 frozen
+before/after complete collections also match accepted current responses. The same six
+competitor Taobao-field replays retain 97 extra sites each. Fresh latency effects remain
+mixed: Taobao/Douyin method repeats, Taobao complete-method startup and WeChat field
+startup still lose. See artifacts/adaptive-reference-pages-20261024/accepted/summary.json
+and STARTUP_STORAGE_EXPERIMENTS.md. The public inventory audit still matches the pinned
+25 tools, two resources, three prompts and 87 parameters, but broader behavioral closure
+and new full cross-platform/package gates remain open. Subsequent paragraphs retain the
+earlier candidate history, not acceptance for the latest runtime.
 
 The development-branch compact-summary and direct trace-prompt additions pass the local
 1213-test source suite on Linux Python 3.13, including real stdio/HTTP handoff and error

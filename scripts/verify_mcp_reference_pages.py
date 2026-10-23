@@ -115,6 +115,13 @@ async def verify_pages(call, query, expected, page_size):
                 assert result[key] == value, f"Page diagnostic differs: {key}"
         rows = result["items"]
         assert len(rows) <= page_size
+        if "page_limited_by" in result:
+            assert result["page_limited_by"] == "response_bytes"
+            assert 0 < len(rows) < page_size
+            maximum = result["response_byte_limit"]
+            assert type(maximum) is int and 0 < maximum < 256 * 1024
+            body = {k: v for k, v in result.items() if k != "session_id"}
+            assert len(json.dumps(body).encode()) <= maximum
         assert rows == expected["items"][offset : offset + len(rows)], (
             "Ordered instruction rows differ"
         )

@@ -326,8 +326,12 @@ instructions or decoding failures return an error rather than partial results ma
 
 Only explicit Java source queries start the optional JVM (512 MiB maximum heap), sharing the
 worker's timeout, aggregate memory, output and cancellation limits. Other JADX versions are rejected.
-Method pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`; oversized
-responses fail explicitly. The API currently takes DEX inputs/sessions, not an APK path.
+Reference pages expose `total`, `offset`, `limit`, `next_offset`, `truncated` and `has_more`.
+For method references, field references, outgoing calls and fuzzy member references, `limit`
+is a maximum: a page can stop earlier at the same 256-KiB encoded DEX-response budget.
+Such pages report `page_limited_by="response_bytes"` and `response_byte_limit`; follow
+`next_offset`, not `offset + limit`, to retain every site. A complete row or metadata that
+cannot fit still returns `response_limit`. The API takes DEX inputs/sessions, not an APK path.
 
 ### Indexed investigation
 

@@ -128,6 +128,8 @@ async def collect_reference_pages(call, implementation, tool, params, label, pag
             "next_cursor",
             "has_more",
             "truncated",
+            "page_limited_by",
+            "response_byte_limit",
         ):
             stable.pop(key, None)
         if expected is None:

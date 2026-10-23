@@ -177,6 +177,19 @@ and new full cross-platform/package gates remain open.
 
 ## Competitor workflow closure
 
+Latest paging increment, 2026-10-24: reference queries now return byte-bounded complete
+prefixes at the original 256-KiB ceiling, retain the requested maximum limit and continue
+at the exact next_offset. The targeted gate passes 288 cases with zero skips and 52
+deliberate deselections. Fresh independent checks accept all 98581 selected sites over
+148 pages and all 36 product collection replays; all 36 frozen before/after collections
+also match complete accepted responses. Six comparator Taobao-field replays retain the
+97-extra-site failure. The same three-APK timing batch has zero product reference retries,
+but Taobao/Douyin complete-method repeats, Taobao method startup-to-complete and WeChat
+field startup still lose. Paired before/after effects are also mixed, so fewer pages alone
+do not close the performance goal. See STARTUP_STORAGE_EXPERIMENTS.md and
+artifacts/adaptive-reference-pages-20261024/accepted/summary.json. Full workflow/graph,
+storage and fresh cross-platform/package gates remain open; no new release is approved.
+
 - [ ] Re-read the pinned competitor implementation and test all 25 tools, two resource
   templates, three prompts and 87 non-context parameters against implemented equivalents.
   Refresh the source inventory; distinguish inventory parity from exercised behavior.

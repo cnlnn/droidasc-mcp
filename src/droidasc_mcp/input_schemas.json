@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "9a3680ff1f806bfd4b5083cdbb4580069b0354103454a22d8f232af77f767f3f",
+  "source_sha256": "6bc334d6bc1f853c5486e7a2d471c43a35e80cb6a7cb55c1832dc68b57dafd63",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "f24466058da4cbc0cc07609778c66e1a99980d505aeac346c589440632d8f858",
+  "records_sha256": "160fd00fb806dfadcfec2a4b75df2b36e22d77559072ee1e8930a6898745227a",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -491,7 +491,7 @@
           },
           "limit": {
             "default": 500,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },
@@ -551,7 +551,7 @@
           },
           "limit": {
             "default": 200,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },
@@ -603,7 +603,7 @@
           },
           "limit": {
             "default": 500,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },
@@ -696,7 +696,7 @@
           },
           "limit": {
             "default": 200,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },
@@ -963,7 +963,7 @@
           },
           "limit": {
             "default": 200,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },
@@ -1056,7 +1056,7 @@
       "is_async": false
     },
     "asc_query_dex_session": {
-      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
+      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs builds/reuses that index; subsequent method/field queries also reuse it.\ntype_descriptor is exact (including arrays); type_relation filters before pagination.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nReference pages can stop at the byte budget before limit; continue with next_offset.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
       "parameters": {
         "properties": {
           "session_id": {
@@ -1292,7 +1292,7 @@
           },
           "limit": {
             "default": 200,
-            "description": "Positive result page size in rows or source lines, server-capped",
+            "description": "Maximum result page size in rows or source lines, server-capped",
             "title": "Limit",
             "type": "integer"
           },

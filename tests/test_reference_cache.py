@@ -526,7 +526,7 @@ async def test_cancelled_page_waiter_keeps_leader_lease_and_session_usable(
 
 
 @pytest.mark.parametrize("count,padding", [(300, 1000), (400, 550)])
-def test_oversized_page_returns_bounded_error_without_rescanning(
+def test_oversized_page_returns_complete_bounded_prefix_without_rescanning(
     cached, monkeypatch, count, padding
 ):
     cache, _ = cached
@@ -536,7 +536,20 @@ def test_oversized_page_returns_bounded_error_without_rescanning(
     cache.settings = replace(cache.settings, max_page_size=1000)
     monkeypatch.setattr(reference_cache, "MAX_ENTRY_BYTES", cache.budget)
     publish(cache, rows=rows)
-    assert cache.read({**QUERY, "limit": count})["code"] == "response_limit"
+    offset, actual = 0, []
+    while True:
+        result = cache.read({**QUERY, "offset": offset, "limit": count})
+        assert result["status"] == "ok", result
+        assert result["limit"] == count and result["offset"] == offset
+        assert len(json.dumps(result).encode()) < 256 * 1024
+        actual.extend(result["items"])
+        if result["next_offset"] is None:
+            break
+        assert result["page_limited_by"] == "response_bytes"
+        assert result["has_more"] and result["truncated"]
+        assert result["next_offset"] == offset + len(result["items"]) > offset
+        offset = result["next_offset"]
+    assert [{k: v for k, v in row.items() if not k.startswith("target_")} for row in actual] == rows
     assert cache.begin(QUERY) is None
     assert cache.read(QUERY)["total"] == count
 

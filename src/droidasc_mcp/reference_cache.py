@@ -11,14 +11,14 @@ from contextlib import closing, suppress
 from pathlib import Path
 
 from .memory_cache import signature
+from .reference_page import OPERATIONS as OPERATIONS
+from .reference_page import reference_page
 from .reference_spool import MAX_VALUE_BYTES, RECEIPT_BYTES, SCHEMA, checksum, file_identity
 from .runner import _check_cancelled
-from .worker_errors import response_limit
 
 MAX_SESSION_BYTES = 32 * 1024**2
 MAX_ENTRY_BYTES = 16 * 1024**2
 MIN_ENTRY_BYTES = 64 * 1024
-OPERATIONS = {"find_method_refs", "find_field_refs", "get_method_calls", "search_refs"}
 
 
 def selector(query):
@@ -116,17 +116,17 @@ class ReferenceCache:
                         "FROM sites WHERE rowid>? AND rowid<=? ORDER BY rowid",
                         (maximum, start, stop),
                     )
-                    items, size = [], 0
+                    items, size, limited = [], 0, False
                     for (encoded,) in rows:
                         _check_cancelled()
                         if encoded is None:
                             raise ValueError("Invalid reference row size")
                         size += len(encoded.encode())
                         if size > maximum:
-                            self._validate_read(path, expected, identity)
-                            return response_limit()
+                            limited = True
+                            break
                         items.append(json.loads(encoded))
-                if len(items) != min(limit, max(0, total - offset)):
+                if not limited and len(items) != min(limit, max(0, total - offset)):
                     raise ValueError("Incomplete reference page")
                 for row in items:
                     target = row.get("field_descriptor", row.get("callee"))
@@ -142,7 +142,7 @@ class ReferenceCache:
                     "limit": limit,
                     "has_more": more,
                     "truncated": more,
-                    "next_offset": offset + limit if more else None,
+                    "next_offset": offset + len(items) if more else None,
                     "query_cache": {
                         "hit": True,
                         "scope": "selected_reference_set",
@@ -150,11 +150,7 @@ class ReferenceCache:
                         "stored_bytes": self.used,
                     },
                 }
-                if len(json.dumps(result).encode()) > maximum:
-                    result.pop("query_cache")
-                    if len(json.dumps(result).encode()) > maximum:
-                        self._validate_read(path, expected, identity)
-                        return response_limit()
+                result = reference_page(result, maximum, check=_check_cancelled)
                 self._validate_read(path, expected, identity)
                 self.entries.move_to_end(key)
                 return result

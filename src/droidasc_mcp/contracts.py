@@ -347,6 +347,8 @@ class SourceReference(Object, total=False):
 
 
 class DexResult(Result, total=False):
+    page_limited_by: Literal["response_bytes"]
+    response_byte_limit: int
     member_references: list[SourceReference]
     source_sha256: str
     source_start: int

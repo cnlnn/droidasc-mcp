@@ -53,6 +53,26 @@ new release; the current startup/storage experiments are separate and remain iso
 
 ## Complete MCP Reference Pages
 
+The latest adaptive-page increment keeps the 256-KiB DEX-response ceiling and requested
+maximum row count, returning a complete prefix with explicit byte-limit hints and exact
+continuations instead of requiring a failed oversized attempt. Its focused gate passes
+288 tests, zero skips, with 52 deliberate other-integration deselections:
+artifacts/adaptive-reference-pages-20261024/targeted-complete.xml. Both real transports
+collect all 2000 individual sites from a generated DEX twice without retry; independent
+verifier regressions reject false byte hints, oversize and incorrect continuations.
+The input/output schema checks and pinned 25-tool/2-resource/3-prompt/87-parameter
+inventory audit also pass; inventory is not behavioral acceptance of all parameters.
+The new accepted/summary.json under that root binds all 98581 original selected sites
+over 148 pages, 36 matched trials and 72 independent collection replays. Every product
+collection passes. Six competitor Taobao-field replays retain the 97-extra-site failure;
+the other 30 comparator collections pass. All 36 frozen before/after complete responses
+also match independent current acceptance, including ordered duplicates and diagnostics.
+Paired latency effects are mixed, not a universal improvement. Fresh comparisons still
+lose on Taobao/Douyin method repeats, Taobao complete-method startup and WeChat field
+startup. See STARTUP_STORAGE_EXPERIMENTS.md for exact medians and separate RSS/tmpfs
+costs. Full current-runtime Linux/Windows/canonical-package gates remain outstanding;
+the following earlier counts and CI receipts are historical, not approval of this runtime.
+
 The subsequent output-schema-only increment uses Pydantic's equivalent primitive type
 unions, retaining strict runtime contracts and all result fields. Its focused gate passes
 203 tests, zero skips, with 52 deliberately deselected other integration cases:

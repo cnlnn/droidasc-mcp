@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 
 from droidasc_mcp import memory_cache
+from droidasc_mcp.reference_page import reference_page
 
 
 @pytest.fixture
@@ -98,3 +99,34 @@ def test_signature_tracks_prepared_input_replacement(settings, tmp_path, name):
     before = memory_cache.signature(settings, tmp_path)
     path.write_bytes(b"two")
     assert memory_cache.signature(settings, tmp_path) != before
+
+
+def test_exact_page_hit_preserves_the_reference_byte_limit(settings, tmp_path, monkeypatch):
+    import json
+
+    monkeypatch.setattr(memory_cache, "signature", lambda *args: "same")
+    settings = replace(settings, max_output_bytes=1024)
+    pages = memory_cache.PageCache()
+    query = {"operation": "find_method_refs", "offset": 0, "limit": 100}
+    result = reference_page(
+        {
+            "status": "ok",
+            "items": [{"value": "x" * 50} for _ in range(100)],
+            "total": 100,
+            "offset": 0,
+            "limit": 100,
+            "has_more": False,
+            "truncated": False,
+            "next_offset": None,
+        },
+        settings.max_output_bytes,
+    )
+    first = pages.execute(settings, tmp_path, query, lambda: result)
+
+    def rescan():
+        raise AssertionError("Exact-page hit must not run the worker")
+
+    second = pages.execute(settings, tmp_path, query, rescan)
+    assert second["items"] == first["items"]
+    assert second["next_offset"] == len(second["items"])
+    assert len(json.dumps(second).encode()) < 1024

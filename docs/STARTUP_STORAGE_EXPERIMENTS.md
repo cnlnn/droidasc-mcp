@@ -7,6 +7,76 @@ used the workflow candidate at
 reader addition. That addition does not replace the stored preparation/query path.
 These receipts neither approve publication nor close the startup/storage objective.
 
+## Adaptive Reference Pages, 2026-10-24
+
+The development runtime now returns the largest complete prefix that fits the existing
+256-KiB DEX-result ceiling for method/field references, outgoing calls and fuzzy member
+references. `limit` stays the requested, server-capped maximum. Short nonterminal pages
+declare `page_limited_by=response_bytes`, the available encoded byte budget and an exact
+`next_offset`. The worker newline is reserved. Metadata, diagnostics, ordering, duplicate
+sites and individual identities remain intact; an unpageable row/metadata still returns
+`response_limit`. This improves continuation behavior without changing the result model.
+Selected-set reads stop before buffering over-budget rows; exact-page hits also account
+for their added cache diagnostic. Per-page byte hints are not stored as set-wide metadata.
+
+Evidence root: artifacts/adaptive-reference-pages-20261024/. targeted-complete.xml passes
+288 tests, zero skips, with 52 other integration cases deliberately deselected. Boundary
+cases include Unicode/JSON escaping, large offsets, cancellation, exact cache hits and
+unpageable metadata. A generated real DEX contains 2000 repeated call sites: both stdio
+and HTTP collect every original offset twice, with fixed requested page size and no
+error/retry. Input/output schema checks and the pinned public-surface audit also pass.
+This is a focused gate, not full Linux/Windows or installation-package acceptance.
+
+accepted/summary.json binds all 98581 original-byte selected sites over 148 pages,
+36 matched trials and 72 independent collection replays. Every product collection
+passes. The same six competitor Taobao-field collections fail with 97 extra sites each;
+their timings remain excluded from correct-result comparisons. The other 30 competitor
+collections pass. All 36 frozen before/after method collections separately match the
+independently accepted complete current response, including order, duplicates, metadata
+and diagnostics: paired-runtime/accuracy.json.
+
+Three alternating fresh-server rounds compare frozen 4c01302 (same native extension)
+with adaptive paging. First complete query starts after open; medians are seconds:
+
+| Input | First complete query before / after | Repeat complete query before / after |
+| --- | --- | --- |
+| Taobao | 4.0851 / 4.3730 | 3.6027 / 3.6240 |
+| WeChat | 5.6125 / 4.8628 | 4.0735 / 4.2121 |
+| Douyin | 7.9634 / 7.7734 | 6.8891 / 6.2245 |
+
+The result is mixed: fewer pages and no retry do not establish a universal speedup.
+Taobao first/repeat and WeChat repeat medians regress in this paired batch. The change
+is retained for explicit, gap-free byte-bounded continuations, not as proof that the
+remaining repeated-query latency deficit is solved. Original accuracy collection pages
+fall from the preceding runtime's 200 to 148 with the same requested maximum and sites.
+
+The separate fresh competitor batch uses the same interpreter/dependencies, four logical
+CPUs/workers, 4096-MiB descendant RSS and 8192-MiB temporary-file caps, three alternating
+rounds and retained OS caches. These absolute times are not a causal comparison with the
+preceding before/after batch. No focused tests overlap either timing batch.
+
+| Input | First complete method query ours / competitor | Repeat complete method query ours / competitor | Startup to complete method collection ours / competitor |
+| --- | --- | --- | --- |
+| Taobao | 4.4862 / 4.8623 | 3.4631 / 3.2284 | 6.3029 / 5.7331 |
+| WeChat | 5.9201 / 10.2491 | 4.2108 / 4.7872 | 9.3179 / 11.8777 |
+| Douyin | 7.5010 / 11.7956 | 6.1283 / 5.1270 | 11.7796 / 13.0564 |
+
+The 870 successful product method pages include 852 explicit byte-bounded prefixes
+and zero response-limit retries. First successful method-page medians from process start
+are 2.6218 / 2.9564, 4.3890 / 5.7570 and 5.9172 / 7.7031 seconds. WeChat field first/repeat
+complete queries are 0.5262 / 2.1478 and 0.0439 / 0.0834, but startup still loses at
+3.8916 / 3.8569. Douyin field first/repeat are 0.9479 / 4.0194 and 0.0678 / 0.1342;
+startup is 5.2837 / 5.4033. Taobao field comparison remains invalid as noted above.
+
+Product method descendant-RSS maxima are 117682176 / 121659392 / 134729728 bytes versus
+845029376 / 968208384 / 1104261120 for the competitor. Temporary regular-file peaks are
+125277477 / 189117508 / 491522624 product bytes; the competitor records zero within its
+measured temporary root. These are sampled lower bounds. `/tmp` is tmpfs, and its file
+cost is separate from RSS rather than evidence of lower whole-system RAM usage.
+Taobao/Douyin method repeats, Taobao complete-result startup and WeChat field startup
+still lose in this batch. Storage, broader workflows/graphs and fresh full cross-platform
+package gates also remain open. No new publication is approved.
+
 ## Output Schema Validation, 2026-10-24
 
 After selected-set reuse removed repeated scans, profiles still showed host page work

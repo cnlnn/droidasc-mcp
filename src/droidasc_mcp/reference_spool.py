@@ -10,7 +10,17 @@ from pathlib import Path
 SCHEMA = 1
 MAX_VALUE_BYTES = 256 * 1024
 RECEIPT_BYTES = 8192
-PAGE_FIELDS = {"items", "offset", "limit", "has_more", "truncated", "next_offset", "query_cache"}
+PAGE_FIELDS = {
+    "items",
+    "offset",
+    "limit",
+    "has_more",
+    "truncated",
+    "next_offset",
+    "query_cache",
+    "page_limited_by",
+    "response_byte_limit",
+}
 
 
 def file_identity(path):

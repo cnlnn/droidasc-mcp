@@ -365,6 +365,15 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, query, workspace):
+    from .reference_page import OPERATIONS, reference_page
+
+    result = _select_query_prepared(runner, bundle, common, query, workspace)
+    if query["operation"] in OPERATIONS:
+        return reference_page(result, runner.settings.max_output_bytes)
+    return result
+
+
+def _select_query_prepared(runner, bundle, common, query, workspace):
     if query["operation"] in OWNER_OPERATIONS or query.get("method_name") is not None:
         from .class_directory import ClassDirectory
 
