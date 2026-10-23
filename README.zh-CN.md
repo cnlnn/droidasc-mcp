@@ -34,9 +34,8 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.2.4 中，核心 DEX 引用、发现、结构视图及惰性索引不依赖 Java 或 JADX；可选 stable-ABI C
-加速器保留独立 Python 回退，Smali 仍使用 ASC 官方 CLI。只有显式请求 Java 源码才使用可选
-JADX。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
+0.2.3 提供原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
+回退，Smali 仍使用 ASC 官方 CLI。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
 冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
 
 同时包含类搜索、结构、继承关系、字符串使用位置、指令文本检索、
@@ -51,31 +50,29 @@ JADX。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量�
 Windows runner 的 Python 3.10-3.13，使用源码构建的[测试 APK](tests/fixtures/android/README.md)
 验收 stdio/HTTP 全部 18 个工具及发布包安装；macOS 尚未验证。
 
-0.3.0 至 0.5.0 已撤回，后续每批改动验收通过后按 0.2.x 递增发布，不回退原生实现。
-下列固定版本的 0.2.8 命令仅在该版本完成验收并出现在
-[Releases](https://github.com/cnlnn/droidasc-mcp/releases) 后可用。
+从 [Releases](https://github.com/cnlnn/droidasc-mcp/releases) 安装下列固定版本包。
 CPython 3.11+、x86-64 Linux 安装原生 wheel：
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.8/droidasc_mcp-0.2.8-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+、Windows（PowerShell）：
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.8/droidasc_mcp-0.2.8-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-win_amd64.whl
 ```
 
 CPython 3.10 使用 `python3.10` 或 `py -3.10` 创建环境，并将 wheel URL 中的
 `cp311-abi3` 替换为 `cp310-cp310`。stable-ABI wheel 支持 CPython 3.11 及以上，
-Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.8.tar.gz`；
+Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.3.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
-`--force-reinstall` 也可将已安装的撤回版本替换为当前正式版；后续不复用已发布过的版本号。
+已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为重新构建的合并版 0.2.3。
 
-0.2.4 新增 `operation="find_string_refs"`：可将字符串搜索结果的 `value` 原样传入，
+`operation="find_string_refs"`：可将字符串搜索结果的 `value` 原样传入，
 按字面子串查找 `const-string` 和 `const-string/jumbo` 使用位置，无需转义正则或构建索引。
 保留全量扫描计数、全局分页、严格 Unicode 解码及原始代码偏移。
 

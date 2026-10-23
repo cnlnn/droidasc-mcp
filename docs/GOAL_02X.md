@@ -1,13 +1,12 @@
 # 0.2.x incremental completion goal
 
-Status: active. On 2026-10-23 the maintainer superseded the replacement-v0.3.0 release
-plan: withdraw the old releases now, then publish accepted increments as v0.2.3, v0.2.4
-and subsequent 0.2.x versions. The full performance, workflow/source-comparison, accuracy
-and cross-platform canonical-package objectives remain open across those increments.
-This checklist mirrors the full requested completion objective; workflow
-completeness and ergonomics are mandatory criteria, not follow-up work.
-The four authorized old releases/tags were withdrawn after backup verification. No new
-release, tag or main merge is allowed before that increment's complete acceptance passes.
+Status: active. On 2026-10-23 the maintainer requested consolidation of v0.2.3-v0.2.9
+into a freshly built and accepted v0.2.3, preserving all current source improvements and
+v0.2.2 and earlier releases. The seven releases, assets and tag objects were backed up
+and verified before withdrawal under artifacts/reissue-023-20261023/backup.
+This consolidation does not close the overall performance, workflow/source-comparison
+or accuracy objectives. Workflow completeness and ergonomics remain mandatory criteria.
+Release notes follow the established Highlights / Acceptance / Install / Limits format.
 
 ## Competitor workflow closure
 
@@ -53,8 +52,8 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 ## 0.2.x release gate
 
 - [ ] Select a coherent increment and finish its implementation before freezing its candidate.
-  v0.2.3 through v0.2.8 are published; v0.2.9 is in development. Remaining deficits stay explicit
-  in this overall goal; a patch release does not mean comprehensive competitor superiority.
+  The consolidated v0.2.3 retains the accepted source at 159a6f3; only version metadata and
+  release documentation change. Fresh acceptance is required for the rebuilt packages.
 - [ ] All Linux/Windows Python 3.10-3.13 suites pass without skipped tests; real stdio/HTTP,
   signing, Rust and stability acceptance pass on the exact final commit.
 - [ ] Clean source and native-wheel acceptance pass on Linux and Windows, using the exact
@@ -64,7 +63,8 @@ release, tag or main merge is allowed before that increment's complete acceptanc
 - [x] Withdraw the four old releases/tags now, preserving v0.2.2 and earlier versions.
   Completed 2026-10-23; the four tags remain absent in the v0.2.8 publication readback.
 - [ ] Only after an increment's acceptance: fast-forward main and publish its next 0.2.x tag
-  using exact successful CI artifacts. Never reuse a published patch version or roll back code.
+  using exact successful CI artifacts. The maintainer explicitly authorized reuse of v0.2.3
+  for this consolidation; subsequent updates use new patch versions without rolling back code.
 - [ ] Read back main/tag/release target, latest flag, asset versions and server/local SHA-256;
   verify withdrawn versions are absent and the worktree is clean before marking complete.
 
@@ -75,7 +75,11 @@ unified cross-platform packaging and release acceptance. Candidate branch commit
 for CI, not main/tag/release publication before that increment's gates pass. The original
 all-gap completion goal stays active after an intermediate patch is published.
 
-## In-progress evidence, 2026-10-22
+## Historical increment evidence, 2026-10-22
+
+The v0.2.3-v0.2.9 publication statements below describe withdrawn releases and immutable
+historical receipts, not current availability or acceptance of the consolidated build.
+Original version labels and commit hashes are retained for auditability.
 
 Update, 2026-10-23:
 

@@ -3,7 +3,20 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
-## v0.2.x native-query gate, updated 2026-10-23
+## Consolidated v0.2.3, 2026-10-23
+
+The maintainer requested withdrawal of v0.2.3-v0.2.9 and fresh consolidation as v0.2.3.
+The original release metadata/assets and tag objects are backed up and hash-verified under
+artifacts/reissue-023-20261023/backup. v0.2.2 and earlier remain unchanged. Current runtime
+sources are retained from 159a6f39b0764f44e27c05203ab53573cd344dc4; version metadata and
+release documentation are updated. Fresh Linux/Windows Python 3.10-3.13, canonical-sdist,
+native-wheel, signing, Rust and stability acceptance is required for the consolidated build.
+
+## Historical v0.2.x native-query evidence
+
+The versioned publication statements below describe the withdrawn increments, not current
+download availability. Original receipt versions and commits are preserved; they are not
+relabelled as fresh acceptance of the consolidated v0.2.3.
 
 The maintainer superseded the replacement-v0.3.0 plan with accepted 0.2.x increments.
 Old v0.3.0/v0.4.0/v0.4.1/v0.5.0 releases and tags were withdrawn on 2026-10-23 after
