@@ -694,14 +694,21 @@ static void unmap_region(MappedRegion *region) {
 /* Validate every byte through short-lived mapping windows. Touching an entire
  * DEX mapping for CRC would unnecessarily keep its pages resident while class
  * identities are allocated. Owned chunks also cannot escape as dangling views. */
-static int check_crc(Py_ssize_t handle, Py_ssize_t offset, Py_ssize_t length, uint32_t expected) {
-    PyObject *module = PyImport_ImportModule("zlib"), *function = NULL;
+static int check_crc(Py_ssize_t handle, Py_ssize_t offset, Py_ssize_t length,
+                     uint32_t expected, PyObject *crc_function) {
+    PyObject *module = NULL, *function = NULL;
     Py_ssize_t position;
     unsigned long crc = 0;
     int status = -1;
-    if (!module) return -1;
-    function = PyObject_GetAttrString(module, "crc32");
-    if (!function) goto finished_crc;
+    if (crc_function) {
+        function = crc_function;
+        Py_INCREF(function);
+    } else {
+        module = PyImport_ImportModule("zlib");
+        if (!module) return -1;
+        function = PyObject_GetAttrString(module, "crc32");
+        if (!function) goto finished_crc;
+    }
     for (position = 0; position < length;) {
         Py_ssize_t size = length-position > 256*1024 ? 256*1024 : length-position;
         PyObject *block, *result;
@@ -713,27 +720,43 @@ static int check_crc(Py_ssize_t handle, Py_ssize_t offset, Py_ssize_t length, ui
         result = PyObject_CallFunction(function, "OI", block, (unsigned int)crc);
         Py_DECREF(block);
         if (!result) goto finished_crc;
+        if (crc_function && !PyLong_CheckExact(result)) {
+            Py_DECREF(result);
+            PyErr_SetString(PyExc_TypeError, "CRC callback must return a uint32 integer");
+            goto finished_crc;
+        }
         crc = PyLong_AsUnsignedLong(result);
         Py_DECREF(result);
         if (PyErr_Occurred()) goto finished_crc;
+        if (crc_function && crc > UINT32_MAX) {
+            PyErr_SetString(PyExc_OverflowError, "CRC callback result exceeds uint32");
+            goto finished_crc;
+        }
         position += size;
     }
     if (crc != expected) PyErr_SetString(PyExc_ValueError, "Stored DEX snapshot CRC mismatch");
     else status = 0;
 finished_crc:
     Py_XDECREF(function);
-    Py_DECREF(module);
+    Py_XDECREF(module);
     return status;
 }
 
-static PyObject *mapped_classes_impl(PyObject *args, int checked) {
+static PyObject *mapped_classes_impl(PyObject *args, int checked, int custom_crc) {
     Py_ssize_t handle, offset, length;
     unsigned int crc;
     unsigned int position;
     const unsigned char *data;
     MappedRegion region;
-    PyObject *result = NULL;
-    if (!PyArg_ParseTuple(args, "nnnI", &handle, &offset, &length, &crc)) return NULL;
+    PyObject *result = NULL, *crc_function = NULL;
+    if (custom_crc) {
+        if (!PyArg_ParseTuple(args, "nnnIO", &handle, &offset, &length, &crc, &crc_function))
+            return NULL;
+        if (!PyCallable_Check(crc_function)) {
+            PyErr_SetString(PyExc_TypeError, "CRC callback must be callable");
+            return NULL;
+        }
+    } else if (!PyArg_ParseTuple(args, "nnnI", &handle, &offset, &length, &crc)) return NULL;
     if (map_region(handle, offset, length, &region) < 0) return NULL;
     data = region.data;
     if (length < 112 || memcmp(data, "dex\n", 4) || data[7] ||
@@ -749,7 +772,7 @@ static PyObject *mapped_classes_impl(PyObject *args, int checked) {
             (!count && start) || ((position == 80 || position == 88) && count > 65536))
             goto invalid_mapped_classes;
     }
-    if (check_crc(handle, offset, length, crc) < 0) goto finished_mapped_classes;
+    if (check_crc(handle, offset, length, crc, crc_function) < 0) goto finished_mapped_classes;
     result = class_rows(data, length, u32(data+100), u32(data+96),
                          u32(data+68), u32(data+64), u32(data+60), u32(data+56), 1, checked);
     goto finished_mapped_classes;
@@ -762,12 +785,17 @@ finished_mapped_classes:
 
 static PyObject *mapped_classes(PyObject *self, PyObject *args) {
     (void)self;
-    return mapped_classes_impl(args, 0);
+    return mapped_classes_impl(args, 0, 0);
 }
 
 static PyObject *mapped_checked_classes(PyObject *self, PyObject *args) {
     (void)self;
-    return mapped_classes_impl(args, 1);
+    return mapped_classes_impl(args, 1, 0);
+}
+
+static PyObject *mapped_checked_classes_crc(PyObject *self, PyObject *args) {
+    (void)self;
+    return mapped_classes_impl(args, 1, 1);
 }
 
 static unsigned char ascii_lower(unsigned char value) {
@@ -976,6 +1004,7 @@ static PyMethodDef methods[] = {
     {"checked_classes", buffer_checked_classes, METH_VARARGS, "Validate ASCII duplicates and return only deferred Unicode row indices."},
     {"mapped_classes", mapped_classes, METH_VARARGS, "Read CRC-checked names; defer only non-ASCII class offsets."},
     {"mapped_checked_classes", mapped_checked_classes, METH_VARARGS, "Read CRC-checked names and validate ASCII duplicates without a Python directory walk."},
+    {"mapped_checked_classes_crc", mapped_checked_classes_crc, METH_VARARGS, "Read checked names with an explicit CRC function and mandatory full readback."},
     {"matching_types", buffer_matching_types, METH_VARARGS, "Match checked ASCII types; defer modified UTF8."},
     {"matching_strings", buffer_matching_strings, METH_VARARGS, "Match checked ASCII strings; defer modified UTF8."},
     {"owner_members", buffer_owner_members, METH_VARARGS, "Select bounded member IDs by checked owner IDs."},

@@ -65,6 +65,10 @@ def distribution_identity(project: Path, wheel: Path) -> tuple[str, dict[str, st
         metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
         for field in ("Name", "Version"):
             assert source_metadata[field] and source_metadata[field] == metadata[field], field
+        for field in ("Requires-Dist", "Provides-Extra"):
+            assert sorted(source_metadata.get_all(field, [])) == sorted(
+                metadata.get_all(field, [])
+            ), field
         package_files = {
             name.removeprefix("droidasc_mcp/"): archive.read(name)
             for name in archive.namelist()
@@ -87,6 +91,20 @@ def distribution_identity(project: Path, wheel: Path) -> tuple[str, dict[str, st
     }
 
 
+def sync_command(python, preparation):
+    command = ["uv", "sync", "--locked", "--extra", "dev", "--python", str(python)]
+    if preparation:
+        command.extend(["--extra", "preparation"])
+    return command
+
+
+def pytest_command(python, profile, stage, junit_dir):
+    command = [str(python), "-m", "pytest", "-q"]
+    if junit_dir is not None:
+        command.append("--junitxml=" + str(junit_dir / f"{profile}-{stage}.xml"))
+    return command
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sdist", type=Path)
@@ -94,7 +112,20 @@ def main():
     parser.add_argument("--fixture-apk", type=Path, help="Built public acceptance APK")
     parser.add_argument("--complex-apk", type=Path, help="R8/Kotlin release fixture")
     parser.add_argument("--complex-mapping", type=Path, help="R8 acceptance-side mapping")
+    parser.add_argument(
+        "--preparation", action="store_true", help="Test the pinned optional profile"
+    )
+    parser.add_argument(
+        "--junit-dir", type=Path, help="Preserve distinct profile/stage test receipts"
+    )
     args = parser.parse_args()
+    profile = "preparation" if args.preparation else "base"
+    if args.junit_dir is not None:
+        args.junit_dir = args.junit_dir.resolve()
+        args.junit_dir.mkdir(parents=True, exist_ok=True)
+        for stage in ("sdist", "wheel"):
+            if (args.junit_dir / f"{profile}-{stage}.xml").exists():
+                parser.error("Preserve previous distribution test receipts")
     wheel = args.wheel.resolve()
     env = os.environ.copy()
     for name in (
@@ -138,6 +169,7 @@ def main():
                 "tests/test_graph_benchmark_binding.py",
                 "uv.lock",
                 "scripts/verify_dist.py",
+                "scripts/verify_preparation_profile.py",
                 "tests/test_distribution_identity.py",
                 "scripts/verify_archive_workflow.py",
                 "scripts/verify_signing.py",
@@ -262,9 +294,16 @@ def main():
         def run(command, cwd=project):
             subprocess.run(command, cwd=cwd, env=env, check=True, timeout=1800)
 
-        run(["uv", "sync", "--locked", "--extra", "dev", "--python", sys.executable])
+        run(sync_command(sys.executable, args.preparation))
         python = project / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        run([str(python), "-m", "pytest", "-q"])
+        run(
+            [
+                str(python),
+                str(project / "scripts" / "verify_preparation_profile.py"),
+                profile,
+            ]
+        )
+        run(pytest_command(python, profile, "sdist", args.junit_dir))
         # Replace editable installation with the built wheel; never import the original checkout.
         run(
             [
@@ -299,7 +338,14 @@ def main():
             ],
             root,
         )
-        run([str(python), "-m", "pytest", "-q"])
+        run(
+            [
+                str(python),
+                str(project / "scripts" / "verify_preparation_profile.py"),
+                profile,
+            ]
+        )
+        run(pytest_command(python, profile, "wheel", args.junit_dir))
         run([str(python), "-m", "droidasc_mcp", "--help"], root)
     print("sdist and wheel acceptance passed")
 

@@ -9,6 +9,7 @@ description = "A safe, structured MCP server for the Droid ASC Android decompile
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [
     { name = "cnlnn" },
 ]
@@ -38,6 +39,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+preparation = ["zlib-ng==1.0.0"]
 dev = [
     "pytest>=8.3",
     "pytest-cov>=6",

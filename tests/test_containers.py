@@ -203,10 +203,14 @@ def test_preparation_never_constructs_full_resource_zipinfo_inventory(
 
 
 @pytest.mark.parametrize("failure", [False, True])
-def test_prefetch_preserves_bytes_and_late_error_without_leaking_threads(failure):
+@pytest.mark.parametrize("queue_blocks", [1, 32])
+@pytest.mark.parametrize("payload_bytes", [900_000, 9 * 1024**2])
+def test_prefetch_preserves_bytes_and_late_error_without_leaking_threads(
+    failure, queue_blocks, payload_bytes
+):
     from droidasc_mcp.containers import prefetched
 
-    data = b"0123456789" * 90000
+    data = (b"0123456789" * ((payload_bytes + 9) // 10))[:payload_bytes]
 
     class Source(io.BytesIO):
         name = "bounded.dex"
@@ -218,16 +222,65 @@ def test_prefetch_preserves_bytes_and_late_error_without_leaking_threads(failure
                 raise zipfile.BadZipFile("late CRC failure")
             return block
 
-    with Source(data) as source, prefetched(source) as stream:
-        result = stream.read(112)
+    with Source(data) as source, prefetched(source, queue_blocks=queue_blocks) as stream:
+        result = bytearray(stream.read(112))
         while len(result) < len(data):
-            result += stream.read(min(256 * 1024, len(data) - len(result)))
+            result.extend(stream.read(min(256 * 1024, len(data) - len(result))))
         assert result == data
         if failure:
             with pytest.raises(zipfile.BadZipFile, match="late CRC"):
                 stream.read(1)
         else:
             assert stream.read(1) == b""
+    assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
+@pytest.mark.parametrize("payload_bytes", [32 * 1024, 9 * 1024**2])
+def test_prefetched_future_zip_member_crc_failure_closes_every_reader(payload_bytes, monkeypatch):
+    from droidasc_mcp.containers import prefetched_entries
+
+    opened = []
+    failed_ahead = threading.Event()
+    original_read = zipfile.ZipExtFile.read
+
+    def observe_crc(source, count=-1):
+        try:
+            return original_read(source, count)
+        except zipfile.BadZipFile:
+            if source.name == "second.dex":
+                failed_ahead.set()
+            raise
+
+    monkeypatch.setattr(zipfile.ZipExtFile, "read", observe_crc)
+    first = b"valid" * 1000
+    raw = zip_bytes([("first.dex", first), ("second.dex", b"x" * payload_bytes)])
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        # Exercise a real stdlib decompressor/CRC failure, both before the next
+        # member is consumed and after its bounded prefetch window fills.
+        archive.getinfo("second.dex").CRC ^= 1
+
+        class TrackingArchive:
+            def open(self, info):
+                stream = archive.open(info)
+                opened.append(stream)
+                return stream
+
+        inputs = [(TrackingArchive(), info, info.filename) for info in archive.infolist()]
+        with (
+            pytest.raises(zipfile.BadZipFile, match="CRC"),
+            prefetched_entries(inputs) as entries,
+        ):
+            if payload_bytes < 8 * 1024**2:
+                assert failed_ahead.wait(3), "Future-member error must precede consumption"
+            source, _, name = next(entries)
+            assert name == "first.dex"
+            assert b"".join(iter(lambda: source.read(256 * 1024), b"")) == first
+            source, _, name = next(entries)
+            assert name == "second.dex"
+            while source.read(256 * 1024):
+                pass
+        assert failed_ahead.is_set()
+        assert len(opened) == 2 and all(stream.closed for stream in opened)
     assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
 
 
@@ -266,28 +319,63 @@ def test_prefetch_full_chunks_are_transferred_without_copying():
         assert stream.read(1) == b""
 
 
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"chunk_size": 0},
+        {"chunk_size": -1},
+        {"chunk_size": True},
+        {"chunk_size": 256 * 1024 + 1},
+        {"queue_blocks": 0},
+        {"queue_blocks": -1},
+        {"queue_blocks": True},
+        {"queue_blocks": 33},
+    ],
+)
+def test_prefetch_rejects_unbounded_or_invalid_buffer_configuration(options):
+    from droidasc_mcp.containers import prefetched
+
+    class Source:
+        name = "never-read.dex"
+
+        def read(self, count):
+            raise AssertionError("Invalid buffer configuration must not start a reader")
+
+    with pytest.raises(ValueError, match="Prefetch"), prefetched(Source(), **options):
+        raise AssertionError("Invalid buffer configuration must not be yielded")
+    assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
 @pytest.mark.parametrize("consume_block", [False, True])
 def test_abandoned_prefetched_entries_bound_both_queues_and_join_threads(consume_block):
     from types import SimpleNamespace
 
-    from droidasc_mcp.containers import prefetched_entries
+    from droidasc_mcp.containers import (
+        PREFETCH_CHUNK_BYTES,
+        PREFETCH_ENTRY_QUEUE_BLOCKS,
+        prefetched_entries,
+    )
 
     queued = {name: threading.Event() for name in ("first.dex", "second.dex")}
     sources = []
     block = b"x" * (256 * 1024)
+    assert len(block) == PREFETCH_CHUNK_BYTES
+    assert 2 * (PREFETCH_ENTRY_QUEUE_BLOCKS + 2) * PREFETCH_CHUNK_BYTES <= 9 * 1024**2
 
     class Source(io.BytesIO):
         def __init__(self, name):
-            super().__init__(block * 8)
+            super().__init__()
             self.name, self.reads = name, 0
 
         def read(self, count):
             assert 0 < count <= len(block)
             self.block_size = count
             self.reads += 1
-            if self.reads == 2:
+            if self.reads == PREFETCH_ENTRY_QUEUE_BLOCKS + 1:
                 queued[self.name].set()
-            return super().read(count)
+            # An unbounded source must still stop at the fixed queue capacity.
+            # Share immutable test bytes rather than allocate the full window.
+            return block[:count]
 
     class Archive:
         def open(self, info):
@@ -295,21 +383,38 @@ def test_abandoned_prefetched_entries_bound_both_queues_and_join_threads(consume
             sources.append(source)
             return source
 
-    inputs = [(Archive(), SimpleNamespace(filename=name), name) for name in queued]
+    inputs = [
+        (Archive(), SimpleNamespace(filename=name), name) for name in [*queued, "must-not-open.dex"]
+    ]
     with (
         pytest.raises(RuntimeError, match="abandon both"),
         prefetched_entries(inputs) as entries,
     ):
         assert all(event.wait(3) for event in queued.values())
-        assert [source.reads for source in sources] == [2, 2]
+        assert len(sources) == 2, "At most two members may be decompressed ahead"
+        assert [source.reads for source in sources] == [PREFETCH_ENTRY_QUEUE_BLOCKS + 1] * 2
         if consume_block:
             stream, _, _ = next(entries)
             assert stream.read(len(block)) == block[: sources[0].block_size]
         raise RuntimeError("abandon both")
     assert all(source.closed for source in sources)
-    assert sources[0].reads <= (3 if consume_block else 2)
-    assert sources[1].reads == 2
+    assert sources[0].reads <= PREFETCH_ENTRY_QUEUE_BLOCKS + 1 + int(consume_block)
+    assert sources[1].reads == PREFETCH_ENTRY_QUEUE_BLOCKS + 1
     assert not any(thread.name == "droidasc-dex-prefetch" for thread in threading.enumerate())
+
+
+def test_prefetch_entry_default_does_not_lower_standalone_maximum():
+    import inspect
+
+    from droidasc_mcp.containers import (
+        PREFETCH_ENTRY_QUEUE_BLOCKS,
+        PREFETCH_QUEUE_BLOCKS,
+        prefetched,
+    )
+
+    assert PREFETCH_ENTRY_QUEUE_BLOCKS == 16
+    assert PREFETCH_QUEUE_BLOCKS == 32
+    assert inspect.signature(prefetched).parameters["queue_blocks"].default == 1
 
 
 def test_capability_routes_do_not_duplicate_resource_inventory():

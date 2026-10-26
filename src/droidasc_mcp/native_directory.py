@@ -82,7 +82,7 @@ def stored_member_offset(stream, info):
     return info.header_offset + 30 + name_size + extra_size
 
 
-def class_names(bundle, info, *, accelerator=True):
+def class_names(bundle, info, *, accelerator=True, crc32=None):
     """Read one closed member, including before the enclosing ZIP is finalized.
 
     The caller must flush the writer first. No view/handle survives this call,
@@ -90,12 +90,18 @@ def class_names(bundle, info, *, accelerator=True):
     """
     native = None
     checked = False
+    custom_crc = False
+    if crc32 is not None and not callable(crc32):
+        raise TypeError("CRC callback must be callable")
     if accelerator:
         with suppress(ImportError):
             from . import _dexscan
 
             checked = hasattr(_dexscan, "mapped_checked_classes")
             native = _dexscan.mapped_checked_classes if checked else _dexscan.mapped_classes
+            if crc32 is not None and hasattr(_dexscan, "mapped_checked_classes_crc"):
+                native = _dexscan.mapped_checked_classes_crc
+                custom_crc = checked = True
     with bundle.open("rb") as stream:
         handle = stream.fileno()
         if os.name == "nt":
@@ -119,7 +125,10 @@ def class_names(bundle, info, *, accelerator=True):
                 dex.close()
         seen = set()
         try:
-            names = native(handle, base, info.file_size, info.CRC)
+            arguments = (handle, base, info.file_size, info.CRC)
+            # Older native modules retain their mandatory standard-zlib check.
+            # The new API changes only the checksum function, never readback.
+            names = native(*arguments, crc32) if custom_crc else native(*arguments)
         except ValueError as exc:
             raise InvalidDex(str(exc)) from exc
         if checked:

@@ -1,6 +1,7 @@
 """Compiled schema registration must preserve SDK contracts and strict validation."""
 
 import json
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pydantic
@@ -239,7 +240,12 @@ def test_compact_schema_preserves_every_nullable_leaf_and_constrained_union():
     for contract in OUTPUT_TYPES.values():
         compact = contract_schema(contract)
         Draft202012Validator.check_schema(compact)
-        compare(TypeAdapter(contract).json_schema(), compact)
+        original = TypeAdapter(contract).json_schema()
+        if contract is contracts.DexResult:
+            assert original["properties"]["items"]["items"] == {"$ref": "#/$defs/DexRow"}
+            assert compact["properties"]["items"]["items"] == compact["$defs"]["DexRow"]
+            original["properties"]["items"]["items"] = deepcopy(original["$defs"]["DexRow"])
+        compare(original, compact)
     assert checked >= 30
 
 
@@ -252,8 +258,146 @@ def test_schema_generation_falls_back_for_older_pydantic(monkeypatch):
         return original(self)
 
     expected = original(TypeAdapter(contracts.DexResult))
+    expected["properties"]["items"]["items"] = deepcopy(expected["$defs"]["DexRow"])
     monkeypatch.setattr(TypeAdapter, "json_schema", older)
     assert contract_schema(contracts.DexResult) == expected
+
+
+def raw_contract_schema(contract):
+    import inspect
+
+    options = (
+        {"union_format": "primitive_type_array"}
+        if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters
+        else {}
+    )
+    return TypeAdapter(contract).json_schema(**options)
+
+
+def test_only_hot_row_reference_is_inlined_without_changing_any_constraint():
+    from droidasc_mcp.tool_registry import OUTPUT_TYPES, contract_schema
+
+    for contract in OUTPUT_TYPES.values():
+        original = raw_contract_schema(contract)
+        expected = deepcopy(original)
+        if contract is contracts.DexResult:
+            expected["properties"]["items"]["items"] = deepcopy(expected["$defs"]["DexRow"])
+        actual = contract_schema(contract)
+        assert actual == expected
+        if contract is contracts.DexResult:
+            assert actual["$defs"] == original["$defs"]
+            assert actual["properties"]["items"]["items"] is not actual["$defs"]["DexRow"]
+            assert actual["properties"]["edges"] == original["properties"]["edges"]
+            assert (
+                actual["properties"]["unresolved_sites"]
+                == original["properties"]["unresolved_sites"]
+            )
+
+
+def test_inlined_row_preserves_all_field_validation_and_invalid_instance_errors():
+    from jsonschema import Draft202012Validator
+
+    from droidasc_mcp.tool_registry import contract_schema
+
+    original = raw_contract_schema(contracts.DexResult)
+    before = Draft202012Validator(original)
+    after = Draft202012Validator(contract_schema(contracts.DexResult))
+    values = [
+        None,
+        True,
+        False,
+        0,
+        -1,
+        1.5,
+        "",
+        "read",
+        "static",
+        "\u00e9\U0001f680",
+        [],
+        ["x"],
+        [1],
+        {},
+        {"a": 1},
+    ]
+
+    def errors(validator, instance):
+        return [
+            (list(error.absolute_path), error.validator, error.message)
+            for error in validator.iter_errors(instance)
+        ]
+
+    checked = 0
+    rejected = 0
+    for field in original["$defs"]["DexRow"]["properties"]:
+        for value in values:
+            instance = {"status": "ok", "items": [{field: value}]}
+            expected = errors(before, instance)
+            assert errors(after, instance) == expected
+            checked += 1
+            rejected += bool(expected)
+    for instance in (
+        {},
+        {"status": "success"},
+        {"status": "ok", "items": None},
+        {"status": "ok", "items": [None]},
+        {"status": "ok", "items": ["bad"]},
+        {"status": "ok", "items": [{"future_diagnostic": [None, {"x": 1}]}]},
+        {"status": "partial", "items": []},
+    ):
+        assert errors(after, instance) == errors(before, instance)
+    assert checked >= 500 and rejected >= 300
+
+
+@pytest.mark.parametrize(
+    "keyword",
+    [
+        "$ref",
+        "$dynamicRef",
+        "$recursiveRef",
+        "$id",
+        "$anchor",
+        "$dynamicAnchor",
+        "$recursiveAnchor",
+        "$schema",
+        "$defs",
+        "definitions",
+        "id",
+    ],
+)
+@pytest.mark.parametrize("nested", [False, True])
+def test_row_inlining_refuses_scope_or_reference_keywords(keyword, nested):
+    from droidasc_mcp.tool_registry import _inline_reference_rows
+
+    row = {"type": "object", "properties": {"value": {"type": "string"}}}
+    target = row["properties"]["value"] if nested else row
+    target[keyword] = "scoped-value"
+    schema = {
+        "$defs": {"DexRow": row},
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/$defs/DexRow"}}},
+    }
+    expected = deepcopy(schema)
+    _inline_reference_rows(schema)
+    assert schema == expected
+
+
+@pytest.mark.parametrize(
+    "item_schema",
+    [
+        {"$ref": "#/$defs/Other"},
+        {"$ref": "#/$defs/DexRow", "description": "keep"},
+        {"type": "object"},
+    ],
+)
+def test_row_inlining_preserves_nonexact_references_and_siblings(item_schema):
+    from droidasc_mcp.tool_registry import _inline_reference_rows
+
+    schema = {
+        "$defs": {"DexRow": {"type": "object"}},
+        "properties": {"items": {"items": item_schema}},
+    }
+    expected = deepcopy(schema)
+    _inline_reference_rows(schema)
+    assert schema == expected
 
 
 @pytest.mark.parametrize(

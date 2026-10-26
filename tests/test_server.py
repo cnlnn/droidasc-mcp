@@ -63,11 +63,11 @@ async def test_every_tool_advertises_typed_wire_contract(settings):
         properties = schema["properties"]
         assert len(properties) >= 5, tool.name
         if tool.name.startswith(("asc_query_dex", "asc_analyze_dex")):
-            assert properties["items"]["items"]["$ref"].endswith("/DexRow")
+            assert properties["items"]["items"] == schema["$defs"]["DexRow"]
             assert properties["status"]["enum"] == ["ok", "partial", "error", "not_applicable"]
             validator = Draft202012Validator(schema)
             # Both anyOf and a primitive type array can describe a nullable
-            # integer. Exercise the advertised contract through its real $ref.
+            # integer. Exercise the complete advertised row contract.
             for offset in (None, 0, 12, -1):
                 validator.validate({"status": "ok", "items": [{"instruction_offset": offset}]})
             for offset in (True, False, "12", "twelve", 1.5, [], {}):

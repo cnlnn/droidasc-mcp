@@ -27,7 +27,10 @@ class CapsuleTests(unittest.TestCase):
         self.addCleanup(cloud_test.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.base = Path(self.temp.name)
+        # Windows TEMP may use a short-name/case alias which resolve() expands.
+        # Raw verifier receipts bind resolved paths, so create the entire fixture
+        # under one canonical root before serializing any path-keyed evidence.
+        self.base = Path(self.temp.name).resolve(strict=True)
         self.root = self.base / "source"
         (self.root / "src/droidasc_mcp").mkdir(parents=True)
         (self.root / "scripts").mkdir()
@@ -788,6 +791,49 @@ class CapsuleTests(unittest.TestCase):
         item.update(status="passed", oracle_match=True, reports=[])
         with self.assertRaisesRegex(ValueError, "report count"):
             b.build_capsule(self.manifest)
+
+
+class FixturePathTests(unittest.TestCase):
+    def test_aliased_temporary_root_builds_complete_capsule(self):
+        # Exercise Windows-style alias expansion without requiring Windows-only
+        # short-name APIs, administrator privileges, symlinks, or a skipped test.
+        factory = tempfile.TemporaryDirectory
+        aliases = []
+
+        class AliasedTemporaryDirectory:
+            def __init__(self):
+                self.actual = factory()
+                root = Path(self.actual.name)
+                (root / "alias-anchor").mkdir()
+                self.name = str(root / "alias-anchor" / "..")
+                aliases.append(self.name)
+
+            def cleanup(self):
+                self.actual.cleanup()
+
+        case = CapsuleTests(
+            methodName="test_full_valid_synthesis_is_deterministic_private_and_preserves_failures"
+        )
+        try:
+            with patch.object(tempfile, "TemporaryDirectory", AliasedTemporaryDirectory):
+                case.setUp()
+            self.assertNotEqual(aliases[0], str(Path(aliases[0]).resolve(strict=True)))
+            self.assertEqual(case.base, Path(aliases[0]).resolve(strict=True))
+            # Full 30+8 validation, determinism, privacy and comparator accounting,
+            # not only a lexical path assertion.
+            case.test_full_valid_synthesis_is_deterministic_private_and_preserves_failures()
+        finally:
+            case.doCleanups()
+
+    def test_same_bytes_at_another_path_do_not_bind_required_dependency(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(strict=True)
+            required, substitute = root / "required.json", root / "substitute.json"
+            required.write_bytes(b"identical bytes do not make identical provenance")
+            substitute.write_bytes(required.read_bytes())
+            report = {"acceptance_inputs_sha256": {str(substitute): b.file_hash(substitute)}}
+            with self.assertRaisesRegex(ValueError, "Required dependency not bound"):
+                b.dependencies(report, [required])
 
 
 if __name__ == "__main__":

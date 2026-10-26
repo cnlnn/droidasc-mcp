@@ -5,7 +5,7 @@ import shutil
 import threading
 from collections import OrderedDict
 from importlib.metadata import version
-from pathlib import Path
+from pathlib import Path, PosixPath
 
 from .reference_page import OPERATIONS, reference_page
 
@@ -14,16 +14,26 @@ MAX_PAGE_BYTES = 256 * 1024
 MAX_ENTRIES = 32
 
 
+def _sorted_siblings(paths):
+    """Use filename ordering only for concrete POSIX siblings, never custom paths."""
+    paths = list(paths)
+    if paths and all(type(path) is PosixPath and path.name for path in paths):
+        parent = paths[0].parts[:-1]
+        if all(path.parts[:-1] == parent for path in paths):
+            return sorted(paths, key=lambda path: path.name)
+    return sorted(paths)
+
+
 def signature(settings, root):
     """Track local implementation, engine and index replacement before reusing a page."""
     home = settings.jadx_home
     java = shutil.which(settings.java_executable or "java")
-    jars = sorted((home / "lib").glob("*.jar")) if home else []
+    jars = _sorted_siblings((home / "lib").glob("*.jar")) if home else []
     source = Path(__file__).parent
     paths = [
-        *sorted(source.glob("*.py")),
-        *sorted(source.glob("*.java")),
-        *sorted(source.glob("_dexscan.*")),
+        *_sorted_siblings(source.glob("*.py")),
+        *_sorted_siblings(source.glob("*.java")),
+        *_sorted_siblings(source.glob("_dexscan.*")),
         *jars,
     ]
     if java:

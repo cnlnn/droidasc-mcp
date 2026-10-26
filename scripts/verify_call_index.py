@@ -186,9 +186,11 @@ def compare_index(index, independent_records, workspace):
         db.execute("PRAGMA journal_mode=OFF")
         db.execute("PRAGMA synchronous=OFF")
         db.execute("PRAGMA cache_size=-4096")
+        # A rowid table stores the exact record twice: in the table and its unique
+        # primary-key index. Keep one exact-key B-tree, not a digest surrogate.
         db.execute(
             "CREATE TABLE records (kind TEXT, record BLOB, candidate INTEGER, oracle INTEGER, "
-            "PRIMARY KEY(kind,record))"
+            "PRIMARY KEY(kind,record)) WITHOUT ROWID"
         )
         for column, records in (
             ("candidate", candidate_records(native)),

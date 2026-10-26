@@ -12,6 +12,8 @@ import sqlite3
 import struct
 import zipfile
 import zlib
+from collections import Counter
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -56,7 +58,7 @@ def gate(monkeypatch):
 @pytest.fixture
 def index(tmp_path):
     path = tmp_path / "calls.sqlite"
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         db.executescript("""
             CREATE TABLE symbols (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL);
             CREATE TABLE definitions (kind TEXT, name INTEGER UNIQUE, entry TEXT);
@@ -81,6 +83,189 @@ def index(tmp_path):
         )
         db.execute("INSERT INTO dynamic VALUES (1,1,?)", (zlib.compress(compact(unresolved())),))
     return path
+
+
+@pytest.fixture
+def compare_storage(gate, monkeypatch):
+    """Run the unchanged comparator against either physical primary-key layout."""
+    connect = sqlite3.connect
+
+    def run(index, records, workspace, *, legacy_rowid=False):
+        connections, snapshots = [], []
+
+        class ObservedConnection(sqlite3.Connection):
+            is_comparison = False
+
+            def execute(self, sql, *args, **kwargs):
+                if sql.startswith("CREATE TABLE records "):
+                    self.is_comparison = True
+                    assert sql.endswith(" WITHOUT ROWID")
+                    if legacy_rowid:
+                        sql = sql.removesuffix(" WITHOUT ROWID")
+                    # Fix the page size so the allocation comparison is repeatable.
+                    super().execute("PRAGMA page_size=4096")
+                return super().execute(sql, *args, **kwargs)
+
+            def close(self):
+                try:
+                    if self.is_comparison:
+                        # Inspect live pages, including the uncommitted working set.
+                        # compare_index intentionally does not persist this scratch DB.
+                        snapshots.append(
+                            {
+                                "schema": list(
+                                    self.execute(
+                                        "SELECT type,name,sql FROM sqlite_schema ORDER BY type,name"
+                                    )
+                                ),
+                                "page_count": self.execute("PRAGMA page_count").fetchone()[0],
+                                "page_size": self.execute("PRAGMA page_size").fetchone()[0],
+                                "rows": list(
+                                    self.execute(
+                                        "SELECT kind,record,candidate,oracle FROM records "
+                                        "ORDER BY kind,record"
+                                    )
+                                ),
+                            }
+                        )
+                finally:
+                    super().close()
+
+        def observed_connect(*args, **kwargs):
+            connection = connect(*args, factory=ObservedConnection, **kwargs)
+            connections.append(connection)
+            return connection
+
+        with monkeypatch.context() as patch:
+            patch.setattr(gate.sqlite3, "connect", observed_connect)
+            try:
+                result = gate.compare_index(index, records, workspace)
+            finally:
+                # Keep references alive to prove explicit close, not CPython GC.
+                assert len(connections) == 2
+                for connection in connections:
+                    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+                        connection.execute("SELECT 1")
+                assert not list(workspace.glob("call-multiset-*"))
+        assert len(snapshots) == 1
+        return result, snapshots[0]
+
+    return run
+
+
+def expected_multiset_result(records):
+    """Independent in-memory reference for the existing wire-format digest."""
+    counts, hashes = {}, {}
+    for kind in ("calls", "methods", "dynamic"):
+        multiset = Counter(record for tag, record in records if tag == kind)
+        counts[kind] = sum(multiset.values())
+        digest = hashlib.sha256()
+        for record, count in sorted(multiset.items()):
+            digest.update(struct.pack("<II", len(record), count))
+            digest.update(record)
+        hashes[kind] = digest.hexdigest()
+    methods = [json.loads(record) for kind, record in records if kind == "methods"]
+    return {
+        "total_call_sites": counts["calls"],
+        "methods": counts["methods"],
+        "scanned_instructions": sum(row[2] for row in methods),
+        "methods_without_code": sum(row[3] for row in methods),
+        "dynamic_sites": counts["dynamic"],
+        "site_multiset_sha256": hashes["calls"],
+        "method_multiset_sha256": hashes["methods"],
+        "dynamic_multiset_sha256": hashes["dynamic"],
+    }
+
+
+@pytest.mark.parametrize("case", ["empty", "mixed", "duplicates", "shared_bytes"])
+def test_storage_layout_preserves_exact_multisets(
+    gate, index, tmp_path, monkeypatch, compare_storage, case
+):
+    records = [] if case == "empty" else independent_records()
+    if case == "duplicates":
+        records += records[::2] * 3 + records[1::2] * 2
+    elif case == "shared_bytes":
+        # Test the composite key itself: identical bytes in different kinds must
+        # never be merged, even when each kind has a different multiplicity.
+        key = compact(["classes.dex", "Lfixture/Shared;->same()V", 9, 0])
+        records += [
+            (kind, key)
+            for n, kind in enumerate(("calls", "methods", "dynamic"), 1)
+            for _ in range(n)
+        ]
+    monkeypatch.setattr(gate, "candidate_records", lambda _: iter(records))
+    old_result, old = compare_storage(index, reversed(records), tmp_path, legacy_rowid=True)
+    new_result, new = compare_storage(index, reversed(records), tmp_path)
+    assert old_result == new_result == expected_multiset_result(records)
+    expected_rows = [
+        (kind, record, count, count) for (kind, record), count in sorted(Counter(records).items())
+    ]
+    assert old["rows"] == new["rows"] == expected_rows
+
+
+@pytest.mark.parametrize("kind", ["calls", "methods", "dynamic"])
+@pytest.mark.parametrize("fault", ["omission", "duplicate", "equal_count_corruption"])
+def test_both_storage_layouts_reject_exact_multiset_differences(
+    gate, index, tmp_path, monkeypatch, compare_storage, kind, fault
+):
+    records = independent_records()
+    monkeypatch.setattr(gate, "candidate_records", lambda _: iter(records))
+    oracle = records.copy()
+    position = next(n for n, (tag, _) in enumerate(oracle) if tag == kind)
+    if fault == "omission":
+        oracle.pop(position)
+    elif fault == "duplicate":
+        oracle.append(oracle[position])
+    else:
+        tag, record = oracle[position]
+        oracle[position] = tag, record + b" "  # Same JSON value, different exact bytes.
+    errors = []
+    for legacy_rowid in (True, False):
+        with pytest.raises(AssertionError, match=f"Persisted {kind} multiset") as error:
+            compare_storage(index, iter(oracle), tmp_path, legacy_rowid=legacy_rowid)
+        errors.append(str(error.value))
+    assert errors[0] == errors[1]
+
+
+@pytest.mark.parametrize("descriptor_repeats", [16, 256], ids=["medium", "overflow"])
+def test_long_descriptors_use_one_smaller_exact_key_btree(
+    gate, index, tmp_path, monkeypatch, compare_storage, record_property, descriptor_repeats
+):
+    owner = "Lfixture/" + "LongDescriptor" * descriptor_repeats + ";->"
+    records = [
+        (
+            "calls",
+            compact(
+                [
+                    "classes.dex",
+                    owner + "root()V",
+                    owner + f"target{n:04d}()V",
+                    n,
+                    "invoke-static",
+                    "",
+                ]
+            ),
+        )
+        for n in range(128)
+    ]
+    records += records[::3]  # Multiplicity updates must not allocate duplicate records.
+    monkeypatch.setattr(gate, "candidate_records", lambda _: iter(records))
+    old_result, old = compare_storage(index, reversed(records), tmp_path, legacy_rowid=True)
+    new_result, new = compare_storage(index, reversed(records), tmp_path)
+    assert old_result == new_result == expected_multiset_result(records)
+    assert old["rows"] == new["rows"]
+    assert [(kind, name) for kind, name, _ in old["schema"]] == [
+        ("index", "sqlite_autoindex_records_1"),
+        ("table", "records"),
+    ]
+    assert [(kind, name) for kind, name, _ in new["schema"]] == [("table", "records")]
+    assert new["schema"][0][2].endswith(" WITHOUT ROWID")
+    assert old["page_size"] == new["page_size"] == 4096
+    old_bytes = old["page_count"] * old["page_size"]
+    new_bytes = new["page_count"] * new["page_size"]
+    record_property("legacy_comparison_bytes", old_bytes)
+    record_property("without_rowid_comparison_bytes", new_bytes)
+    assert new_bytes < old_bytes * 0.75
 
 
 def test_complete_multisets_include_empty_methods_and_dynamic_content(gate, index, tmp_path):
@@ -128,7 +313,7 @@ def test_complete_multisets_include_empty_methods_and_dynamic_content(gate, inde
 def test_omissions_duplicates_hidden_rows_and_provenance_are_rejected(
     gate, index, tmp_path, mutation
 ):
-    with sqlite3.connect(index) as db:
+    with closing(sqlite3.connect(index)) as db, db:
         db.execute(mutation)
     with pytest.raises(AssertionError):
         gate.compare_index(index, iter(independent_records()), tmp_path)
@@ -147,7 +332,7 @@ def test_omissions_duplicates_hidden_rows_and_provenance_are_rejected(
 )
 def test_equal_dynamic_counts_cannot_hide_wrong_payload(gate, index, tmp_path, field, value):
     row = {**unresolved(), field: value}
-    with sqlite3.connect(index) as db:
+    with closing(sqlite3.connect(index)) as db, db:
         db.execute("UPDATE dynamic SET data=?", (zlib.compress(compact(row)),))
         assert db.execute("SELECT count(*) FROM dynamic").fetchone()[0] == 1
     with pytest.raises(AssertionError, match="dynamic multiset"):
@@ -165,14 +350,14 @@ def test_equal_dynamic_counts_cannot_hide_wrong_payload(gate, index, tmp_path, f
     ],
 )
 def test_call_content_and_polymorphic_prototype_are_exact(gate, index, tmp_path, payload):
-    with sqlite3.connect(index) as db:
+    with closing(sqlite3.connect(index)) as db, db:
         db.execute("UPDATE edges SET data=? WHERE id=2", (compact(payload),))
     with pytest.raises(AssertionError):
         gate.compare_index(index, iter(independent_records()), tmp_path)
 
 
 def test_no_calls_is_a_real_empty_multiset_not_null(gate, index, tmp_path):
-    with sqlite3.connect(index) as db:
+    with closing(sqlite3.connect(index)) as db, db:
         db.execute("DELETE FROM edges")
         db.execute("DELETE FROM dynamic")
     rows = [row for row in independent_records() if row[0] == "methods"]
@@ -344,7 +529,7 @@ def test_engine_and_source_hashes_must_reproduce_input_id(gate, acceptance_input
 
 
 def test_empty_prototype_is_not_silently_normalized_to_absent(gate, index, tmp_path):
-    with sqlite3.connect(index) as db:
+    with closing(sqlite3.connect(index)) as db, db:
         db.execute("UPDATE edges SET data=? WHERE id=1", (compact([0, "invoke-static", ""]),))
     with pytest.raises(AssertionError, match="Unexpected prototype"):
         gate.compare_index(index, independent_records(), tmp_path)

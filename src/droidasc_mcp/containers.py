@@ -12,6 +12,10 @@ from contextlib import ExitStack, contextmanager
 from .archive_errors import ArchiveError
 from .archive_worker import _digest, _entries, _identity, _read, page
 
+PREFETCH_CHUNK_BYTES = 256 * 1024
+PREFETCH_QUEUE_BLOCKS = 32
+PREFETCH_ENTRY_QUEUE_BLOCKS = 16
+
 
 def validate_budget(value, settings):
     if type(value) is not int or not 1 <= value <= settings.max_apk_bytes:
@@ -324,12 +328,16 @@ def snapshot(settings, path, root, budget, module):
 
 
 @contextmanager
-def prefetched(source, chunk_size=256 * 1024):
-    """Overlap bounded ZIP decompression with hashing/copying, without raw files."""
+def prefetched(source, chunk_size=PREFETCH_CHUNK_BYTES, *, queue_blocks=1):
+    """Overlap ZIP decompression and copying with bounded owned payload blocks."""
     from queue import Full, Queue
     from threading import Event, Thread
 
-    pending = Queue(maxsize=1)
+    if type(chunk_size) is not int or not 1 <= chunk_size <= PREFETCH_CHUNK_BYTES:
+        raise ValueError("Prefetch chunks must be within 1 byte and 256 KiB")
+    if type(queue_blocks) is not int or not 1 <= queue_blocks <= PREFETCH_QUEUE_BLOCKS:
+        raise ValueError("Prefetch queues must contain between 1 and 32 blocks")
+    pending = Queue(maxsize=queue_blocks)
     stopped = Event()
 
     def send(value):
@@ -399,7 +407,15 @@ def prefetched_entries(inputs):
         lifetime = ExitStack()
         try:
             source = lifetime.enter_context(reader.open(info))
-            stream = lifetime.enter_context(prefetched(source, chunk_size=64 * 1024))
+            # Keep two readers, but let the next member decode far enough ahead
+            # to overlap validation/copying instead of stalling after 64 KiB.
+            # The two queues + producer/reader-held blocks occupy at most
+            # 2 * (16 + 1 + 1) * 256 KiB = 9 MiB. Caller slices/handoffs
+            # and stdlib decompressor buffers are additional, not free RSS.
+            # Total process-tree memory stays subject to the unchanged watchdog.
+            stream = lifetime.enter_context(
+                prefetched(source, queue_blocks=PREFETCH_ENTRY_QUEUE_BLOCKS)
+            )
         except BaseException:
             lifetime.close()
             raise

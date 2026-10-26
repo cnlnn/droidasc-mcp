@@ -309,3 +309,182 @@ def test_mapped_directory_checks_local_header_consistency(tmp_path):
         stream.write(b"\x08\0")
     with pytest.raises(InvalidDex, match="local header"):
         list(class_entries(bundle))
+
+
+def _custom_crc_data():
+    data = bytearray(class_dex(["Lfixture/C;"]))
+    data += b"x" * (3 * 256 * 1024 + 137)
+    struct.pack_into("<I", data, 32, len(data))
+    data[12:32] = hashlib.sha1(data[32:]).digest()
+    struct.pack_into("<I", data, 8, zlib.adler32(data[12:]))
+    return bytes(data)
+
+
+def _custom_crc_call(path, data, checksum, expected=None):
+    from droidasc_mcp._dexscan import mapped_checked_classes_crc
+
+    path.write_bytes(data)
+    with path.open("rb") as stream:
+        handle = stream.fileno()
+        if os.name == "nt":
+            import msvcrt
+
+            handle = msvcrt.get_osfhandle(handle)
+        return mapped_checked_classes_crc(
+            handle, 0, len(data), zlib.crc32(data) if expected is None else expected, checksum
+        )
+
+
+@pytest.mark.parametrize("failure", [None, "exception", "mismatch"])
+def test_custom_crc_retains_full_bounded_owned_readback(tmp_path, failure):
+    data, path, chunks, seeds = _custom_crc_data(), tmp_path / "custom-crc.dex", [], []
+
+    def checksum(block, seed):
+        assert type(block) is bytes and 0 < len(block) <= 256 * 1024
+        chunks.append(block)
+        seeds.append(seed)
+        if failure == "exception" and len(chunks) == 3:
+            raise RuntimeError("checksum failed")
+        return zlib.crc32(block, seed)
+
+    if failure == "exception":
+        with pytest.raises(RuntimeError, match="checksum failed"):
+            _custom_crc_call(path, data, checksum)
+        assert b"".join(chunks) == data[: 3 * 256 * 1024]
+    elif failure == "mismatch":
+        with pytest.raises(ValueError, match="CRC mismatch"):
+            _custom_crc_call(path, data, checksum, expected=zlib.crc32(data) ^ 1)
+        assert b"".join(chunks) == data
+    else:
+        names, deferred, seen = _custom_crc_call(path, data, checksum)
+        assert names == ["Lfixture/C;"] and not deferred and seen == {"Lfixture/C;"}
+        assert b"".join(chunks) == data
+    assert seeds == [zlib.crc32(data[: index * 256 * 1024]) for index in range(len(chunks))]
+    path.unlink()
+    assert chunks[-1][-1] == ord("x"), "callback arguments remain owned after mappings close"
+
+
+@pytest.mark.parametrize("value", [True, False, None, 1.0, "1", -1, 2**32, 2**80])
+def test_custom_crc_rejects_non_uint32_result_and_releases_mapping(tmp_path, value):
+    data, path = _custom_crc_data(), tmp_path / "bad-crc-result.dex"
+    with pytest.raises((TypeError, OverflowError)):
+        _custom_crc_call(path, data, lambda block, seed: value)
+    path.unlink()
+
+
+def test_custom_crc_rejects_integer_subclass(tmp_path):
+    class IntegerSubclass(int):
+        pass
+
+    data, path = _custom_crc_data(), tmp_path / "subclass-crc.dex"
+    with pytest.raises(TypeError, match="uint32 integer"):
+        _custom_crc_call(path, data, lambda block, seed: IntegerSubclass(zlib.crc32(block, seed)))
+    path.unlink()
+
+
+@pytest.mark.parametrize("checksum", [None, False, 0, "crc32"])
+def test_custom_crc_native_requires_callable(tmp_path, checksum):
+    data, path = _custom_crc_data(), tmp_path / "not-callable.dex"
+    with pytest.raises(TypeError, match="callable"):
+        _custom_crc_call(path, data, checksum)
+    path.unlink()
+
+
+@pytest.mark.parametrize("handle,offset,length", [(-1, 0, 112), (0, -1, 112), (0, 0, 0)])
+def test_custom_crc_rejects_invalid_mapping_without_callback(handle, offset, length):
+    from droidasc_mcp._dexscan import mapped_checked_classes_crc
+
+    def checksum(*args):
+        pytest.fail("Invalid mapping must not call the checksum backend")
+
+    with pytest.raises(ValueError):
+        mapped_checked_classes_crc(handle, offset, length, 0, checksum)
+
+
+@pytest.mark.parametrize("fallback", ["current", "legacy_checked", "legacy", "python", "missing"])
+@pytest.mark.parametrize("corrupt", [False, True])
+def test_custom_crc_directory_fallbacks_remain_checked(tmp_path, monkeypatch, fallback, corrupt):
+    from droidasc_mcp import _dexscan
+    from droidasc_mcp.native_directory import class_names
+
+    if fallback == "missing":
+        import sys
+
+        import droidasc_mcp
+
+        monkeypatch.delattr(droidasc_mcp, "_dexscan")
+        monkeypatch.setitem(sys.modules, "droidasc_mcp._dexscan", None)
+    if fallback in {"legacy_checked", "legacy"}:
+        monkeypatch.delattr(_dexscan, "mapped_checked_classes_crc")
+    if fallback == "legacy":
+        monkeypatch.delattr(_dexscan, "mapped_checked_classes")
+    bundle, calls = tmp_path / "custom-crc-fallback.apk", []
+    names = ["Lascii/C;", "Lunicode/\U0001f600;"]
+
+    def checksum(block, seed):
+        calls.append((len(block), seed))
+        return zlib.crc32(block, seed)
+
+    with zipfile.ZipFile(bundle, "w") as writer:
+        writer.writestr("classes.dex", class_dex(names))
+        writer.fp.flush()
+        info = writer.getinfo("classes.dex")
+        if corrupt:
+            info.CRC ^= 1
+            with pytest.raises(InvalidDex, match="CRC"):
+                class_names(bundle, info, accelerator=fallback != "python", crc32=checksum)
+        else:
+            assert (
+                class_names(bundle, info, accelerator=fallback != "python", crc32=checksum) == names
+            )
+        assert bool(calls) is (fallback == "current")
+        # No native view or callback survives, including when the CRC check fails.
+        writer.writestr("classes2.dex", class_dex(["Lafter/C;"]))
+    bundle.unlink()
+
+
+def test_custom_crc_directory_rejects_duplicates(tmp_path):
+    from droidasc_mcp.native_directory import class_names
+
+    path = tmp_path / "duplicate-custom-crc.apk"
+    with zipfile.ZipFile(path, "w") as writer:
+        writer.writestr("classes.dex", class_dex(["Lsame/C;", "Lsame/C;"]))
+        writer.fp.flush()
+        with pytest.raises(InvalidDex, match="Duplicate"):
+            class_names(path, writer.getinfo("classes.dex"), crc32=zlib.crc32)
+    path.unlink()
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_custom_crc_releases_callback_reference(tmp_path, failure):
+    import sys
+
+    data, path = _custom_crc_data(), tmp_path / "callback-reference.dex"
+
+    class Checksum:
+        def __call__(self, block, seed):
+            if failure:
+                raise RuntimeError("callback error")
+            return zlib.crc32(block, seed)
+
+    checksum = Checksum()
+    before = sys.getrefcount(checksum)
+    if failure:
+        with pytest.raises(RuntimeError, match="callback error"):
+            _custom_crc_call(path, data, checksum)
+    else:
+        _custom_crc_call(path, data, checksum)
+    assert sys.getrefcount(checksum) == before
+    path.unlink()
+
+
+def test_custom_crc_invalid_header_is_rejected_before_callback(tmp_path):
+    data, path = bytearray(_custom_crc_data()), tmp_path / "bad-header-crc.dex"
+    data[0] ^= 1
+
+    def checksum(*args):
+        pytest.fail("Invalid header must not call the checksum backend")
+
+    with pytest.raises(ValueError, match="header"):
+        _custom_crc_call(path, bytes(data), checksum)
+    path.unlink()

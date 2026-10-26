@@ -27,11 +27,15 @@ def reference_page(result, maximum, *, check=lambda: None):
             "page_limited_by": "response_bytes",
             "response_byte_limit": maximum,
         }
-    if _size(result) <= maximum:
+    result_size = _size(result)
+    if result_size <= maximum:
         return result
     if "query_cache" in result:
         without_cache = {k: v for k, v in result.items() if k != "query_cache"}
-        if _size(without_cache) <= maximum:
+        # There are other required fields: removing the cache field removes its
+        # key/value and one comma+space, exactly the singleton object's size.
+        cache_size = _size({"query_cache": result["query_cache"]})
+        if result_size - cache_size <= maximum:
             return without_cache
     base = {
         **result,

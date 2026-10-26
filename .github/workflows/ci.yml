@@ -107,7 +107,16 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run python scripts/compile_output_schemas.py --check
       - run: uv run python scripts/compile_input_schemas.py --check
+      - run: uv run --no-sync python scripts/verify_preparation_profile.py base
       - run: uv run pytest --cov --cov-report=term-missing --junitxml=test-results.xml
+        env:
+          ASC_TEST_APK: ${{ github.workspace }}/artifacts/fixture apk/app-debug.apk
+          ASC_TEST_EXPECT_FIXTURE: "1"
+          ASC_TEST_COMPLEX_APK: ${{ github.workspace }}/artifacts/complex/apk/release/complex-release-unsigned.apk
+          ASC_TEST_COMPLEX_MAPPING: ${{ github.workspace }}/artifacts/complex/mapping/release/mapping.txt
+      - run: uv sync --locked --extra dev --extra preparation
+      - run: uv run --no-sync python scripts/verify_preparation_profile.py preparation
+      - run: uv run --no-sync pytest --junitxml=test-results-preparation.xml
         env:
           ASC_TEST_APK: ${{ github.workspace }}/artifacts/fixture apk/app-debug.apk
           ASC_TEST_EXPECT_FIXTURE: "1"
@@ -128,6 +137,7 @@ jobs:
           name: tests-${{ matrix.os }}-py${{ matrix.python-version }}
           path: |
             test-results.xml
+            test-results-preparation.xml
             signing-results.json
 
   package:
@@ -215,7 +225,20 @@ jobs:
           --fixture-apk "artifacts/fixture apk/app-debug.apk"
           --complex-apk artifacts/complex/apk/release/complex-release-unsigned.apk
           --complex-mapping artifacts/complex/mapping/release/mapping.txt
+          --junit-dir distribution-receipts
         shell: bash
+      - run: >-
+          uv run python scripts/verify_dist.py dist/*.tar.gz dist/*.whl
+          --fixture-apk "artifacts/fixture apk/app-debug.apk"
+          --complex-apk artifacts/complex/apk/release/complex-release-unsigned.apk
+          --complex-mapping artifacts/complex/mapping/release/mapping.txt
+          --preparation --junit-dir distribution-receipts
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: distribution-tests-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: distribution-receipts/*.xml
 
   stability:
     needs: fixture

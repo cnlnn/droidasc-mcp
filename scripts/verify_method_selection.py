@@ -69,9 +69,49 @@ def original_methods(apk):
     return selected, overloaded
 
 
+class VerificationMismatch(AssertionError):
+    """An explicit oracle or protocol contract did not match."""
+
+
+class ToolFailure(RuntimeError):
+    """An MCP tool explicitly reported an error."""
+
+
+def require(condition, detail="Verification mismatch"):
+    if not condition:
+        raise VerificationMismatch(detail)
+
+
+def failure_detail(exc):
+    """Classify only concrete exception types, never guess from error text."""
+    if isinstance(exc, TimeoutError):
+        kind = "timeout"
+    elif isinstance(exc, VerificationMismatch):
+        kind = "correctness_mismatch"
+    elif isinstance(exc, ToolFailure):
+        kind = "tool_error"
+    elif isinstance(exc, (KeyboardInterrupt, SystemExit, asyncio.CancelledError)):
+        kind = "interrupted"
+    else:
+        kind = "unexpected_error"
+    return {"kind": kind, "exception_type": type(exc).__name__, "error": repr(exc)}
+
+
+def failure_chain(exc):
+    """Retain errors from client context-manager cleanup as well as the primary failure."""
+    errors, seen = [], set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
+        errors.append(failure_detail(exc))
+        exc = exc.__cause__ if exc.__cause__ is not None else exc.__context__
+    return errors
+
+
 async def main(args):
+    if not __debug__:
+        raise RuntimeError("Method-selection verification requires assertions enabled")
     args.apk = args.apk.resolve(strict=True)
-    assert not args.output.exists(), "Preserve previous acceptance attempts"
+    require(not args.output.exists(), "Preserve previous acceptance attempts")
     runtime, helper, original = runtime_identity(), digest(Path(__file__)), digest(args.apk)
     competitor = competitor_runtime_identity(args.competitor)
     selected, overloaded = original_methods(args.apk)
@@ -79,6 +119,14 @@ async def main(args):
     method = selected["class_name"] + "->" + selected["method_name"] + selected["prototype"]
     report = {
         "status": "running",
+        "phase": "product",
+        # These describe this attempt, not independent release qualifications.
+        "component_outcomes": {
+            "product": "running",
+            "comparator": "not_started",
+            "integrity": "not_verified",
+        },
+        "cleanup_errors": [],
         "apk_sha256": original,
         "runtime_sha256": runtime,
         "verifier_sha256": helper,
@@ -119,7 +167,8 @@ async def main(args):
 
             async def call(tool, **params):
                 reply = await client.call_tool(tool, params)
-                assert not reply.is_error, reply
+                if reply.is_error:
+                    raise ToolFailure(repr(reply))
                 return reply.structured_content
 
             opened = await call(
@@ -127,7 +176,7 @@ async def main(args):
                 artifact_path=str(args.apk),
                 max_uncompressed_bytes=512 * 1024**2,
             )
-            assert opened["status"] == "ok", opened
+            require(opened["status"] == "ok", opened)
             key = opened["session_id"]
 
             async def query(operation, **selection):
@@ -156,8 +205,11 @@ async def main(args):
                         method_name=selected["method_name"],
                     )
                     exact = await query(operation, method_descriptor=method)
-                    assert named["status"] == exact["status"] == "ok", (named, exact)
-                    assert named["method_descriptor"] == method and named["candidate_count"] == 1
+                    require(named["status"] == exact["status"] == "ok", (named, exact))
+                    require(
+                        named["method_descriptor"] == method and named["candidate_count"] == 1,
+                        "Verification mismatch",
+                    )
                     left, right = query_content(named), query_content(exact)
                     for field in (
                         "method_name",
@@ -168,12 +220,14 @@ async def main(args):
                     ):
                         left.pop(field, None)
                         right.pop(field, None)
-                    assert left == right, operation
+                    require(left == right, operation)
                     if operation == "disassemble_method":
-                        assert not named["has_more"]
-                        assert [
-                            (row["instruction_offset"], row["opcode"]) for row in named["items"]
-                        ] == selected["instructions"]
+                        require(not named["has_more"], "Verification mismatch")
+                        require(
+                            [(row["instruction_offset"], row["opcode"]) for row in named["items"]]
+                            == selected["instructions"],
+                            "Verification mismatch",
+                        )
                     report["operations"].append(
                         {
                             "operation": operation,
@@ -189,20 +243,39 @@ async def main(args):
                     class_name=overloaded["class_name"],
                     method_name=overloaded["method_name"],
                 )
-                assert ambiguous["code"] == "ambiguous_method", ambiguous
-                assert ambiguous["candidate_count"] == overloaded["candidate_count"]
+                require(ambiguous["code"] == "ambiguous_method", ambiguous)
+                require(
+                    ambiguous["candidate_count"] == overloaded["candidate_count"],
+                    "Verification mismatch",
+                )
                 resolved = await query(
                     "disassemble_method",
                     **{key: value for key, value in overloaded.items() if key != "candidate_count"},
                 )
-                assert resolved["status"] == "ok" and resolved["candidate_count"] == 1, resolved
+                require(resolved["status"] == "ok" and resolved["candidate_count"] == 1, resolved)
                 report["overload_recovery"] = "passed"
             finally:
-                assert (await call("asc_close_dex_session", session_id=key))["status"] == "ok"
-                assert (await call("asc_ping"))["dex_sessions"]["open_count"] == 0
+                primary = sys.exc_info()[1]
+                try:
+                    require((await call("asc_close_dex_session", session_id=key))["status"] == "ok")
+                    require((await call("asc_ping"))["dex_sessions"]["open_count"] == 0)
+                except BaseException as cleanup_error:
+                    report["cleanup_errors"].append(failure_detail(cleanup_error))
+                    if primary is None:
+                        raise
+        # Product completion includes a fresh byte-identity check before any
+        # comparator execution, not merely five accumulated operation rows.
+        require(digest(args.apk) == original and runtime_identity() == runtime)
+        require(digest(Path(__file__)) == helper)
+        report["product_input_runtime_and_verifier_unchanged"] = True
+        report["component_outcomes"]["product"] = "passed"
+        report["phase"] = "comparator"
+        report["component_outcomes"]["comparator"] = "running"
+        save()
         async with Client(endpoint("asc_mcp")) as client:
             opened = await client.call_tool("load_artifact", {"path": str(args.apk)})
-            assert not opened.is_error, opened
+            if opened.is_error:
+                raise ToolFailure(repr(opened))
             key = opened.structured_content["analysis_id"]
             try:
                 reply = await client.call_tool(
@@ -213,12 +286,15 @@ async def main(args):
                         "method_name": selected["method_name"],
                     },
                 )
-                assert not reply.is_error, reply
+                if reply.is_error:
+                    raise ToolFailure(repr(reply))
                 actual = reply.structured_content
-                assert actual["descriptor"] == selected["prototype"]
-                assert [
-                    (row["offset"] // 2, row["opcode"]) for row in actual["instructions"]
-                ] == selected["instructions"]
+                require(actual["descriptor"] == selected["prototype"], "Verification mismatch")
+                require(
+                    [(row["offset"] // 2, row["opcode"]) for row in actual["instructions"]]
+                    == selected["instructions"],
+                    "Verification mismatch",
+                )
                 ambiguous = await client.call_tool(
                     "apk_disassemble_method",
                     {
@@ -227,17 +303,39 @@ async def main(args):
                         "method_name": overloaded["method_name"],
                     },
                 )
-                assert ambiguous.is_error and "overloaded" in str(ambiguous)
+                require(
+                    ambiguous.is_error and "overloaded" in str(ambiguous), "Verification mismatch"
+                )
                 report["competitor_disassembly_and_ambiguity"] = "passed"
             finally:
-                closed = await client.call_tool("close_artifact", {"analysis_id": key})
-                assert not closed.is_error, closed
-        assert digest(args.apk) == original and runtime_identity() == runtime
-        assert digest(Path(__file__)) == helper
-        assert competitor_runtime_identity(args.competitor) == competitor
+                primary = sys.exc_info()[1]
+                try:
+                    closed = await client.call_tool("close_artifact", {"analysis_id": key})
+                    if closed.is_error:
+                        raise ToolFailure(repr(closed))
+                except BaseException as cleanup_error:
+                    report["cleanup_errors"].append(failure_detail(cleanup_error))
+                    if primary is None:
+                        raise
+        report["component_outcomes"]["comparator"] = "passed"
+        report["phase"] = "integrity"
+        report["component_outcomes"]["integrity"] = "running"
+        save()
+        require(
+            digest(args.apk) == original and runtime_identity() == runtime, "Verification mismatch"
+        )
+        require(digest(Path(__file__)) == helper, "Verification mismatch")
+        require(competitor_runtime_identity(args.competitor) == competitor, "Verification mismatch")
+        report["component_outcomes"]["integrity"] = "passed"
         report.update(status="passed", input_runtime_and_verifier_unchanged=True)
     except BaseException as exc:
-        report.update(status="failed", error=repr(exc))
+        report["component_outcomes"][report["phase"]] = "failed"
+        report.update(
+            status="failed",
+            error=repr(exc),
+            failure=failure_detail(exc),
+            failure_chain=failure_chain(exc),
+        )
         raise
     finally:
         save()

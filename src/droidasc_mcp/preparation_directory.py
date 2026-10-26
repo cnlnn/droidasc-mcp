@@ -3,6 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
 
+from ._preparation_backend import crc32
 from .archive_errors import ArchiveError
 from .class_directory import ClassDirectory
 from .native_dex import InvalidDex
@@ -40,7 +41,9 @@ class PreparationDirectory:
         # owned class strings reach the background SQLite writer, including on Windows.
         archive.fp.flush()
         try:
-            names = class_names(self.root / "analysis.apk", archive.getinfo(record["dex_entry"]))
+            names = class_names(
+                self.root / "analysis.apk", archive.getinfo(record["dex_entry"]), crc32=crc32
+            )
         except InvalidDex as exc:
             raise ArchiveError("invalid_dex", str(exc)) from exc
         record["class_count"] = len(names)

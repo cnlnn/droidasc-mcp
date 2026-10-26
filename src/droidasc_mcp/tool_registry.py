@@ -51,7 +51,45 @@ def contract_schema(contract):
         if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters
         else {}
     )
-    return TypeAdapter(contract).json_schema(**options)
+    schema = TypeAdapter(contract).json_schema(**options)
+    if contract is contracts.DexResult:
+        _inline_reference_rows(schema)
+    return schema
+
+
+def _inline_reference_rows(schema):
+    """Avoid repeated client reference resolution without changing row constraints."""
+    items = schema.get("properties", {}).get("items", {})
+    row = schema.get("$defs", {}).get("DexRow")
+    if items.get("items") != {"$ref": "#/$defs/DexRow"} or not isinstance(row, dict):
+        return
+    # A leaf with references, anchors or its own dialect/scope cannot simply move
+    # to another location. Keep the original schema unchanged in that case.
+    scoped = {
+        "$ref",
+        "$dynamicRef",
+        "$recursiveRef",
+        "$id",
+        "$anchor",
+        "$dynamicAnchor",
+        "$recursiveAnchor",
+        "$schema",
+        "$defs",
+        "definitions",
+        "id",
+    }
+    pending = [row]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, dict):
+            if scoped.intersection(value):
+                return
+            pending.extend(value.values())
+        elif isinstance(value, list):
+            pending.extend(value)
+    # The original definition and every other reference stay in place. The SDK
+    # still validates the same TypedDict; clients validate this identical leaf.
+    items["items"] = deepcopy(row)
 
 
 def schema_document():

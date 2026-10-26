@@ -1,6 +1,6 @@
 """Streaming central-directory inventory for DEX preparation, not resource browsing.
 
-Member decompression, local-header matching and CRC checking stay in stdlib zipfile.
+Member local-header matching, bounded reads and CRC checks retain stdlib code.
 Only code/container ZipInfos are retained; every other name still participates in
 the same safety, duplicate, inventory and next-local-header checks.
 """
@@ -43,14 +43,17 @@ def plain_extra(extra):
 class PreparationZipFile(zipfile.ZipFile):
     """Read-only preparation adapter; ``inventory`` includes omitted resource names.
 
-    The isolated _RealGetContents override is the only custom directory path. Public
-    ZipFile.open(ZipInfo) and ZipExtFile retain the standard member-reader behavior,
-    with an overlap guard for Python patch releases predating that stdlib check.
+    The isolated _RealGetContents override is the only custom directory path.
+    Member readers retain current stdlib code, optionally with private compatible
+    decoder bindings, plus an overlap guard for older stdlib patch releases.
     infolist/getinfo intentionally expose only the code/container members retained here.
     Resource operations must continue using a normal ZipFile.
     """
 
     def __init__(self, handle):
+        from ._preparation_inflate import open_member
+
+        self._open_member = open_member
         self.inventory = {}
         self._member_bounds = {}
         super().__init__(handle, "r")
@@ -78,7 +81,7 @@ class PreparationZipFile(zipfile.ZipFile):
             )
             if payload + info.compress_size > self._member_bounds[info.filename]:
                 raise zipfile.BadZipFile("Overlapped entries (possible zip bomb)")
-        return super().open(name, mode, pwd, force_zip64=force_zip64)
+        return self._open_member(self, name, mode, pwd, force_zip64=force_zip64)
 
     def _RealGetContents(self):
         source = self.fp
