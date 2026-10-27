@@ -307,13 +307,29 @@ def test_legacy_inline_operations_remain_readable(benchmark, tmp_path):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("implementation", ["ours", "competitor"])
+@pytest.mark.parametrize(
+    "sampling", ["normal", "in_flight_at_close", "late_error", "late_disk_limit"]
+)
 async def test_full_reference_trial_measures_last_response_and_all_recovery_attempts(
-    benchmark, tmp_path, monkeypatch, implementation
+    benchmark, tmp_path, monkeypatch, implementation, sampling
 ):
     calls = []
     ours = implementation == "ours"
     elapsed = 0.0
     monkeypatch.setattr(benchmark, "time", SimpleNamespace(monotonic=lambda: elapsed))
+    close_seen = asyncio.Event()
+    if sampling != "normal":
+
+        async def delayed_sample(function, *args):
+            await close_seen.wait()
+            await asyncio.sleep(0.01)
+            if sampling == "late_error":
+                raise OSError("Delayed storage scan failed")
+            if sampling == "late_disk_limit":
+                return 8192 * 1024**2 + 1, 0, 1
+            return function(*args)
+
+        monkeypatch.setattr(benchmark.asyncio, "to_thread", delayed_sample)
 
     class Client:
         def __init__(self, endpoint):
@@ -334,6 +350,7 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
                 result = {"status": "ok", "session_id": "s", "analysis_id": "s"}
             elif name in {"asc_close_dex_session", "close_artifact"}:
                 result = {"status": "ok"}
+                close_seen.set()
             elif ours and params["limit"] == 2:
                 result = {"status": "error", "code": "response_limit"}
             else:
@@ -381,7 +398,17 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
 
     await benchmark.trial(args, implementation, "full_method", 0, report, save)
     metric = report["trials"][0]
-    assert metric["status"] == "passed", metric
+    if sampling in {"late_error", "late_disk_limit"}:
+        assert metric["status"] == "failed"
+        if sampling == "late_error":
+            assert metric["temporary_usage_errors"] == 1
+            assert metric["error"] == "Temporary storage measurement is incomplete"
+        else:
+            assert metric["safety_stop"] == "temporary_logical_bytes"
+        return
+    assert metric["status"] == "passed", metric.get("error", metric)
+    assert metric["temporary_usage_samples"] > 0
+    assert metric["temporary_usage_errors"] == 0
     assert len(metric["reference_collections"]) == len(metric["batch_seconds"]) == 2
     first_collection = metric["reference_collections"][0]
     first_ops = [op for op in metric["operations"] if op["label"].startswith("query:0:0:")]

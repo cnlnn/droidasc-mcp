@@ -196,11 +196,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1 selected-set block storage follow-up passes 1628 full-source cases without skips and the Douyin MCP smoke; independent decoding, new CI and B1 acceptance remain open |
-| Next action | Verify block storage on complete Douyin MCP collections and original bytes, then finish holdout, matched baseline/candidate/comparator measurements and fresh source/CI/package gates |
+| Current task | B1 block storage passes full-source and original-byte Douyin/holdout checks; CI exposed an acceptance-harness sampling race, now reproduced and fixed locally; B1 remains open |
+| Next action | Rerun full source and CI after monitor completion/short test-ID fixes, then finish matched baseline/candidate/comparator measurements and remaining large-input cells |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Large-input benchmark matrix remains open; CI run 40458754727 passed for pre-follow-up candidate 3b1de37, not current block storage; real-model access is a later B3 gate |
+| Open dependencies | Large-input performance matrix remains open; CI 40464186953 exposed Linux monitor completion and Windows oversized test-ID failures; preserve both and verify the follow-up rather than reuse previous green CI; real-model access is a later B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -419,6 +419,50 @@ Full-collection acceptance extension, 2026-10-27:
   with this correctness suite, not with the timed MCP trial. This candidate is ready for
   its own development-branch CI; neither the prior commit's CI nor this source gate
   substitutes for current Windows/distribution evidence or remaining B1 performance cells.
+- Candidate `b71962411f3a00c10ebf78331278dc1f23b89a88` is pushed only to the development
+  branch. CI `40464186953` is its separate current matrix; no main merge/tag/release occurs.
+- `douyin-operands-blocks-verified-2400s.json` completes independent decoding of all
+  53 original DEX files: 2708565 methods, 52547329 instructions and 213254 methods without
+  code. All four product collections match exactly (4778 string/115306 type sites), as
+  do both comparator type collections. Both comparator string collections contain one
+  extra site, so the combined receipt correctly stays **failed**, with unchanged bound
+  inputs/runtime/oracle and verified temporary cleanup. `douyin-comparator-extra-string.json`
+  independently localizes it to byte offset 600 outside a 598-byte method in classes9.dex;
+  the last real instruction is return-void at byte offset 596. Comparator source only
+  checks a prefix within coarse 16-byte buckets, not the exact method end. Preserve this
+  correctness defect, do not copy it or discard the extra site to obtain a speedup ratio.
+  The earlier concurrent timings are observed workload times, not equal-correctness parity.
+- Frozen B1 holdout `org.fdroid.fdroid.apk` completes the new paired MCP smoke and all
+  eight independent collection checks: 62 string sites and 1772 type sites, zero missing
+  or extra sites for either implementation. Original-byte diagnostics cover 117352 methods,
+  1692420 instructions and 5126 no-code methods. Both source/input identities and oracle
+  cleanup pass in `holdout-operands-blocks-smoke.json` and
+  `holdout-operands-blocks-verified.json`. This is one round, not performance acceptance.
+- CI `40464186953`, job `122056346620`, fails the Linux Python 3.11 installed-wheel gate:
+  1627 tests pass and the synthetic competitor full-collection timing case fails. Its
+  asynchronous disk sample can still be in flight when the trial judges sample completeness,
+  before the existing final monitor join. A delayed-sample test deterministically reproduces
+  this for both products in `monitor-completion-red.xml`; do not classify it as flaky and
+  merely rerun. The harness now joins that monitor after the measured close response and
+  before judging resource gates or deleting the temporary root. Late sample errors and
+  quota violations still fail; decoded-response timing boundaries are unchanged.
+- `monitor-completion-verifiers.xml` passes 183 focused harness/verifier cases, including
+  delayed sample completion/error/over-quota cases. Product runtime bytes are unchanged
+  from b719624; the benchmark harness hash changes, so fresh timing receipts name it rather
+  than silently relabeling earlier measurements. A new real-MCP holdout smoke is in progress.
+- The same CI matrix also exposes a Windows test-collection/setup error: pytest derives
+  the decompression-bound test ID from its 263168-byte argument, exceeding Windows'
+  32767-character environment-variable limit for PYTEST_CURRENT_TEST. Jobs 122056346594,
+  122056346627 and 122056346681 report 1627 passes/two errors for this case. Explicit short
+  descriptive parameter IDs fix the test portability issue without reducing its payload;
+  collected lines now have maximum length 111. Current Windows acceptance still requires
+  a fresh matrix, not a Linux-only inference.
+- `candidate/ci-followup-focused.xml` passes all 281 cache/harness/verifier tests, zero
+  skips. `holdout-monitor-joined-smoke.json` completes four alternating fresh-server trials
+  on the final monitor ordering; `holdout-monitor-joined-verified.json` accepts all 16
+  complete string/type collections with unchanged identities and verified cleanup. Full
+  source/CI reruns remain open for this test-and-harness-only follow-up; product runtime
+  bytes are unchanged from the independently accepted b719624 candidate.
 
 Reproduce full-collection smoke and verification (choose new output names):
 

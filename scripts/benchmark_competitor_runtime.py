@@ -616,6 +616,9 @@ async def trial(args, implementation, scenario, round_number, report, save):
                     "asc_close_dex_session" if ours else "close_artifact",
                     {"session_id" if ours else "analysis_id": key},
                 )
+                # Finish in-flight samples before judging them or deleting their root.
+                running = False
+                await task
                 if metric.get("safety_stop"):
                     raise RuntimeError(f"Trial exceeded resource cap: {metric['safety_stop']}")
                 if metric["temporary_usage_errors"] or not metric["temporary_usage_samples"]:

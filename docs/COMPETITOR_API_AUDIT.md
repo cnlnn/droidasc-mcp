@@ -94,6 +94,18 @@ operand-only scans plus complete selected-set reuse for operands/strings. Curren
 and evidence are recorded at the top of GOAL_02X.md. Neither the historical releases below
 nor passing fixture transports close the new large-input/performance/package gates.
 
+Fresh Douyin full-collection verification additionally exposes a comparator string false
+positive: it reports a `const-string` at byte offset 600 of a method whose instruction
+stream is only 598 bytes. Original-byte decoding ends with `return-void` at offset 596.
+The comparator's 16-byte instruction buckets and prefix-only range verification admit
+bytes beyond that method's code; its current locator does not retain/check each code end.
+Both comparator string collections contain the same one extra site. Product string
+collections contain all 4778 original sites and operand collections all 115306 sites,
+with zero missing/extra sites; comparator operand collections also match. The combined
+verification remains failed, not relabeled as parity or used for an equal-correctness
+concurrent speedup claim. Evidence: `artifacts/competitor-gap-b1-20261027/candidate/`
+`douyin-operands-blocks-verified-2400s.json` and `douyin-comparator-extra-string.json`.
+
 The subsequent full-concurrency/bounded-graph harness increment verifies all 72 complete
 product collections over two/four CPUs and all 24 measured product graphs. Twelve of 72
 comparator collections retain the Taobao-field 97-extra-site failure; four-CPU Douyin

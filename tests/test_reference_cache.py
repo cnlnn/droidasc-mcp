@@ -223,6 +223,26 @@ def test_repeated_identities_fit_existing_quota_without_losing_page_boundaries(c
         (zlib.compress(b"{}"), 1, 2),
         (zlib.compress(b"[42]"), 1, 4),
     ],
+    ids=[
+        "zero-count",
+        "bool-count",
+        "too-many-rows",
+        "raw-size-over-limit",
+        "raw-size-too-small",
+        "raw-size-too-large",
+        "row-count-mismatch",
+        "truncated-stream",
+        "trailing-data",
+        "concatenated-streams",
+        "decompression-bomb",
+        "stored-size-over-limit",
+        "invalid-zlib",
+        "text-not-blob",
+        "invalid-utf8",
+        "invalid-json",
+        "non-array",
+        "non-object-row",
+    ],
 )
 def test_compressed_block_rejects_invalid_or_unbounded_input(encoded, count, raw_bytes):
     with pytest.raises(ValueError):
