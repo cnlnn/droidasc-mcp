@@ -222,8 +222,8 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B2 indexed-target grouped MCP implemented; F-Droid smoke complete, Douyin flat timeout needs diagnosis; frozen B1 final gates remain open |
-| Next action | Finish unchanged-runtime Douyin recheck, freeze B2 for CI and five-round output measurements, and complete frozen B1 uncached/cached parity without conflating runtimes |
+| Current task | B1 four-input cache parity passed; B2 latency diagnosis identifies redundant internal flat formatting; f44 CI has one Windows exit-observer failure |
+| Next action | Verify bounded process-exit observation, reuse validated cache chunks for grouping without flat formatting, then rerun real MCP and matched output measurements |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
 | Open dependencies | Remaining corpus performance matrix stays open; CI 40498703094 accepts frozen B1 b64f85c, not B2; real-model access is a later B3 gate |
@@ -1070,6 +1070,51 @@ Full-collection acceptance extension, 2026-10-27:
   3928669 kHz before recheck and 3629661-3820306 kHz during it. Rerun the original pair with
   unchanged runtime, selectors and 180-second bound, without the diagnostic overlay.
   No query optimization or timeout relaxation is justified by the prior timeout alone.
+- `douyin-target-table-frequency-recheck.json` passes the unchanged pair, all eight full
+  collections and exact row/diagnostic equality; input/runtime/helper hashes stay unchanged.
+  CPU0 frequency samples during the run are 3.63-3.82 GHz. This supports an environmental
+  contribution to the previous timeouts, not a controlled proof of their sole cause.
+  Across two queries and two repeats, flat/grouped text totals are 83,933,361/77,640,300 bytes
+  and page totals 278/216, with no retries. Cold/repeat batches are 25.8178/10.8819 versus
+  30.4898/15.3044 s: grouping improves payload/page count but remains slower. Keep this
+  performance residual; one successful pair does not close the five-round gate.
+- B2 implementation and attribution are frozen at `f44fe8d72098d67fe7dc54f3cfe18ac1bc2447dd`,
+  pushed only to the development branch. CI `40581715566` is running; do not reuse B1's
+  successful CI as B2 evidence. Additional public-service member/outgoing/fuzzy/empty-group
+  and benchmark retry-byte accounting coverage is being checked separately before a follow-up.
+- Frozen B1 fresh cache parity: `b64-{douyin,wechat,taobao}-selected-parity-input.json`
+  each records one complete real-MCP operand pair with the pinned comparator, two repeats,
+  four CPUs and unchanged input/runtime/helper identities. They are correctness inputs,
+  not new five-round performance evidence or independently accepted comparator string sites.
+  The corresponding `b64-*-selected-parity.json` files replay every product page against
+  complete uncached scans of original APK bytes and compare every backend semantic field,
+  row order and duplicate multiplicity. All three pass, with temporary oracle cleanup:
+  Douyin 4,778 strings/115,306 type sites; WeChat 738/44,002; Taobao 2,163/56,791.
+  F-Droid completes the fourth required cache-parity input in `b64-fdroid-selected-parity.json`:
+  62 string and 1,772 type sites, unchanged identities, full semantic equality and verified
+  cleanup. All 16 cold/repeated product collections across the four inputs now pass this
+  dedicated gate. This closes the missing cache-equivalence evidence, not the overall goal.
+- Downloaded the exact B1 CI source/signing artifacts into `b64-ci-source-results` and
+  preserved `b64-ci-run.json`. All eight Linux/Windows Python 3.10-3.13 JUnit files each
+  report 1,693 tests, zero failures/errors/skips. The bound run is b64f85c, 25 successful
+  jobs including canonical distribution, Rust and stability gates, not the B2 candidate.
+- CI `40581715566` is terminal failure, with one failed Windows Python 3.11 job.
+  Its original JUnit is retained at `f44-ci-first-failed-win311/test-results.xml` in the
+  B2 artifact directory. The owner-writer termination assertion observed a running process
+  immediately before its representation reported termination. The observer now waits at
+  most two seconds for exit, without killing it or relaxing production deadlines/cleanup;
+  a still-live process fails. Red observer evidence: `windows-exit-observer-red.xml`
+  (2 failures, 6 passes). Fresh full preparation/group/member/benchmark tests pass 137
+  cases, zero skips: `exit-observer-and-member-workflows-green.xml`. The earlier
+  `member-workflows-and-retry-accounting.xml` retains one incorrect test-fixture descriptor;
+  corrected against the actual Smali fixture, not by changing product behavior.
+- `douyin-grouped-service-profile/report.json` is diagnostic, not MCP timing acceptance.
+  Full-row digests agree and identities/cleanup pass. Profiled flat/grouped type collection
+  makes 139/215 cache reads and 109,877/291,453 JSON encodes respectively (concurrent strings
+  may contribute counts). Grouping still calls the flat formatter on every internal chunk.
+  Next reuse the same validated bounded cache-block reader before final grouped formatting;
+  retain integrity/quota/cancellation checks and the unchanged public flat path. No new
+  persistent cache or replacement grouping algorithm is justified by this profile.
 
 Reproduce alternating old/new complete-workflow regression timing (fresh output required):
 

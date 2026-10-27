@@ -149,6 +149,79 @@ def test_session_grouped_pages_collect_multiple_flat_pages_and_resume(string_ref
         service.close()
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        {"operation": "find_method_refs", "method_descriptor": "Lfixture/Target;->pick(I)V"},
+        {"operation": "find_field_refs", "field_descriptor": "Lfixture/Target;->value:I"},
+        {"operation": "get_method_calls", "method_descriptor": "Lfixture/Caller;->run()V"},
+        {"operation": "search_refs", "kind": "method", "value": "pick", "member_match": "name"},
+        {"operation": "search_refs", "kind": "field", "value": "value", "member_match": "name"},
+    ],
+)
+def test_member_grouped_service_preserves_all_flat_rows_and_diagnostics(smali_dex_files, query):
+    settings = replace(Settings.from_env(), allowed_roots=(smali_dex_files[0].parent,))
+    service = DroidAscService(settings)
+    try:
+        opened = service.open_dex_session([str(path) for path in smali_dex_files])
+        assert opened["status"] == "ok", opened
+        key = opened["session_id"]
+        flat = service.query_dex_session(key, **query, limit=1000, offset=0)
+        assert flat["status"] == "ok" and flat["total"] > 0 and not flat["has_more"], flat
+        cursor, rows = None, []
+        while True:
+            page = service.query_dex_session(
+                key, **query, reference_format="grouped", limit=1, cursor=cursor
+            )
+            assert page["status"] == "ok", page
+            assert page["offset"] == len(rows)
+            rows.extend(flatten(page["groups"]))
+            for name in (
+                "total",
+                "scanned_methods",
+                "scanned_instructions",
+                "methods_without_code",
+                "instruction_scan_complete",
+                "scan_errors",
+                "input_id",
+                "sources",
+                "unresolved_matches",
+                "dynamic_sites",
+                "dynamic_sites_truncated",
+            ):
+                assert (name in page) == (name in flat)
+                if name in flat:
+                    assert page[name] == flat[name]
+            if not page["has_more"]:
+                assert page["next_cursor"] is None and page["next_offset"] is None
+                break
+            assert page["next_offset"] == len(rows) < flat["total"]
+            cursor = page["next_cursor"]
+        assert rows == flat["items"]
+    finally:
+        service.close()
+
+
+def test_empty_grouped_service_result_has_terminal_cursor(string_reference_dex_files):
+    settings = replace(Settings.from_env(), allowed_roots=(string_reference_dex_files[0].parent,))
+    service = DroidAscService(settings)
+    try:
+        opened = service.open_dex_session([str(path) for path in string_reference_dex_files])
+        result = service.query_dex_session(
+            opened["session_id"],
+            operation="find_string_refs",
+            value="no-such-fixture-value",
+            reference_format="grouped",
+            limit=1,
+        )
+        assert result["status"] == "ok"
+        assert result["total"] == result["returned_sites"] == 0 and result["groups"] == []
+        assert not result["has_more"] and not result["truncated"]
+        assert result["next_cursor"] is None and result["next_offset"] is None
+    finally:
+        service.close()
+
+
 @pytest.mark.parametrize("kind", ["string", "type"])
 def test_wide_caller_splits_at_byte_cap_without_losing_sites(wide_operand_dex_file, kind):
     path, values, targets = wide_operand_dex_file

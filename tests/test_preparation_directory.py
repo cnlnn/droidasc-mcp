@@ -18,12 +18,17 @@ from droidasc_mcp.worker_runtime import WorkerSettings
 def assert_process_stopped(pid):
     try:
         process = psutil.Process(pid)
-        assert not process.is_running() or process.status() == psutil.STATUS_ZOMBIE
+        if process.is_running() and process.status() != psutil.STATUS_ZOMBIE:
+            process.wait(timeout=2)
     except psutil.NoSuchProcess:
         pass
+    except psutil.TimeoutExpired as exc:
+        raise AssertionError("Worker still running after bounded exit wait") from exc
 
 
-@pytest.mark.parametrize("stage", ["construct", "running", "status", "stopped", "zombie", "live"])
+@pytest.mark.parametrize(
+    "stage", ["construct", "running", "status", "wait", "stopped", "zombie", "exiting", "live"]
+)
 def test_process_exit_observer_races(monkeypatch, stage):
     from types import SimpleNamespace
 
@@ -34,11 +39,19 @@ def test_process_exit_observer_races(monkeypatch, stage):
 
     def process(pid):
         check("construct", None)
+
+        def wait(timeout):
+            assert timeout == 2
+            if stage == "live":
+                raise psutil.TimeoutExpired(timeout, pid=pid)
+            return check("wait", 0)
+
         return SimpleNamespace(
             is_running=lambda: check("running", stage != "stopped"),
             status=lambda: check(
                 "status", psutil.STATUS_ZOMBIE if stage == "zombie" else psutil.STATUS_RUNNING
             ),
+            wait=wait,
         )
 
     monkeypatch.setattr(psutil, "Process", process)

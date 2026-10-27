@@ -117,6 +117,43 @@ async def test_grouped_collection_uses_opaque_cursor_and_checks_reconstruction(b
         ]
 
 
+@pytest.mark.parametrize("damage", [None, "missing_page", "duplicate_page", "missing_retry"])
+def test_format_benchmark_counts_retry_payloads_without_setup_bytes(benchmark, damage):
+    import importlib
+
+    formats = importlib.import_module("benchmark_reference_formats")
+    operations = [
+        {"label": "open", "response_text_bytes": 999},
+        {"label": "query:0:0:page:0:attempt:0", "response_text_bytes": 40},
+        {"label": "query:0:0:page:0:attempt:1", "response_text_bytes": 100},
+        {"label": "query:0:0:page:1:attempt:1", "response_text_bytes": 80},
+        {"label": "close", "response_text_bytes": 999},
+    ]
+    collections = [
+        {
+            "label": "query:0:0",
+            "page_labels": [operations[2]["label"], operations[3]["label"]],
+            "response_limit_recoveries": [{"offset": 0, "limit": 1000}],
+        }
+    ]
+    if damage == "missing_page":
+        del operations[3]
+    elif damage == "duplicate_page":
+        operations.append(dict(operations[3]))
+    elif damage == "missing_retry":
+        del operations[1]
+    if damage:
+        with pytest.raises(AssertionError):
+            formats.payload_totals(operations, collections)
+    else:
+        assert formats.payload_totals(operations, collections) == {
+            "pages": 2,
+            "attempts": 3,
+            "response_text_bytes": 220,
+            "recovery_attempts": 1,
+        }
+
+
 def test_temporary_usage_counts_regular_files_and_not_external_symlinks(benchmark, tmp_path):
     root = tmp_path / "owned"
     root.mkdir()
