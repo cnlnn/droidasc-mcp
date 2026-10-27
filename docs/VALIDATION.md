@@ -16,6 +16,18 @@ the release notes identify the final CI and package hashes after those gates pas
 Earlier evidence below retains its original runtime and scope; it is not a substitute for
 this candidate's final package acceptance or proof of overall performance completion.
 
+The first candidate 014969b passes all 1490 local Linux source tests with zero skips.
+CI 40430197917 passes 17 jobs but fails all eight Windows source/distribution jobs on
+one test-fixture lifetime error: the corrupt-reference-count mutation commits its SQLite
+transaction without closing the connection before checking file cleanup. Production cache
+cleanup correctly retains its reservation when Windows refuses deletion of that open file.
+The fixture now explicitly closes the connection, with a closed-handle assertion that also
+fails on Linux before the fix. Production runtime sources are unchanged. The failed CI,
+packages, local red test and original-oracle timeout/retry are preserved under
+artifacts/release-024-20261027; corrected-candidate receipts use its candidate2 subdirectory.
+The independent Douyin JVM oracle timed out once at 180 seconds and passed a separate
+same-parameter retry; this is not a product-query failure or a performance acceptance result.
+
 ## Complete concurrency development checks, 2026-10-24
 
 The full_concurrent harness now collects every method and field page concurrently and

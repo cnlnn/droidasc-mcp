@@ -5,6 +5,7 @@ import sqlite3
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock
@@ -194,8 +195,10 @@ def test_incomplete_or_corrupt_publication_never_reused(cached, mutation):
     if mutation in {"checksum", "key", "schema"}:
         receipt[{"checksum": "sha256", "key": "key", "schema": "schema"}[mutation]] = "wrong"
     elif mutation == "count":
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.execute("DELETE FROM sites WHERE rowid=2")
+        with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
+            db.execute("SELECT 1")
         receipt.update(size=path.stat().st_size, sha256=checksum(path))
     elif mutation == "extra_file":
         (directory / "unaccounted").touch()

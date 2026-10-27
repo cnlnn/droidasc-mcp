@@ -19,6 +19,12 @@ Final CI, package and publication receipts are recorded with the release, after 
 commit is accepted. Startup/storage, universal repeat-query superiority and broader workflow
 and graph-completeness objectives remain open independently of this incremental release.
 
+The first candidate's Windows gate exposed a leaked SQLite handle in the corruption-test
+fixture, not in the product cache. The corrected fixture commits and closes before cleanup;
+an explicit closed-handle assertion reproduces the defect on Linux too. CI 40430197917
+and its packages remain rejected. The production runtime stays frozen; all final candidate
+source/package gates are refreshed under artifacts/release-024-20261027/candidate2.
+
 ## Consolidation history
 
 Status: active. On 2026-10-23 the maintainer requested consolidation of v0.2.3-v0.2.9
