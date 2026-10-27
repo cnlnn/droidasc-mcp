@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "5c2650f0d774bb32327a86f9199e303cf33bcd269d1121a2bd7406c98811f408",
+  "contracts_sha256": "440838805e6c4778d18713735a3a3dc43ec0c79ab01048a09dbbcdbe6cf3177f",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "0abfa64d6a81c0c464f393a0adf8d134425ad914d1b43c46b98d87989e046be7",
+  "schemas_sha256": "41b6cb375b7a6d75de612387c5cb76671254285d22d5e1aa5cc75789fed501b0",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -724,6 +724,10 @@
         "DexRow": {
           "additionalProperties": true,
           "properties": {
+            "target_index": {
+              "title": "Target Index",
+              "type": "integer"
+            },
             "value": {
               "title": "Value",
               "type": "string"
@@ -1014,6 +1018,59 @@
           "title": "QueryCache",
           "type": "object"
         },
+        "ReferenceGroup": {
+          "additionalProperties": true,
+          "properties": {
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "target_field": {
+              "enum": [
+                "callee",
+                "field_descriptor",
+                "value",
+                "type_descriptor"
+              ],
+              "title": "Target Field",
+              "type": "string"
+            },
+            "offset_unit": {
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "matches": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Matches",
+              "type": "array"
+            },
+            "evidence": {
+              "items": {
+                "$ref": "#/$defs/DexRow"
+              },
+              "title": "Evidence",
+              "type": "array"
+            }
+          },
+          "required": [
+            "dex_entry",
+            "caller",
+            "target_field",
+            "matches",
+            "evidence"
+          ],
+          "title": "ReferenceGroup",
+          "type": "object"
+        },
         "Source": {
           "additionalProperties": true,
           "properties": {
@@ -1200,9 +1257,45 @@
           "type": "string"
         },
         "page_limited_by": {
-          "const": "response_bytes",
+          "enum": [
+            "response_bytes",
+            "caller_groups"
+          ],
           "title": "Page Limited By",
           "type": "string"
+        },
+        "reference_format": {
+          "const": "grouped",
+          "title": "Reference Format",
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/ReferenceGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "returned_sites": {
+          "title": "Returned Sites",
+          "type": "integer"
+        },
+        "limit_unit": {
+          "const": "caller_groups",
+          "title": "Limit Unit",
+          "type": "string"
+        },
+        "total_unit": {
+          "const": "reference_sites",
+          "title": "Total Unit",
+          "type": "string"
+        },
+        "next_cursor": {
+          "title": "Next Cursor",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "response_byte_limit": {
           "title": "Response Byte Limit",
@@ -1709,6 +1802,10 @@
         "DexRow": {
           "additionalProperties": true,
           "properties": {
+            "target_index": {
+              "title": "Target Index",
+              "type": "integer"
+            },
             "value": {
               "title": "Value",
               "type": "string"

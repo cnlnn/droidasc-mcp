@@ -2,7 +2,7 @@
 
 ## Current implementation plan, 2026-10-27
 
-Status: goal execution active; B1 implementation and local acceptance in progress. This section is the
+Status: goal execution active; B1 candidate frozen with acceptance pending; B2 grouped MCP works, payload experiment ongoing. This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
 this section. The cross-platform/package requirements and invariants below still apply.
@@ -78,8 +78,8 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | Batch | Deliverable | Dependency | State |
 | --- | --- | --- | --- |
 | P0 | Source-backed plan and compatibility decisions | Current audit | complete |
-| B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | in progress |
-| B2 | Compact reference output and resumable full-result collection | B1 runtime frozen; B1 final acceptance remains open | next: upstream grouping adaptation |
+| B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | frozen b64f85c; final acceptance open |
+| B2 | Compact reference output and resumable full-result collection | B1 runtime frozen; B1 final acceptance remains open | in progress: MCP integration; measured payload regression under correction |
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | deferred |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
@@ -222,11 +222,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1 bounded cache-read fix under real-MCP verification; the original 15-pair concurrent regression remains preserved, not superseded by a profile |
-| Next action | Finish fixed-runtime comparison against both the pre-fix snapshot and v0.2.4, revalidate affected cells, complete uncached/cached parity and final package CI |
+| Current task | B2 indexed-target grouped MCP implemented; F-Droid smoke complete, Douyin flat timeout needs diagnosis; frozen B1 final gates remain open |
+| Next action | Finish unchanged-runtime Douyin recheck, freeze B2 for CI and five-round output measurements, and complete frozen B1 uncached/cached parity without conflating runtimes |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Remaining corpus performance matrix stays open; CI 40468194811 accepts pre-fix 046045b, not the subsequent cache-read change or final doc-inclusive archive; real-model access is a later B3 gate |
+| Open dependencies | Remaining corpus performance matrix stays open; CI 40498703094 accepts frozen B1 b64f85c, not B2; real-model access is a later B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -983,6 +983,93 @@ Full-collection acceptance extension, 2026-10-27:
   matrix. No required gate is waived, and the older 1649-test/CI result is not relabeled
   as covering these changes. Focused cache/page tests and the 27 parity-verifier tests
   remain the completed local evidence; remaining large-input parity is still open.
+- Freeze B1 at `b64f85c5e555ea27e9dc5eed6b058008a777d07c`, pushed only to the
+  development branch. CI `40498703094` completed successfully in all 25 jobs, verified
+  against the exact head SHA; this does not cover subsequent dirty B2 changes. The detached
+  worktree `artifacts/competitor-gap-b1-20261027/b1-read-budget-frozen` contains this
+  exact tracked commit plus the measured `_dexscan.abi3.so`; runtime hashes match the
+  candidate in `douyin-read-budget-isolation-cpu4.json`. Use this worktree for pending
+  B1 acceptance while B2 changes the primary checkout. The initial attempted copy used
+  a nonexistent interpreter-specific extension filename; the actual ABI3 extension was
+  then copied and its identity verified. No release, version change or main update.
+- B2 starts with an actual upstream adaptation in `reference_groups.py`, not another
+  output-format design exercise. Preserve `findrefs_structured`'s target-set/evidence-list
+  accumulation, using canonical caller/DEX identities and contiguous caller runs so flat
+  ordering and duplicate sites survive page boundaries. `NOTICE` records upstream revision,
+  original function and modifications; package license files and required sdist members
+  include this attribution. Six regressions in `grouping-port-red.xml` first fail for the
+  missing capability, then pass in `grouping-port-green.xml`: all four target kinds,
+  duplicate sites, repeated/noncontiguous callers, cross-DEX identity, original metadata,
+  empty string targets and a single caller split across chunks. This helper is not wired
+  to MCP yet and proves no page-count/latency improvement. Next wire the grouped collector,
+  bounded continuations and opt-in public contract; retain the existing flat default.
+- B2 now exposes grouped references through the actual session query tool, reusing bounded
+  flat pages and existing caches. HMAC cursors bind the session, selector and immutable
+  preparation/runtime identity; active queries pin the session, and cancellation/deadline
+  checks retain normal cleanup. Existing optional index creation does not invalidate cursors.
+  Evidence: `grouping-focused.xml` (211 passing), `grouping-cursor-and-harness.xml` (101),
+  and `grouping-identity-transports.xml` (34, including real stdio and HTTP). These receipts
+  live in the B1 candidate directory but test B2; they are not frozen B1 acceptance.
+- Preserve the first B2 performance smoke, `artifacts/competitor-gap-b2-20261027/holdout-grouped-smoke.json`:
+  four fresh servers, one alternating round, two repeats, 16 full collections, unchanged
+  identities and exact flat/grouped rows/diagnostics. F-Droid operands used 8/6 pages and
+  1,291,212/1,394,982 tool-text bytes (flat/grouped). Concurrent member queries used 6/6
+  pages and 964,100/952,538 bytes; repeated collection latency was 0.6049/0.7789 s.
+  Fewer pages alone is not success: payload grew for operands and the repeated member
+  workflow slowed. This is exploratory evidence, not five-round acceptance or a fresh
+  B2 holdout. Tool-text bytes are not the encoded structured-response cap or wire framing.
+- Freeze that initial B2 runtime/helpers in `grouped-before-target-table/{src,scripts}`
+  under the B2 artifact directory. Keep upstream grouping, replace repeated full targets
+  with indices into its matches table, and lift shared offset units into each group header.
+  First-appearance target order makes indices stable; changes of target kind or unit split
+  groups. Every original row/field/duplicate must reconstruct exactly. Four target-kind
+  tests first fail in `target-table-red.xml`; implementation and transport retest are underway.
+  `target-table-green.xml` preserves 113 passing tests plus an HTTP readiness timeout before
+  any HTTP query; do not report this run as fully passing. No B2 acceptance or release yet.
+- The target-table change now round-trips all four target kinds and passes exact incremental
+  byte-budget checks, mixed/absent/null offset units, index-width changes and rejected-row
+  immutability. Benchmark replay independently checks target index bounds/types, first-use
+  order, complete table use and header collisions. The initial HTTP startup log was empty;
+  the unchanged 10-second readiness check is retained, and a separate fresh stdio/HTTP
+  retry passes both transports in 47.40 s (`target-table-transports-rerun.xml`). This retry
+  does not erase the initial timeout. Input schemas, Ruff lint/format and diff whitespace
+  checks pass; output schema regenerated.
+- `fdroid-target-table-smoke.json` completes the same four fresh-server smoke trials with
+  exact complete-result equality, unchanged inputs/runtime/helpers and no retry responses.
+  Operand text is now 1,291,212/1,319,304 bytes across 8/6 pages (flat/grouped), still 2.18%
+  larger than flat despite reducing the original grouping-only payload. Member collections
+  are 964,100/824,864 bytes across 6/6 pages (14.44% smaller). First/repeat batch times:
+  operands 13.7299/2.6042 versus 13.5532/2.5555 s; members 4.0932/1.7840 versus
+  5.9164/1.8662 s. Keep the member cold/repeat regressions; this one-round result does not
+  establish a speedup. No input-specific thresholds were added. Next check the same
+  representation on Douyin before deciding whether further compacting is justified.
+- `douyin-target-table-smoke.json` preserves a failed first flat trial: artifact open took
+  66.9427 s, the string collection completed eight pages, and the first concurrent operand
+  type request exceeded the unchanged 180-second external deadline. No grouped trial ran,
+  so this provides no Douyin grouped performance/equality conclusion. Source and receipt
+  files are retained, including the partial collection and failure log. Host load and
+  exhausted swap were observed afterwards, but are not a proven cause of this request's
+  timeout. Diagnose the flat timeout before rerunning a comparable full-operand pair;
+  do not raise the acceptance timeout or select the completed string subset as success.
+- Final focused target-table/cursor/replay regression run passes 112 tests in 42.26 s,
+  zero skips (`target-table-focused-final.xml`), in addition to the separate two-transport
+  retry. Both generated schemas check cleanly; Ruff lint/format and git diff checks pass.
+  Offline sdist/native-wheel build succeeds in `target-table-dist`, with build log retained;
+  archive reads verify NOTICE byte-for-byte against the repository in both artifacts.
+  This is build/attribution evidence, not the pending clean-install, Windows, full-suite
+  or real-workflow performance acceptance. The version remains 0.2.4 and nothing is released.
+- Timeout diagnosis preserves a second unchanged full-operand failure in
+  `douyin-target-table-repro.json` (first flat type call: 180.396 s) and a standalone-type
+  failure in `douyin-type-timeout-stacks.json`. A diagnostic-only `timeout-probe/sitecustomize.py`
+  overlay records periodic stacks outside product code: the worker remains in native type
+  scanning/declaration decoding, not a blocked MCP response or concurrent string lock.
+  GDB attachment was unavailable under the current ptrace restriction; its failed attempt
+  is preserved, with no permission/configuration changes. The native extension hashes match
+  frozen B1 exactly. One contemporaneous CPU0 frequency read was 399243 kHz; this is a
+  single host observation, not a proven throttle cause. On 2026-10-28 the same read reports
+  3928669 kHz before recheck and 3629661-3820306 kHz during it. Rerun the original pair with
+  unchanged runtime, selectors and 180-second bound, without the diagnostic overlay.
+  No query optimization or timeout relaxation is justified by the prior timeout alone.
 
 Reproduce alternating old/new complete-workflow regression timing (fresh output required):
 

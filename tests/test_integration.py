@@ -37,6 +37,82 @@ from droidasc_mcp.server import build_server
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_grouped_reference_cursor_over_real_transports(
+    transport, tmp_path, string_reference_dex_files, request, monkeypatch
+):
+    paths = [str(shutil.copy(path, tmp_path)) for path in string_reference_dex_files]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_JAVA", "/missing-java-for-reference-query")
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+        opened = (
+            await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        ).structured_content
+        key = opened["session_id"]
+        query = {"session_id": key, "operation": "find_string_refs", "value": "https://"}
+        flat = (await client.call_tool("asc_query_dex_session", query)).structured_content
+        cursor, rows, groups = None, [], 0
+        while True:
+            response = await client.call_tool(
+                "asc_query_dex_session",
+                {
+                    **query,
+                    "reference_format": "grouped",
+                    "limit": 1,
+                    "cursor": cursor,
+                },
+            )
+            assert not response.is_error, response
+            result = response.structured_content
+            assert result["reference_format"] == "grouped"
+            assert result["input_id"] == opened["input_id"]
+            assert result["sources"] == opened["sources"]
+            assert result["scanned_instructions"] == flat["scanned_instructions"]
+            assert len(json.dumps(result).encode()) + 1 <= 256 * 1024
+            assert json.loads(response.content[0].text) == result
+            for group in result["groups"]:
+                for evidence in group["evidence"]:
+                    row = {"dex_entry": group["dex_entry"], "caller": group["caller"], **evidence}
+                    row[group["target_field"]] = group["matches"][row.pop("target_index")]
+                    if "offset_unit" in group:
+                        row["offset_unit"] = group["offset_unit"]
+                    rows.append(row)
+            groups += len(result["groups"])
+            if not result["has_more"]:
+                assert result["next_cursor"] is None
+                break
+            cursor = result["next_cursor"]
+        assert rows == flat["items"] and groups == 2
+        mismatched = await client.call_tool(
+            "asc_query_dex_session",
+            {
+                **query,
+                "value": "different",
+                "reference_format": "grouped",
+                "cursor": cursor,
+            },
+        )
+        assert mismatched.structured_content["code"] == "invalid_cursor"
+        assert (await client.call_tool("asc_query_dex_session", query)).structured_content[
+            "items"
+        ] == rows
+        closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+        assert not closed.structured_content["cleanup_pending"]
+        assert (await client.call_tool("asc_ping", {})).structured_content["dex_sessions"][
+            "open_count"
+        ] == 0
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 @pytest.mark.parametrize("kind", ["string", "type"])
 async def test_operand_and_string_complete_sets_over_real_transports(
     transport, kind, tmp_path, smali_dex_files, string_reference_dex_files, request, monkeypatch

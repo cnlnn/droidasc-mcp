@@ -122,6 +122,13 @@ def main():
         with tarfile.open(args.sdist) as archive:
             members = archive.getnames()
             required = (
+                "NOTICE",
+                "src/droidasc_mcp/reference_groups.py",
+                "src/droidasc_mcp/reference_cursor.py",
+                "src/droidasc_mcp/grouped_references.py",
+                "tests/test_reference_groups.py",
+                "tests/test_reference_cursor.py",
+                "scripts/benchmark_reference_formats.py",
                 "tests/conftest.py",
                 "tests/process_fixture.py",
                 "tests/preparation_worker.py",

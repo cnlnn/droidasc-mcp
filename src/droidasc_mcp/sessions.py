@@ -6,6 +6,7 @@ import copy
 import hashlib
 import itertools
 import json
+import secrets
 import tempfile
 import threading
 import time
@@ -13,6 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .grouped_references import grouped_reference_page
 from .memory_cache import PageCache
 from .reference_cache import (
     MAX_SESSION_BYTES,
@@ -20,6 +22,7 @@ from .reference_cache import (
     ReferenceCache,
     selector,
 )
+from .reference_cursor import cursor_identity
 from .reference_page import operand_query, selected_query
 from .runner import _check_cancelled
 
@@ -41,6 +44,7 @@ class Entry:
     pages: PageCache = field(default_factory=PageCache)
     references: ReferenceCache | None = None
     query_locks: tuple = field(default_factory=lambda: tuple(threading.Lock() for _ in range(32)))
+    cursor_key: bytes = field(default_factory=lambda: secrets.token_bytes(32), repr=False)
 
 
 class DexSessions:
@@ -174,76 +178,25 @@ class DexSessions:
                 return error("session_not_found", "Session is unknown, expired, or closed")
             entry.users += 1
         try:
-            from .xref_index import (
-                DISCOVERY_OPERATIONS,
-                INDEX_OPERATIONS,
-                REFERENCE_OPERATIONS,
-                STRUCTURE_OPERATIONS,
-            )
-
-            if (
-                query.get("operation")
-                in INDEX_OPERATIONS
-                | REFERENCE_OPERATIONS
-                | DISCOVERY_OPERATIONS
-                | STRUCTURE_OPERATIONS
-            ):
-                native_read = operand_query(query) or query.get("operation") in {
-                    "find_method_refs",
-                    "get_method_calls",
-                    "find_field_refs",
-                    "find_string_refs",
-                    "search_refs",
-                    "search_members",
-                    "search_strings",
-                    "search_classes",
-                }
-                # Immutable readers run concurrently. Equal queries share a bounded lock
-                # stripe; only index publication needs the session-wide builder lock.
-                stripe = (
-                    int.from_bytes(
-                        hashlib.sha256(
-                            json.dumps(
-                                selector(query) if selected_query(query) else query,
-                                sort_keys=True,
-                            ).encode()
-                        ).digest()[:2],
-                        "big",
-                    )
-                    % 32
+            if query.get("reference_format") == "grouped":
+                root = Path(entry.storage.name)
+                identity = cursor_identity(self.settings, root)
+                if identity is None:
+                    return error("reference_changed", "Reference preparation is unavailable")
+                result = grouped_reference_page(
+                    self.settings,
+                    key,
+                    entry.cursor_key,
+                    query,
+                    lambda page: self._query_entry(entry, page),
+                    identity,
                 )
-                lock = entry.query_locks[stripe] if native_read else entry.index_lock
-                with self.runner._acquire(lock):
-                    _check_cancelled()
-                    root = Path(entry.storage.name)
-
-                    def execute():
-                        cache = self._reference_cache(entry, root, query)
-                        if cache is None:
-                            return self.runner.query_dex_session(root, query)
-                        cached = cache.read(query)
-                        if cached is not None:
-                            return cached
-                        ticket = cache.begin(query)
-                        if ticket is None:
-                            return self.runner.query_dex_session(root, query)
-                        publish = False
-                        try:
-                            result = self.runner.query_dex_session(
-                                root, query, reference_cache=ticket
-                            )
-                            publish = True
-                            return result
-                        finally:
-                            cache.finish(ticket, publish=publish)
-
-                    result = (
-                        execute()
-                        if query.get("operation") == "build_xref_index"
-                        else entry.pages.execute(self.settings, root, query, execute)
+                if identity != cursor_identity(self.settings, root):
+                    return error(
+                        "reference_changed", "Reference preparation changed during collection"
                     )
             else:
-                result = self.runner.query_dex_session(Path(entry.storage.name), query)
+                result = self._query_entry(entry, query)
             return {**result, "session_id": key}
         finally:
             with self.lock:
@@ -252,6 +205,70 @@ class DexSessions:
                 entry.order = next(self.order)
                 if entry.closing and not entry.users:
                     self._drop(key)
+
+    def _query_entry(self, entry, query):
+        from .xref_index import (
+            DISCOVERY_OPERATIONS,
+            INDEX_OPERATIONS,
+            REFERENCE_OPERATIONS,
+            STRUCTURE_OPERATIONS,
+        )
+
+        root = Path(entry.storage.name)
+        if query.get("operation") not in (
+            INDEX_OPERATIONS | REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS | STRUCTURE_OPERATIONS
+        ):
+            return self.runner.query_dex_session(root, query)
+        native_read = operand_query(query) or query.get("operation") in {
+            "find_method_refs",
+            "get_method_calls",
+            "find_field_refs",
+            "find_string_refs",
+            "search_refs",
+            "search_members",
+            "search_strings",
+            "search_classes",
+        }
+        # Equal selectors share a stripe; index publication uses the session builder lock.
+        stripe = (
+            int.from_bytes(
+                hashlib.sha256(
+                    json.dumps(
+                        selector(query) if selected_query(query) else query,
+                        sort_keys=True,
+                    ).encode()
+                ).digest()[:2],
+                "big",
+            )
+            % 32
+        )
+        lock = entry.query_locks[stripe] if native_read else entry.index_lock
+        with self.runner._acquire(lock):
+            _check_cancelled()
+
+            def execute():
+                cache = self._reference_cache(entry, root, query)
+                if cache is None:
+                    return self.runner.query_dex_session(root, query)
+                cached = cache.read(query)
+                if cached is not None:
+                    return cached
+                ticket = cache.begin(query)
+                if ticket is None:
+                    return self.runner.query_dex_session(root, query)
+                publish = False
+                try:
+                    result = self.runner.query_dex_session(root, query, reference_cache=ticket)
+                    publish = True
+                    return result
+                finally:
+                    cache.finish(ticket, publish=publish)
+
+            return (
+                execute()
+                if query.get("operation") == "build_xref_index"
+                else entry.pages.execute(self.settings, root, query, execute)
+            )
 
     def _reference_cache(self, entry, root, query):
         if not selected_query(query):

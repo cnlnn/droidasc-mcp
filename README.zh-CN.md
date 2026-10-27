@@ -258,6 +258,16 @@ asc_query_dex_session(
 `target_resolution`、`target_dex_entry` 表明操作数所指的方法是否定义在输入中。入向查询可查外部方法；
 出向查询要求该方法存在。分页顺序固定为 DEX entry、类、调用者描述符和指令位置。
 
+开发分支可选 `reference_format="grouped"`：按调用方法返回 `groups`，每组包含
+`caller`、`dex_entry`、`target_field`、按首次出现顺序去重的 `matches` 和完整的
+`evidence`。证据中的 `target_index` 引用 `matches`，还原时将目标写回 `target_field`
+指定的字段；可选的 `offset_unit` 从组头补回。默认仍是平铺格式。
+分组模式下 `limit` 限制调用方法组数，`total`、`offset`、`next_offset`、`returned_sites`
+仍按引用位置计数；单个大方法可以跨页。使用 `cursor=next_cursor`、相同查询条件和
+`offset=0` 续取，允许调整 `limit`。游标绑定会话、查询和输入准备及运行时代码身份，
+会话关闭或过期后失效。按组和证据的返回顺序补回 `caller`、`dex_entry`，可还原全部
+平铺记录及重复命中。此接口尚不代表新版本已发布或整体性能已追平。
+
 ```text
 asc_query_dex_session(session_id="...", operation="find_method_refs", method_descriptor="Lcom/example/Main;->check(I)Z")
 asc_query_dex_session(session_id="...", operation="get_method_calls", method_descriptor="Lcom/example/Main;->check(I)Z")

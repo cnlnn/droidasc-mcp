@@ -688,6 +688,20 @@ def build_server(
     @registry.tool(annotations=SESSION_STATE)
     def asc_query_dex_session(
         session_id: SessionId,
+        reference_format: Annotated[
+            Literal["flat", "grouped"],
+            Field(
+                description="Reference rows or caller groups with complete evidence; default flat"
+            ),
+        ] = "flat",
+        cursor: Annotated[
+            str | None,
+            Field(
+                min_length=1,
+                max_length=1024,
+                description="Grouped next_cursor for the same session/query; leave offset at zero",
+            ),
+        ] = None,
         operation: Annotated[
             Literal[
                 "info",
@@ -792,11 +806,16 @@ def build_server(
         using a case-sensitive literal value, not instruction use sites.
         Identical discovery and non-indexed reference pages reuse a bounded session cache.
         Reference pages can stop at the byte budget before limit; continue with next_offset.
+        reference_format=grouped returns groups with matches/evidence for instruction references.
+        In grouped format limit counts caller groups; total/offset/returned_sites count sites.
+        Continue with next_cursor and identical selectors; a large caller may span pages.
         source_format=auto uses ASC exact-method Smali, never JADX.
         source_format=java explicitly selects the optional compatibility backend.
         """
         return service.query_dex_session(
             session_id,
+            reference_format=reference_format,
+            cursor=cursor,
             operation=operation,
             prefix=prefix,
             class_name=class_name,

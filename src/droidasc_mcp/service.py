@@ -8,6 +8,8 @@ from importlib.metadata import PackageNotFoundError, version
 from . import __version__
 from .config import Settings
 from .reference_cache import MAX_ENTRY_BYTES, MAX_SESSION_BYTES
+from .reference_cursor import MAX_CURSOR_LENGTH
+from .reference_page import selected_query
 from .runner import DroidAscRunner, ReferenceKind
 from .rust_backend import LIMITATION, TESTED_COMMIT, RustAscRunner
 from .sessions import DexSessions
@@ -64,7 +66,27 @@ class DroidAscService:
         return self.sessions.open([], artifact=path, budget=budget, module=module)
 
     def query_dex_session(self, session_id, **query):
-        return self.sessions.query(session_id, _normalize_dex_query(query))
+        reference_format = query.pop("reference_format", "flat")
+        cursor = query.pop("cursor", None)
+        if reference_format not in {"flat", "grouped"}:
+            raise ValueError("reference_format must be flat or grouped")
+        if cursor is not None and (
+            reference_format != "grouped"
+            or not isinstance(cursor, str)
+            or not 1 <= len(cursor) <= MAX_CURSOR_LENGTH
+        ):
+            raise ValueError("cursor requires grouped references and a bounded nonempty string")
+        query = _normalize_dex_query(query)
+        if reference_format == "grouped":
+            if not selected_query(query):
+                raise ValueError("grouped format requires an instruction reference operation")
+            if type(query.get("offset", 0)) is not int or query.get("offset", 0) != 0:
+                raise ValueError("grouped references use cursor rather than offset")
+            limit = query.get("limit", 200)
+            if type(limit) is not int or limit <= 0:
+                raise ValueError("limit must be a positive integer")
+            query.update(reference_format="grouped", cursor=cursor, offset=0, limit=limit)
+        return self.sessions.query(session_id, query)
 
     def diff_dex_sessions(
         self, old_session_id, new_session_id, *, kind="all", change="all", offset=0, limit=100

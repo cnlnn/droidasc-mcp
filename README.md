@@ -336,6 +336,20 @@ Such pages report `page_limited_by="response_bytes"` and `response_byte_limit`; 
 `next_offset`, not `offset + limit`, to retain every site. A complete row or metadata that
 cannot fit still returns `response_limit`. The API takes DEX inputs/sessions, not an APK path.
 
+Development grouped references: `asc_query_dex_session(reference_format="grouped")`
+returns `groups` containing `caller`, `dex_entry`, `target_field`, first-appearance-ordered
+deduplicated `matches`, and every original `evidence` row. Each evidence row's `target_index`
+selects its target from `matches`; restore it under `target_field`. Restore caller/DEX and
+the optional shared `offset_unit` from the group header. This applies to method,
+field, outgoing, fuzzy member, literal string and explicit type-operand references.
+The default remains flat. In grouped mode `limit` counts caller groups, while `total`,
+`offset`, `next_offset` and `returned_sites` count individual sites. A large caller can
+span multiple byte-bounded pages. Continue with `cursor=next_cursor`, unchanged selectors
+and `offset=0`; the page limit may change. Cursors are versioned and bound to the session,
+query and immutable preparation/runtime identity; closing or expiring the session ends
+their lifetime. Group evidence in response order reconstructs the original flat stream,
+including duplicates. No new release or benchmark parity is implied by this development API.
+
 ### Indexed investigation
 
 `operation="get_call_graph"` explores an exact `method_descriptor` with

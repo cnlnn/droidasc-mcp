@@ -21,8 +21,12 @@ from verify_mcp_reference_pages import fingerprint
 SCENARIOS = ("full_string", "full_method", "full_field", "full_concurrent")
 
 
-async def collection_digests(operations, trial, repeats, page_size):
-    assert trial["status"] == "passed" and trial["scenario"] in SCENARIOS
+async def collection_digests(operations, trial, repeats, page_size, reference_format="flat"):
+    assert trial["status"] == "passed" and trial["scenario"] in (
+        *SCENARIOS,
+        "full_type",
+        "full_operands",
+    )
     assert operations[0]["label"] == "open" and operations[0]["status"] == "ok"
     assert operations[-1]["label"] == "close" and operations[-1]["status"] == "ok"
     opened = operations[0]["result"]
@@ -43,6 +47,8 @@ async def collection_digests(operations, trial, repeats, page_size):
         label = collection["label"]
         tool, params = wanted[label]
         params = {k: v for k, v in params.items() if k != "limit"}
+        if reference_format == "grouped":
+            params["reference_format"] = "grouped"
         attempts = iter(op for op in operations if op["label"].startswith(label + ":page:"))
 
         async def call(expected_label, expected_tool, arguments, *, _attempts=attempts, **kwargs):

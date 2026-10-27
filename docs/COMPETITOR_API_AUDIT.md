@@ -50,8 +50,14 @@ check is not a substitute for the behavioral tests linked in each row.
 
 ## Parameter And Format Rules
 
-- Competitor cursor strings encode integer offsets; our next_offset is an integer. Follow pages,
-  not tool-count equivalence. Default page sizes differ; both accept explicit bounded limits.
+- Competitor cursor strings encode integer offsets; our default flat next_offset is an integer.
+  B2 development adds opt-in grouped instruction references with session/query/preparation-bound,
+  versioned next_cursor tokens. Limit counts caller groups; total and offsets still count sites.
+  Caller grouping adapts `AscHandler.findrefs_structured` from the pinned comparator with attribution
+  in NOTICE. Evidence remains complete and ordered, including a caller spanning byte-bounded pages.
+  Target indices reference a first-appearance-ordered matches table; target_field and optional
+  offset_unit in each group restore the original flat fields without repeated target strings.
+  Default page sizes differ; compare full collections rather than page limits or tool counts alone.
 - Our DEX worker also caps encoded responses at 256 KiB. Method/field references, outgoing
   calls and fuzzy member-reference queries return a complete prefix when the requested
   maximum row count would exceed that cap. page_limited_by=response_bytes explains a short

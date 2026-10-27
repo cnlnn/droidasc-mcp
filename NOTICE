@@ -1,0 +1,13 @@
+droidasc-mcp
+
+The caller grouping in src/droidasc_mcp/reference_groups.py is adapted from
+aimardcr/asc-mcp, licensed under the Apache License, Version 2.0.
+
+Upstream: https://github.com/aimardcr/asc-mcp
+Revision: 848c711f1d80a1c2577283f1fa5f475ff734aa40
+Source: asc_mcp/analysis/asc_handler.py, AscHandler.findrefs_structured
+
+Modifications retain droidasc-mcp's canonical caller/DEX identities and original
+evidence fields, and group contiguous caller runs for ordered bounded pages.
+Targets use first-appearance table indices and shared offset units live in group headers.
+The Apache License, Version 2.0 is reproduced in LICENSE.

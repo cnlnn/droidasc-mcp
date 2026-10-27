@@ -27,6 +27,96 @@ def benchmark(monkeypatch):
     return module
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "damage",
+    [
+        None,
+        "count",
+        "matches",
+        "identity",
+        "offset",
+        "cursor",
+        "index",
+        "boolean_index",
+        "unit",
+        "field",
+    ],
+)
+async def test_grouped_collection_uses_opaque_cursor_and_checks_reconstruction(benchmark, damage):
+    calls = []
+
+    async def call(label, tool, arguments, **kwargs):
+        index = len(calls)
+        assert arguments["offset"] == 0 and arguments["limit"] == 1
+        assert arguments["cursor"] == (None if index == 0 else "opaque-next")
+        calls.append(arguments)
+        more = index == 0
+        evidence = [{"target_index": 0, "instruction_offset": i} for i in ([0, 1] if more else [2])]
+        result = {
+            "status": "ok",
+            "reference_format": "grouped",
+            "limit_unit": "caller_groups",
+            "total_unit": "reference_sites",
+            "offset": 0 if more else 2,
+            "limit": 1,
+            "total": 3,
+            "returned_sites": len(evidence),
+            "has_more": more,
+            "truncated": more,
+            "next_offset": 2 if more else None,
+            "next_cursor": "opaque-next" if more else None,
+            "groups": [
+                {
+                    "caller": "La;->m()V",
+                    "dex_entry": "classes.dex",
+                    "matches": ["x"],
+                    "target_field": "value",
+                    "evidence": evidence,
+                }
+            ],
+        }
+        if damage == "count":
+            result["returned_sites"] += 1
+        elif damage == "matches":
+            result["groups"][0]["matches"] = ["x", "unused"]
+        elif damage == "identity":
+            evidence[0]["caller"] = "changed"
+        elif damage == "offset":
+            result["offset"] += 1
+        elif damage == "cursor" and not more:
+            result["next_cursor"] = "opaque-next"
+        elif damage == "index":
+            evidence[0]["target_index"] = -1
+        elif damage == "boolean_index":
+            evidence[0]["target_index"] = False
+        elif damage == "unit":
+            evidence[0]["offset_unit"] = "bytes"
+        elif damage == "field":
+            result["groups"][0]["target_field"] = "unexpected"
+        return result
+
+    if damage:
+        with pytest.raises(AssertionError):
+            await benchmark.collect_reference_pages(
+                call, "ours", "tool", {"reference_format": "grouped"}, "q", 1
+            )
+    else:
+        result, pages, retries = await benchmark.collect_reference_pages(
+            call, "ours", "tool", {"reference_format": "grouped"}, "q", 1
+        )
+        assert len(pages) == 2 and not retries and result["total"] == 3
+        assert result["items"] == [
+            {
+                "caller": "La;->m()V",
+                "dex_entry": "classes.dex",
+                "value": "x",
+                "instruction_offset": i,
+            }
+            for i in range(3)
+        ]
+
+
 def test_temporary_usage_counts_regular_files_and_not_external_symlinks(benchmark, tmp_path):
     root = tmp_path / "owned"
     root.mkdir()

@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "851e910dcdea750920b5eaf7069f96af83f0b53b8b5e6552a21d01d65d7a201d",
+  "source_sha256": "a20ff4f24d329cec2bbdb0fa3b355b71cd1de182101e8ca4cc1c758e4f564f9a",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "e2d3d327b9ff5747e70141da00f4bb39548bdb93742037eb2af3050c6bf3bb1b",
+  "records_sha256": "ade2cdcea3988734ea94f9d00691e28868aaf58abb0e994136c2d870d7f9c201",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -1067,13 +1067,38 @@
       "is_async": false
     },
     "asc_query_dex_session": {
-      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs with type_relation=operand scans explicit type operands without an index,\nusing exact or literal substring type_match. Other type scopes build/reuse the index.\ninstruction includes member-type and catch relations; exact matching preserves arrays.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nReference pages can stop at the byte budget before limit; continue with next_offset.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
+      "description": "Query an immutable DEX session in a supervised worker, with original provenance.\n\nNative instruction/declaration queries need no JVM or JADX; Smali uses ASC.\nsearch_refs combines literal owner/name/prototype filters without global preprocessing.\nfind_string_refs accepts a literal value and returns const-string/jumbo use sites.\ntarget_descriptor optionally filters exact prototypes/field types.\nfind_method_refs/get_method_calls return declared instruction targets, not runtime dispatch.\nmethod_descriptor is the full DEX class->name(args)return identity.\nOr supply exact class_name and method_name for a declared method; target_descriptor\noptionally selects its prototype. Ambiguous names fail without choosing an overload.\nfind_field_refs requires field_descriptor (Lpkg/C;->name:I).\nfield_access filters reads/writes; inheritance and reflective accesses are not resolved.\nbuild_xref_index persists an atomic static index for this session's lifetime.\nget_call_graph uses bounded frontiers or an index for multi-hop static exploration.\nInspect truncation_reasons and unresolved_sites; graph edges are declared operands.\nAn optional configured durable cache restores matching indexes across server restarts.\nfind_type_refs with type_relation=operand scans explicit type operands without an index,\nusing exact or literal substring type_match. Other type scopes build/reuse the index.\ninstruction includes member-type and catch relations; exact matching preserves arrays.\nsearch_members scans declarations or reuses an existing index; kind=method/field.\nvalue is a case-sensitive literal substring of the full descriptor, not regex.\nclass_name restricts exact owner. search_strings scans DEX string-pool values\nusing a case-sensitive literal value, not instruction use sites.\nIdentical discovery and non-indexed reference pages reuse a bounded session cache.\nReference pages can stop at the byte budget before limit; continue with next_offset.\nreference_format=grouped returns groups with matches/evidence for instruction references.\nIn grouped format limit counts caller groups; total/offset/returned_sites count sites.\nContinue with next_cursor and identical selectors; a large caller may span pages.\nsource_format=auto uses ASC exact-method Smali, never JADX.\nsource_format=java explicitly selects the optional compatibility backend.",
       "parameters": {
         "properties": {
           "session_id": {
             "description": "Immutable open DEX session ID returned by an open tool",
             "title": "Session Id",
             "type": "string"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Reference rows or caller groups with complete evidence; default flat",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for the same session/query; leave offset at zero",
+            "title": "Cursor"
           },
           "operation": {
             "default": "info",

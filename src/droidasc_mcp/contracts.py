@@ -270,6 +270,7 @@ class ArtifactResult(Result, total=False):
 
 
 class DexRow(Object, total=False):
+    target_index: int
     value: str
     instruction: str
     dispatch_kind: str
@@ -306,6 +307,15 @@ class DexRow(Object, total=False):
     target: str
     reason: str
     call_site_prototype: str
+
+
+class ReferenceGroup(Object, total=False):
+    dex_entry: Required[str]
+    caller: Required[str]
+    target_field: Required[Literal["callee", "field_descriptor", "value", "type_descriptor"]]
+    offset_unit: str | None
+    matches: Required[list[str]]
+    evidence: Required[list[DexRow]]
 
 
 class Index(Object, total=False):
@@ -349,7 +359,13 @@ class SourceReference(Object, total=False):
 class DexResult(Result, total=False):
     type_relation: str
     type_match: Literal["exact", "substring"]
-    page_limited_by: Literal["response_bytes"]
+    page_limited_by: Literal["response_bytes", "caller_groups"]
+    reference_format: Literal["grouped"]
+    groups: list[ReferenceGroup]
+    returned_sites: int
+    limit_unit: Literal["caller_groups"]
+    total_unit: Literal["reference_sites"]
+    next_cursor: str | None
     response_byte_limit: int
     member_references: list[SourceReference]
     source_sha256: str

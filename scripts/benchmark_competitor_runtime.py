@@ -183,11 +183,15 @@ def query_content(result):
 async def collect_reference_pages(call, implementation, tool, params, label, page_size):
     """Follow real continuations, preserving all rows and stable page diagnostics."""
     ours = implementation == "ours"
+    grouped = ours and params.get("reference_format") == "grouped"
     combined, pages, recoveries = [], [], []
     cursor, expected = None, None
     while True:
         arguments = {**params, "limit": page_size}
-        arguments["offset" if ours else "cursor"] = len(combined) if ours else cursor
+        if grouped:
+            arguments.update(offset=0, cursor=cursor)
+        else:
+            arguments["offset" if ours else "cursor"] = len(combined) if ours else cursor
         page_label = f"{label}:page:{len(pages)}:attempt:{len(recoveries)}"
         result = await call(page_label, tool, arguments, allow_response_limit=ours)
         if result.get("status") == "error":
@@ -195,9 +199,39 @@ async def collect_reference_pages(call, implementation, tool, params, label, pag
             recoveries.append({"offset": len(combined), "limit": page_size})
             page_size = max(1, page_size // 2)
             continue
-        row_key = "items" if ours else "hits"
-        rows = result[row_key]
-        assert isinstance(rows, list) and len(rows) <= page_size
+        row_key = "groups" if grouped else "items" if ours else "hits"
+        if grouped:
+            assert result["reference_format"] == "grouped"
+            assert result["limit_unit"] == "caller_groups"
+            assert result["total_unit"] == "reference_sites"
+            groups = result["groups"]
+            assert isinstance(groups, list) and len(groups) <= page_size
+            assert all(group["evidence"] for group in groups)
+            rows = []
+            for group in groups:
+                field, matches = group["target_field"], group["matches"]
+                assert field in ("callee", "field_descriptor", "value", "type_descriptor")
+                assert isinstance(matches, list) and all(isinstance(v, str) for v in matches)
+                assert len(set(matches)) == len(matches)
+                seen = set()
+                for evidence in group["evidence"]:
+                    assert not {"caller", "dex_entry", field, "offset_unit"} & evidence.keys()
+                    index = evidence["target_index"]
+                    assert type(index) is int and 0 <= index < len(matches)
+                    if index not in seen:
+                        assert index == len(seen)
+                        seen.add(index)
+                    row = {"dex_entry": group["dex_entry"], "caller": group["caller"], **evidence}
+                    row.pop("target_index")
+                    row[field] = matches[index]
+                    if "offset_unit" in group:
+                        row["offset_unit"] = group["offset_unit"]
+                    rows.append(row)
+                assert len(seen) == len(matches)
+            assert result["returned_sites"] == len(rows)
+        else:
+            rows = result[row_key]
+            assert isinstance(rows, list) and len(rows) <= page_size
         stable = query_content(result)
         for key in (
             row_key,
@@ -209,6 +243,10 @@ async def collect_reference_pages(call, implementation, tool, params, label, pag
             "truncated",
             "page_limited_by",
             "response_byte_limit",
+            "reference_format",
+            "limit_unit",
+            "total_unit",
+            "returned_sites",
         ):
             stable.pop(key, None)
         if expected is None:
@@ -220,6 +258,14 @@ async def collect_reference_pages(call, implementation, tool, params, label, pag
             assert result["offset"] == len(combined) and result["limit"] == page_size
             assert result["has_more"] == result["truncated"] == more
             assert result["next_offset"] == (len(combined) + len(rows) if more else None)
+            if grouped:
+                following = result["next_cursor"]
+                assert (
+                    isinstance(following, str) and following and following != cursor
+                    if more
+                    else following is None
+                )
+                cursor = following
         else:
             cursor = result["next_cursor"]
             assert cursor == (str(len(combined) + len(rows)) if more else None)
@@ -229,7 +275,7 @@ async def collect_reference_pages(call, implementation, tool, params, label, pag
         if not more:
             break
     assert len(combined) == expected["total"]
-    return {**expected, row_key: combined}, pages, recoveries
+    return {**expected, "items" if grouped else row_key: combined}, pages, recoveries
 
 
 def queries(implementation, key, scenario, graph_root, graph_depth):
@@ -523,6 +569,11 @@ async def trial(args, implementation, scenario, round_number, report, save):
                         )
                         result = reply.structured_content
                         operation["result"] = result
+                        operation["response_text_bytes"] = sum(
+                            len(content.text.encode("utf-8"))
+                            for content in getattr(reply, "content", [])
+                            if content.type == "text"
+                        )
                         recovery = (
                             allow_response_limit
                             and result
@@ -566,6 +617,12 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 )
                 key = opened["session_id" if ours else "analysis_id"]
                 commands = queries(implementation, key, scenario, args.graph_root, args.graph_depth)
+                if ours and getattr(args, "reference_format", "flat") == "grouped":
+                    assert scenario.startswith("full_")
+                    commands = [
+                        (tool, {**params, "reference_format": "grouped"})
+                        for tool, params in commands
+                    ]
 
                 async def command(label, tool, params):
                     if not scenario.startswith("full_"):
@@ -674,6 +731,7 @@ async def main(args):
         "timeout_per_complete_trial_seconds": args.trial_timeout,
         "repeats": args.repeats,
         "full_collection_page_size": args.page_size,
+        "reference_format": getattr(args, "reference_format", "flat"),
         "ours_expansion_budget_mib": args.expanded_mib,
         "ours_session_disk_budget_mib": args.session_disk_mib,
         "external_temporary_logical_cap_mib": args.session_disk_mib,
@@ -764,6 +822,7 @@ if __name__ == "__main__":
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--repeats", type=int, choices=range(1, 4), default=3)
     parser.add_argument("--page-size", type=int, choices=range(1, 1001), default=1000)
+    parser.add_argument("--reference-format", choices=("flat", "grouped"), default="flat")
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--trial-timeout", type=int, default=600)
@@ -775,6 +834,10 @@ if __name__ == "__main__":
     parser.add_argument("--graph-depth", type=int, choices=range(1, 6), default=3)
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
+    if arguments.reference_format == "grouped" and any(
+        not scenario.startswith("full_") for scenario in arguments.scenarios
+    ):
+        parser.error("grouped format requires complete full_* reference scenarios")
     if (
         min(
             arguments.rounds,
