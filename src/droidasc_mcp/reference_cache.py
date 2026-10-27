@@ -121,6 +121,13 @@ class ReferenceCache:
         _check_cancelled()
 
     def read(self, query):
+        return self._read(query, format_page=True)
+
+    def read_chunk(self, query):
+        """Read a validated, decode-budgeted prefix for internal grouped formatting."""
+        return self._read(query, format_page=False)
+
+    def _read(self, query, *, format_page):
         _check_cancelled()
         with self.lock:
             key, identity = self._key(query)
@@ -181,7 +188,8 @@ class ReferenceCache:
                         "stored_bytes": self.used,
                     },
                 }
-                result = reference_page(result, maximum, check=_check_cancelled)
+                if format_page:
+                    result = reference_page(result, maximum, check=_check_cancelled)
                 self._validate_read(path, expected, identity)
                 self.entries.move_to_end(key)
                 return result

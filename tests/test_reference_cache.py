@@ -152,21 +152,23 @@ def publish(cache, query=QUERY, rows=ROWS, **extra):
     return ticket
 
 
-def test_pages_preserve_duplicates_metadata_and_independent_responses(cached):
+@pytest.mark.parametrize("read_method", ["read", "read_chunk"])
+def test_pages_preserve_duplicates_metadata_and_independent_responses(cached, read_method):
     cache, _ = cached
+    read = getattr(cache, read_method)
     publish(cache, selected_method="m", prototypes=["()V"])
-    first = cache.read(QUERY)
+    first = read(QUERY)
     assert first["diagnostic"] == 41 and first["selected_method"] == "m"
     assert first["items"][0]["target_dex_entry"] == "classes2.dex"
     assert first["items"][0]["target_resolution"] == "defined_in_input"
     assert first["next_offset"] == 1
     first["items"].clear()
     first["prototypes"].clear()
-    second = cache.read({**QUERY, "offset": 1, "limit": 2})
+    second = read({**QUERY, "offset": 1, "limit": 2})
     assert [row["instruction_offset"] for row in second["items"]] == [3, 3]
     assert second["prototypes"] == ["()V"] and not second["has_more"]
-    assert cache.read(QUERY)["items"]
-    assert cache.read({**QUERY, "offset": 2**80})["items"] == []
+    assert read(QUERY)["items"]
+    assert read({**QUERY, "offset": 2**80})["items"] == []
 
 
 def test_repeated_identities_fit_existing_quota_without_losing_page_boundaries(cached):
@@ -228,6 +230,39 @@ def test_cached_page_does_not_reencode_rows_to_compute_read_budget(cached, monke
     assert result["items"] == rows[127 : result["next_offset"]]
     assert len(encode(result).encode()) + 1 <= MAX_VALUE_BYTES
     assert not sizing_calls, "Stored block byte counts already bound the cache read"
+
+
+@pytest.mark.parametrize("maximum", [1024, 64 * 1024, MAX_VALUE_BYTES])
+@pytest.mark.parametrize("offset", [0, 7, 127, 999, 1001])
+def test_internal_chunk_keeps_decoded_budget_and_exact_prefix(cached, monkeypatch, maximum, offset):
+    cache, _ = cached
+    rows = [
+        {"value": 'a\\"\n' * (3000 if i % 11 == 0 else 70), "instruction_offset": i // 2}
+        for i in range(1000)
+    ]
+    query = {**NEW_QUERIES[0], "offset": offset, "limit": 1000}
+    publish(cache, query, rows)
+    cache.settings = replace(cache.settings, max_page_size=1000, max_output_bytes=maximum)
+    decode, decoded_bytes = reference_cache.decode_block, []
+
+    def observe(encoded, count, raw_bytes):
+        decoded_bytes.append(raw_bytes)
+        return decode(encoded, count, raw_bytes)
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Internal chunks must not encode flat response pages")
+
+    monkeypatch.setattr(reference_cache, "decode_block", observe)
+    monkeypatch.setattr(reference_cache, "reference_page", unexpected)
+    result = cache.read_chunk(query)
+    assert result["status"] == "ok" and result["total"] == len(rows)
+    assert result["diagnostic"] == 41 and result["offset"] == offset
+    end = offset + len(result["items"])
+    assert result["items"] == rows[offset:end]
+    assert result["next_offset"] == (end if end < len(rows) else None)
+    assert len(result["items"]) <= 1000
+    assert offset >= len(rows) or result["items"]
+    assert sum(decoded_bytes) <= maximum + 2 * MAX_BLOCK_BYTES
 
 
 @pytest.mark.parametrize("maximum", [1024, 64 * 1024, MAX_VALUE_BYTES])
@@ -385,7 +420,8 @@ def test_invalid_block_layout_cannot_publish(cached, statement):
     assert cache.used == 0
 
 
-def test_corrupt_block_payload_falls_back_without_escaping_cache(cached):
+@pytest.mark.parametrize("read_method", ["read", "read_chunk"])
+def test_corrupt_block_payload_falls_back_without_escaping_cache(cached, read_method):
     cache, _ = cached
     ticket = cache.begin(QUERY)
     write_scan(cache, ticket)
@@ -399,7 +435,7 @@ def test_corrupt_block_payload_falls_back_without_escaping_cache(cached):
     receipt_path.write_text(json.dumps(receipt))
     cache.finish(ticket, publish=True)
     assert cache.entries
-    assert cache.read(QUERY) is None
+    assert getattr(cache, read_method)(QUERY) is None
     assert not cache.entries and cache.used == 0 and not directory.exists()
 
 
@@ -428,12 +464,15 @@ def test_selector_identity_covers_all_non_page_parameters(cached):
     assert cache.used == 0 and not list(cache.directory.iterdir())
 
 
-def test_identity_change_during_page_read_discards_cached_response(cached, monkeypatch):
+@pytest.mark.parametrize("read_method", ["read", "read_chunk"])
+def test_identity_change_during_page_read_discards_cached_response(
+    cached, monkeypatch, read_method
+):
     cache, _ = cached
     publish(cache)
     identities = iter(["one", "two"])
     monkeypatch.setattr(reference_cache, "signature", lambda *args: next(identities))
-    assert cache.read(QUERY) is None and not cache.entries
+    assert getattr(cache, read_method)(QUERY) is None and not cache.entries
 
 
 def test_pending_reservations_deduplicate_and_bound_parallel_builds(cached):
@@ -521,7 +560,8 @@ def test_incomplete_or_corrupt_publication_never_reused(cached, mutation):
 
 
 @pytest.mark.parametrize("mutation", ["delete_file", "delete_directory", "replace", "symlink"])
-def test_post_publication_changes_invalidate_without_breaking_query(cached, mutation):
+@pytest.mark.parametrize("read_method", ["read", "read_chunk"])
+def test_post_publication_changes_invalidate_without_breaking_query(cached, mutation, read_method):
     cache, _ = cached
     ticket = publish(cache)
     directory = Path(ticket["directory"])
@@ -537,7 +577,7 @@ def test_post_publication_changes_invalidate_without_breaking_query(cached, muta
             target = cache.root / "outside"
             target.write_bytes(b"preserved")
             path.symlink_to(target)
-    assert cache.read(QUERY) is None and not cache.entries and cache.used == 0
+    assert getattr(cache, read_method)(QUERY) is None and not cache.entries and cache.used == 0
     if mutation == "symlink":
         assert target.read_bytes() == b"preserved"
 
@@ -546,8 +586,10 @@ class Cancelled(BaseException):
     pass
 
 
-def test_cancelled_block_read_keeps_complete_cache_reusable(cached, monkeypatch):
+@pytest.mark.parametrize("read_method", ["read", "read_chunk"])
+def test_cancelled_block_read_keeps_complete_cache_reusable(cached, monkeypatch, read_method):
     cache, _ = cached
+    read = getattr(cache, read_method)
     publish(cache, rows=ROWS * 100)
     original_check = reference_cache._check_cancelled
     calls = 0
@@ -560,10 +602,10 @@ def test_cancelled_block_read_keeps_complete_cache_reusable(cached, monkeypatch)
 
     monkeypatch.setattr(reference_cache, "_check_cancelled", cancel)
     with pytest.raises(Cancelled):
-        cache.read({**QUERY, "limit": 100})
+        read({**QUERY, "limit": 100})
     assert cache.entries and not cache.pending
     monkeypatch.setattr(reference_cache, "_check_cancelled", original_check)
-    assert cache.read(QUERY)["items"][0]["instruction_offset"] == 0
+    assert read(QUERY)["items"][0]["instruction_offset"] == 0
 
 
 def test_cancellation_during_verification_cleans_owned_lease(cached, monkeypatch):

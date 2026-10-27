@@ -222,8 +222,42 @@ def test_empty_grouped_service_result_has_terminal_cursor(string_reference_dex_f
         service.close()
 
 
+def test_warm_grouped_collection_skips_flat_formatting_and_page_cache(
+    string_reference_dex_files, monkeypatch
+):
+    from droidasc_mcp import reference_cache
+
+    service = DroidAscService(
+        replace(Settings.from_env(), allowed_roots=(string_reference_dex_files[0].parent,))
+    )
+    try:
+        key = service.open_dex_session([str(p) for p in string_reference_dex_files])["session_id"]
+        query = {"operation": "find_string_refs", "value": "https://"}
+        flat = service.query_dex_session(key, **query, limit=100, offset=0)
+        assert flat["status"] == "ok" and flat["total"] == 4
+
+        def unexpected(*args, **kwargs):
+            raise AssertionError("Grouped cache hits must not format or cache flat pages")
+
+        entry = service.sessions.entries[key]
+        monkeypatch.setattr(reference_cache, "reference_page", unexpected)
+        monkeypatch.setattr(entry.pages, "execute", unexpected)
+        monkeypatch.setattr(service.runner, "query_dex_session", unexpected)
+        grouped = service.query_dex_session(key, **query, reference_format="grouped", limit=100)
+        assert grouped["status"] == "ok" and not grouped["has_more"]
+        assert flatten(grouped["groups"]) == flat["items"]
+    finally:
+        service.close()
+
+
 @pytest.mark.parametrize("kind", ["string", "type"])
-def test_wide_caller_splits_at_byte_cap_without_losing_sites(wide_operand_dex_file, kind):
+@pytest.mark.parametrize("fits", [False, True])
+def test_wide_caller_splits_at_byte_cap_without_losing_sites(
+    wide_operand_dex_file, kind, fits, monkeypatch
+):
+    from droidasc_mcp import reference_cache
+
+    monkeypatch.setattr(reference_cache, "MAX_ENTRY_BYTES", (1024 if fits else 64) * 1024)
     path, values, targets = wide_operand_dex_file
     service = DroidAscService(replace(Settings.from_env(), allowed_roots=(path.parent,)))
     try:
@@ -258,6 +292,7 @@ def test_wide_caller_splits_at_byte_cap_without_losing_sites(wide_operand_dex_fi
         assert [row["value" if kind == "string" else "type_descriptor"] for row in rows] == (
             values if kind == "string" else targets
         )
+        assert bool(service.sessions.entries[key].references.entries) == fits
     finally:
         service.close()
 

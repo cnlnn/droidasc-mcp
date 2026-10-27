@@ -188,7 +188,7 @@ class DexSessions:
                     key,
                     entry.cursor_key,
                     query,
-                    lambda page: self._query_entry(entry, page),
+                    lambda page: self._query_entry(entry, page, reference_chunk=True),
                     identity,
                 )
                 if identity != cursor_identity(self.settings, root):
@@ -206,7 +206,7 @@ class DexSessions:
                 if entry.closing and not entry.users:
                     self._drop(key)
 
-    def _query_entry(self, entry, query):
+    def _query_entry(self, entry, query, *, reference_chunk=False):
         from .xref_index import (
             DISCOVERY_OPERATIONS,
             INDEX_OPERATIONS,
@@ -250,7 +250,7 @@ class DexSessions:
                 cache = self._reference_cache(entry, root, query)
                 if cache is None:
                     return self.runner.query_dex_session(root, query)
-                cached = cache.read(query)
+                cached = cache.read_chunk(query) if reference_chunk else cache.read(query)
                 if cached is not None:
                     return cached
                 ticket = cache.begin(query)
@@ -266,7 +266,7 @@ class DexSessions:
 
             return (
                 execute()
-                if query.get("operation") == "build_xref_index"
+                if reference_chunk or query.get("operation") == "build_xref_index"
                 else entry.pages.execute(self.settings, root, query, execute)
             )
 

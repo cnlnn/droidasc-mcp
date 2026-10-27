@@ -1,4 +1,4 @@
-"""Collect caller groups through the existing bounded flat-query path."""
+"""Collect caller groups from bounded reference chunks or fallback worker pages."""
 
 import json
 from time import monotonic

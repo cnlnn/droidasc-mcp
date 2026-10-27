@@ -2,7 +2,7 @@
 
 ## Current implementation plan, 2026-10-27
 
-Status: goal execution active; B1 candidate frozen with acceptance pending; B2 grouped MCP works, payload experiment ongoing. This section is the
+Status: goal execution active; B1 candidate frozen with acceptance pending; B2 grouped MCP works, five-round method/field benefit verified with operand latency residual. This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
 this section. The cross-platform/package requirements and invariants below still apply.
@@ -79,7 +79,7 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | --- | --- | --- | --- |
 | P0 | Source-backed plan and compatibility decisions | Current audit | complete |
 | B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | frozen b64f85c; final acceptance open |
-| B2 | Compact reference output and resumable full-result collection | B1 runtime frozen; B1 final acceptance remains open | in progress: MCP integration; measured payload regression under correction |
+| B2 | Compact reference output and resumable full-result collection | B1 runtime frozen; B1 final acceptance remains open | in progress: method/field payload and latency improve; operand latency residual and final gates open |
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | deferred |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
@@ -222,8 +222,8 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1 four-input cache parity passed; B2 latency diagnosis identifies redundant internal flat formatting; f44 CI has one Windows exit-observer failure |
-| Next action | Verify bounded process-exit observation, reuse validated cache chunks for grouping without flat formatting, then rerun real MCP and matched output measurements |
+| Current task | B2 bounded cache chunks pass 265 focused/real-transport tests and five-round Douyin equality; method/field latency improves, operand latency residual remains |
+| Next action | Confirm profile costs, freeze current B2 runtime for CI and held-out measurements, consolidate frozen B1 gates without relabeling older source receipts |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
 | Open dependencies | Remaining corpus performance matrix stays open; CI 40498703094 accepts frozen B1 b64f85c, not B2; real-model access is a later B3 gate |
@@ -1115,6 +1115,50 @@ Full-collection acceptance extension, 2026-10-27:
   Next reuse the same validated bounded cache-block reader before final grouped formatting;
   retain integrity/quota/cancellation checks and the unchanged public flat path. No new
   persistent cache or replacement grouping algorithm is justified by this profile.
+- Follow-up `92c721f` contains only tests/ledger, not runtime changes. The first push
+  received GitHub Internal Server Error; authoritative remote readback still showed f44.
+  Retrying the unchanged push succeeded and started CI `40584948495`. This CI covers the
+  bounded exit observer but not the subsequent grouped cache-chunk change.
+- Grouped collection now reuses `ReferenceCache.read_chunk`, the existing checked reader
+  before flat formatting. Decode budget, file/input identity checks, cancellation, quotas
+  and spool publication stay shared with `read`; public flat `read` still formats normally.
+  Internal chunks bypass the exact flat-page cache to avoid storing oversized internal
+  data as public responses. Cache misses/overflow keep the existing bounded worker fallback;
+  grouped responses retain their final exact byte cap. No cache schema or quota changed.
+  `bounded-group-chunks-red.xml` records 15 missing-chunk failures and one test setup error
+  (flat service call omitted its required offset); the setup-only retry is retained as
+  `bounded-group-service-red.xml`. Adding offset=0 gives the intended flat-cache failure
+  in `bounded-group-service-contract-red.xml`. First green: 175 tests. Expanded integrity,
+  corruption, cancellation, duplicate/context, cache-fit/overflow and real stdio/HTTP checks:
+  `bounded-group-chunks-integrity-green.xml`, 265 passes, zero skips. Both schema checks pass.
+- `douyin-bounded-chunks-five-rounds.json` passes all 20 fresh-server trials, ten alternating
+  pairs and 80 complete collections, with exact reconstructed rows/diagnostics and unchanged
+  input/runtime/helper hashes. Four inherited CPUs, two full repeats, no retries. Medians
+  in seconds, flat/grouped:
+
+  | Workflow | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- |
+  | string/type operands | 28.3991/28.8200 | 12.0796/13.3939 | 32.0293/32.5154 |
+  | method/field concurrent | 6.9786/6.5090 | 5.7391/4.9990 | 10.7018/10.5061 |
+
+  Per trial across both queries/repeats, operand pages fall 278/216 and text bytes
+  83,933,361/77,640,300; member pages 146/86 and text bytes 44,124,280/30,710,858.
+  These are tool-text bytes, not JSON-RPC wire bytes or structured-response caps. Every
+  member first/repeat pair improves (first deltas -0.8782 to -0.4696 s; repeats -0.8818 to
+  -0.4136). Every operand repeat is slower (+1.3143 to +2.3345 s); do not call reduced page
+  count an operand speedup. Grouping remains opt-in, with this residual explicitly open.
+  Peak descendant RSS is 164,147,200/164,474,880 bytes for operands and
+  155,033,600/153,276,416 for members; retained temporary logical bytes remain identical
+  per workflow (480,253,362 and 477,975,984). No storage or total-memory win follows.
+  This is a format comparison on one changed runtime, not an isolated before/after patch
+  speed ratio or a replacement for held-out/cross-platform/package acceptance.
+- `douyin-bounded-chunks-service-profile/report.json` confirms the redundant flat formatter
+  is absent from warm grouped collection. Grouped JSON encoder calls fall from 291,453
+  in the preserved pre-change diagnostic to 125,556, and cache reads from 215 to 197;
+  full ordered row digests still agree with flat, identities stay unchanged and cleanup
+  succeeds. These are profiler observations, not acceptance speed ratios. Remaining
+  grouped costs include per-site grouping and more cache reads than flat (139), so the
+  measured operand latency residual has not been waved away by a lower encode count.
 
 Reproduce alternating old/new complete-workflow regression timing (fresh output required):
 
