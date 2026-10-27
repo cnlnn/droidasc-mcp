@@ -1,6 +1,14 @@
 """Streaming native DEX records for atomic SQLite indexes."""
 
-from .native_dex import DYNAMIC_NAMES, FIELD_NAMES, METHOD_NAMES, InvalidDex, dex_entries, utf16_key
+from .native_dex import (
+    DYNAMIC_NAMES,
+    FIELD_NAMES,
+    METHOD_NAMES,
+    TYPE_OPS,
+    InvalidDex,
+    dex_entries,
+    utf16_key,
+)
 
 
 def records(bundle, calls_only=False):
@@ -288,17 +296,6 @@ def records(bundle, calls_only=False):
                     "without_code": int(not code),
                 }
     yield {"record": "complete", "schema": 1, "edges": edges}
-
-
-TYPE_OPS = {
-    0x1C: "const-class",
-    0x1F: "check-cast",
-    0x20: "instance-of",
-    0x22: "new-instance",
-    0x23: "new-array",
-    0x24: "filled-new-array",
-    0x25: "filled-new-array/range",
-}
 
 
 def split_types(value):

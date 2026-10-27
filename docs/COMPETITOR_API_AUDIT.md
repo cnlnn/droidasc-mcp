@@ -27,7 +27,7 @@ check is not a substitute for the behavioral tests linked in each row.
 | tool | `apk_get_class_source` | `analysis_id,class_name` | get_class_source; get_class_source_metadata adds original ASC token references with global code-point spans and a complete-source hash. Source links are not instruction xrefs. | tests/test_structure.py; tests/test_integration.py |
 | tool | `apk_find_method_references` | `analysis_id,class_name,method_name,fuzzy_class,exact_name,descriptor,cursor,limit` | find_method_refs selects a full identity; search_refs(kind=method) scans a fuzzy owner/name union once, with optional exact prototype, omitted name, case mode and global pagination. | tests/test_native_dex.py; tests/test_methods.py; tests/test_integration.py |
 | tool | `apk_find_field_references` | `analysis_id,class_name,field_name,fuzzy_class,exact_name,field_type,cursor,limit` | search_refs(kind=field) supports owner/name/type filtering in one pass; find_field_refs selects a full class->name:type. Read/write filters and checked individual instruction sites are preserved, without heuristic byte matches. | tests/test_native_dex.py; tests/test_methods.py; tests/test_integration.py |
-| tool | `apk_find_type_instructions` | `analysis_id,type_name,cursor,limit` | find_type_refs with exact Dalvik type and type_relation=instruction. Dotted names become Lpkg/Type;. Broader pattern discovery uses class search before exact queries; declarations/annotations are separate optional relations. | tests/test_xref_index.py; tests/test_integration.py |
+| tool | `apk_find_type_instructions` | `analysis_id,type_name,cursor,limit` | B1 development: find_type_refs(type_relation=operand,type_match=exact/substring) scans explicit type operands without a whole index. Operand scope normalizes dotted names; substring is literal and case-sensitive, not competitor regex parity. Legacy instruction remains broader: member types and catch relations are included; all/declaration/annotation retain their indexed semantics. | tests/test_type_operands.py; tests/test_xref_index.py; tests/test_integration.py; scripts/verify_type_operands.py |
 | tool | `apk_find_string_references` | `analysis_id,value,cursor,limit` | find_string_refs(value=literal) accepts a discovered string unchanged and returns checked const-string/jumbo sites, global pagination and explicit case mode. Legacy find_refs retains its regex semantics. get_string_constants provides class-scoped use sites; pool search alone is not a use-site claim. Included in consolidated v0.2.3; original v0.2.4 acceptance remains historical evidence. | tests/test_string_refs.py; tests/test_structure.py; tests/test_integration.py; scripts/verify_string_references.py |
 | tool | `apk_search_members` | `analysis_id,kind,query,cursor,limit` | search_members(kind=method/field,value=query,member_match=name,case_sensitive=false). Includes declaring class, name, flags and full identity. Descriptor matching remains the backward-compatible default, explicitly distinct. | tests/test_structure.py; tests/test_xref_index.py; tests/test_integration.py |
 | tool | `apk_search_strings` | `analysis_id,query,cursor,limit` | search_strings(value=query,case_sensitive=false), with original DEX entry/string index. Case-sensitive default remains available. | tests/test_structure.py; tests/test_xref_index.py; tests/test_integration.py |
@@ -53,12 +53,16 @@ check is not a substitute for the behavioral tests linked in each row.
 - Competitor cursor strings encode integer offsets; our next_offset is an integer. Follow pages,
   not tool-count equivalence. Default page sizes differ; both accept explicit bounded limits.
 - Our DEX worker also caps encoded responses at 256 KiB. Method/field references, outgoing
-  calls and fuzzy member-reference queries now return a complete prefix when the requested
+  calls and fuzzy member-reference queries return a complete prefix when the requested
   maximum row count would exceed that cap. page_limited_by=response_bytes explains a short
   page; next_offset advances by the actual row count, not the requested limit. No site is
   discarded. Unpageable rows/metadata and other oversized operations still return
   response_limit. The complete-reference verifier checks adaptive continuations, encoded
   byte bounds and the remaining explicit-error recovery path independently.
+- B1 development adds the same bounded prefix/continuation and selected-result cache to
+  literal string references and explicit type operands. New page offsets reuse fitting
+  complete sets; quota-unavailable/oversized sets fall back to scanning. Cache identity
+  retains selector and match mode. No new performance or release acceptance is implied.
 - Our empty member queries enumerate declarations; the competitor rejects them. Empty class
   queries use list_classes; an empty
   string/body search is intentionally rejected rather than returning every pool/instruction row.
@@ -84,6 +88,11 @@ check is not a substitute for the behavioral tests linked in each row.
   identity checks are retained rather than copied from the competitor's weaker boundaries.
 
 ## Acceptance Status
+
+The 2026-10-27 B1 development work keeps legacy broad type relations intact and introduces
+operand-only scans plus complete selected-set reuse for operands/strings. Current execution
+and evidence are recorded at the top of GOAL_02X.md. Neither the historical releases below
+nor passing fixture transports close the new large-input/performance/package gates.
 
 The subsequent full-concurrency/bounded-graph harness increment verifies all 72 complete
 product collections over two/four CPUs and all 24 measured product graphs. Twelve of 72

@@ -48,7 +48,67 @@ def test_real_session_new_page_reuses_complete_reference_scan(smali_dex_files, m
         service.close()
 
 
+@pytest.mark.parametrize("kind", ["type", "string"])
+@pytest.mark.parametrize("fits", [False, True])
+def test_wide_operand_pages_preserve_every_site_with_or_without_cache(
+    wide_operand_dex_file, monkeypatch, kind, fits
+):
+    monkeypatch.setattr(reference_cache, "MAX_ENTRY_BYTES", (1024 if fits else 64) * 1024)
+    service = DroidAscService(
+        replace(Settings.from_env(), allowed_roots=(wide_operand_dex_file.parent,))
+    )
+    try:
+        key = service.open_dex_session([str(wide_operand_dex_file)])["session_id"]
+        query = (
+            {
+                "operation": "find_type_refs",
+                "type_relation": "operand",
+                "type_descriptor": "Lwide/" + "Target" * 500 + ";",
+            }
+            if kind == "type"
+            else {"operation": "find_string_refs", "value": "literal[a.*]"}
+        )
+        rows, offset = [], 0
+        while True:
+            result = service.query_dex_session(key, **query, offset=offset, limit=100)
+            assert result["status"] == "ok" and result["total"] == 100, result
+            assert (
+                len(json.dumps({k: v for k, v in result.items() if k != "session_id"}).encode()) + 1
+                <= 256 * 1024
+            )
+            if offset and fits:
+                assert result["query_cache"]["scope"] == "selected_reference_set"
+            rows.extend(result["items"])
+            if not result["has_more"]:
+                break
+            assert result["page_limited_by"] == "response_bytes"
+            assert result["next_offset"] == offset + len(result["items"]) > offset
+            offset = result["next_offset"]
+        assert [row["instruction_offset"] for row in rows] == list(range(0, 200, 2))
+        assert all(row["caller"] == f"Lwide/Caller;->{kind}s()V" for row in rows)
+        assert all("target_resolution" not in row for row in rows)
+        if kind == "string":
+            assert all(row["value"] == "literal[a.*]" * 300 for row in rows)
+        else:
+            assert all(row["type_descriptor"] == query["type_descriptor"] for row in rows)
+        references = service.sessions.entries[key].references
+        assert bool(references.entries) == fits
+        assert not references.pending
+    finally:
+        service.close()
+
+
 QUERY = {"operation": "find_method_refs", "method_descriptor": "Lx;->m()V", "offset": 0, "limit": 1}
+NEW_QUERIES = [
+    {"operation": "find_string_refs", "value": "STRING_ARGUMENT", "offset": 0, "limit": 1},
+    {
+        "operation": "find_type_refs",
+        "type_descriptor": "Lfixture/Target;",
+        "type_relation": "operand",
+        "offset": 0,
+        "limit": 1,
+    },
+]
 ROWS = [
     {"caller": "Lc;->run()V", "callee": "Lx;->m()V", "instruction_offset": offset}
     for offset in (0, 3, 3)
@@ -350,13 +410,28 @@ def real_session(smali_dex_files):
         {"operation": "search_refs", "kind": "method", "value": "pick", "member_match": "name"},
         {"operation": "search_refs", "kind": "field", "value": "value", "field_access": "write"},
         {"operation": "get_method_calls", "class_name": "fixture.Caller", "method_name": "run"},
+        {"operation": "find_string_refs", "value": "STRING_ARGUMENT"},
+        {
+            "operation": "find_type_refs",
+            "type_descriptor": "Lfixture/Target;",
+            "type_relation": "operand",
+        },
     ],
-    ids=["method", "field", "outgoing", "fuzzy-method", "fuzzy-field", "named-method"],
+    ids=[
+        "method",
+        "field",
+        "outgoing",
+        "fuzzy-method",
+        "fuzzy-field",
+        "named-method",
+        "string",
+        "type",
+    ],
 )
 def test_real_cached_full_pages_equal_uncached_query(real_session, monkeypatch, params):
     service, session_id, entry, root = real_session
     first = service.query_dex_session(session_id, offset=0, limit=1, **params)
-    assert first["status"] == "ok" and first["total"] > 1, first
+    assert first["status"] == "ok" and first["total"] > 0, first
     from droidasc_mcp.service import _normalize_dex_query
 
     query = _normalize_dex_query({**params, "offset": 0, "limit": 100})
@@ -403,15 +478,19 @@ def test_cache_space_reserved_in_global_session_budget(real_session, smali_dex_f
     assert service.sessions.reserved == 0
 
 
-def test_insufficient_cache_budget_preserves_correct_uncached_queries(real_session):
+@pytest.mark.parametrize("query", [QUERY, *NEW_QUERIES])
+def test_insufficient_cache_budget_preserves_correct_uncached_queries(real_session, query):
     service, session_id, entry, _ = real_session
     service.sessions.settings = replace(service.settings, max_dex_session_bytes=entry.size)
-    result = service.query_dex_session(session_id, **QUERY)
+    result = service.query_dex_session(session_id, **query)
     assert result["status"] == "ok" and entry.references is None
 
 
 @pytest.mark.parametrize("failure", [DroidAscError("worker failed"), Cancelled()])
-def test_worker_failure_or_cancellation_releases_cache_lease(real_session, monkeypatch, failure):
+@pytest.mark.parametrize("query", [QUERY, *NEW_QUERIES])
+def test_worker_failure_or_cancellation_releases_cache_lease(
+    real_session, monkeypatch, failure, query
+):
     service, session_id, entry, _ = real_session
 
     def fail(root, query, *, reference_cache):
@@ -420,12 +499,13 @@ def test_worker_failure_or_cancellation_releases_cache_lease(real_session, monke
 
     monkeypatch.setattr(service.runner, "query_dex_session", fail)
     with pytest.raises(type(failure)):
-        service.query_dex_session(session_id, **QUERY)
+        service.query_dex_session(session_id, **query)
     assert entry.users == 0 and not entry.references.pending
     assert not list(entry.references.directory.iterdir())
 
 
-def test_close_waits_for_cache_writer_and_removes_owned_files(real_session, monkeypatch):
+@pytest.mark.parametrize("query", [QUERY, *NEW_QUERIES])
+def test_close_waits_for_cache_writer_and_removes_owned_files(real_session, monkeypatch, query):
     service, session_id, entry, root = real_session
     entered, release = threading.Event(), threading.Event()
     original = service.runner.query_dex_session
@@ -437,7 +517,7 @@ def test_close_waits_for_cache_writer_and_removes_owned_files(real_session, monk
 
     monkeypatch.setattr(service.runner, "query_dex_session", blocked)
     with ThreadPoolExecutor() as pool:
-        future = pool.submit(service.query_dex_session, session_id, **QUERY)
+        future = pool.submit(service.query_dex_session, session_id, **query)
         try:
             assert entered.wait(3)
             assert service.sessions.close(session_id)["cleanup_pending"]
@@ -448,7 +528,8 @@ def test_close_waits_for_cache_writer_and_removes_owned_files(real_session, monk
     assert not root.exists() and session_id not in service.sessions.entries
 
 
-def test_same_selector_pages_share_one_real_worker_scan(real_session, monkeypatch):
+@pytest.mark.parametrize("params", [None, *NEW_QUERIES])
+def test_same_selector_pages_share_one_real_worker_scan(real_session, monkeypatch, params):
     service, session_id, entry, _ = real_session
     entered, release = threading.Event(), threading.Event()
     original = service.runner.query_dex_session
@@ -465,6 +546,8 @@ def test_same_selector_pages_share_one_real_worker_scan(real_session, monkeypatc
         "field_descriptor": "Lfixture/Target;->value:I",
         "limit": 1,
     }
+    if params:
+        query = {key: value for key, value in params.items() if key != "offset"}
     monkeypatch.setattr(service.runner, "query_dex_session", blocked)
     with ThreadPoolExecutor(max_workers=2) as pool:
         first = pool.submit(service.query_dex_session, session_id, offset=0, **query)

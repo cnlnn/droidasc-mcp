@@ -17,7 +17,13 @@ def benchmark(monkeypatch):
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    monkeypatch.setattr(module.psutil, "Process", lambda: SimpleNamespace(children=lambda **kw: []))
+    monkeypatch.setattr(
+        module.psutil,
+        "Process",
+        lambda: SimpleNamespace(
+            children=lambda **kw: [], memory_info=lambda: SimpleNamespace(rss=0)
+        ),
+    )
     return module
 
 
@@ -214,13 +220,89 @@ async def test_full_reference_collection_rejects_incomplete_or_changed_pages(ben
 
 
 @pytest.mark.parametrize("implementation", ["ours", "competitor"])
-@pytest.mark.parametrize("scenario", ["full_method", "full_field"])
+@pytest.mark.parametrize("scenario", ["full_method", "full_field", "full_string", "full_type"])
 def test_full_reference_scenarios_preserve_exact_target(benchmark, implementation, scenario):
     full = benchmark.queries(implementation, "key", scenario, benchmark.GRAPH_ROOT, 3)
     normal = benchmark.queries(
         implementation, "key", scenario.removeprefix("full_"), benchmark.GRAPH_ROOT, 3
     )
     assert full == normal
+
+
+@pytest.mark.parametrize("implementation", ["ours", "competitor"])
+def test_full_operand_concurrent_uses_equivalent_literal_selectors(benchmark, implementation):
+    commands = benchmark.queries(implementation, "key", "full_operands", benchmark.GRAPH_ROOT, 3)
+    assert commands == [
+        benchmark.queries(implementation, "key", kind, benchmark.GRAPH_ROOT, 3)[0]
+        for kind in ("string", "type")
+    ]
+    if implementation == "ours":
+        assert commands[1][1]["type_relation"] == "operand"
+        assert commands[1][1]["type_match"] == "substring"
+        assert commands[1][1]["type_descriptor"] == "Ljava/lang/String;"
+    else:
+        assert commands[1][0] == "apk_find_type_instructions"
+        assert commands[1][1]["type_name"] == "Ljava/lang/String;"
+
+
+@pytest.mark.anyio
+async def test_benchmark_preserves_existing_receipts(benchmark, tmp_path):
+    receipt = tmp_path / "receipt.json"
+    receipt.write_text("previous evidence", encoding="utf-8")
+    with pytest.raises(AssertionError, match="Preserve"):
+        await benchmark.main(SimpleNamespace(output=receipt))
+    assert receipt.read_text(encoding="utf-8") == "previous evidence"
+
+
+def test_receipt_writer_spills_completed_operations_without_retaining_them(benchmark, tmp_path):
+    import json
+
+    output = tmp_path / "receipt.json"
+    writer = benchmark.ReceiptWriter(output)
+    operations = [{"result": {"items": [{"value": "text"}]}}]
+    report = {"status": "running", "trials": [{"operations": operations, "status": "passed"}]}
+    writer.save(report)
+    trial = report["trials"][0]
+    assert "operations" not in trial
+    assert benchmark.trial_operations(output, trial) == operations
+    first = json.loads(output.read_text(encoding="utf-8"))
+    report["trials"].append({"operations": [], "status": "passed"})
+    report["status"] = "passed"
+    writer.save(report)
+    final = json.loads(output.read_text(encoding="utf-8"))
+    assert final["trials"][0] == first["trials"][0]
+    assert final["status"] == "passed"
+    assert benchmark.trial_operations(output, final["trials"][1]) == []
+    with pytest.raises(AssertionError, match="Preserve"):
+        benchmark.ReceiptWriter(output)
+
+
+@pytest.mark.parametrize("damage", ["content", "size", "path", "missing"])
+def test_spilled_receipt_validation_rejects_changed_evidence(benchmark, tmp_path, damage):
+    output = tmp_path / "receipt.json"
+    writer = benchmark.ReceiptWriter(output)
+    report = {"trials": [{"operations": [{"result": 1}]}]}
+    writer.save(report)
+    trial = report["trials"][0]
+    reference = trial["operations_file"]
+    path = benchmark.operation_receipt_path(output, trial)
+    if damage == "content":
+        path.write_text('[{"result":2}]\n', encoding="utf-8")
+    elif damage == "size":
+        reference["size_bytes"] += 1
+    elif damage == "path":
+        reference["name"] = "../outside.json"
+    else:
+        path.unlink()
+    with pytest.raises((AssertionError, OSError)):
+        benchmark.trial_operations(output, trial)
+
+
+def test_legacy_inline_operations_remain_readable(benchmark, tmp_path):
+    operations = [{"result": "legacy"}]
+    assert (
+        benchmark.trial_operations(tmp_path / "old.json", {"operations": operations}) is operations
+    )
 
 
 @pytest.mark.anyio
@@ -404,7 +486,8 @@ async def test_full_receipt_only_saved_after_measured_responses(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "condition", ["valid", "escaped", "empty", "denied", "unsupported", "exited"]
+    "condition",
+    ["valid", "escaped", "empty", "denied", "unsupported", "exited", "client_memory", "deadline"],
 )
 async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
     benchmark, tmp_path, monkeypatch, condition
@@ -425,7 +508,13 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
                 raise NotImplementedError("No affinity readback")
             if condition == "exited":
                 raise benchmark.psutil.NoSuchProcess(self.pid)
-            return {"valid": [1], "escaped": [0, 2], "empty": []}[condition]
+            return {
+                "valid": [1],
+                "escaped": [0, 2],
+                "empty": [],
+                "client_memory": [1],
+                "deadline": [1],
+            }[condition]
 
         def kill(self):
             state["killed"] = True
@@ -436,7 +525,13 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
         state["inventory_calls"] += 1
         return [] if state["inventory_calls"] == 1 else [child]
 
-    monkeypatch.setattr(benchmark.psutil, "Process", lambda: SimpleNamespace(children=inventory))
+    monkeypatch.setattr(
+        benchmark.psutil,
+        "Process",
+        lambda: SimpleNamespace(
+            children=inventory, memory_info=lambda: SimpleNamespace(rss=2 * 1024**2)
+        ),
+    )
 
     class Client:
         def __init__(self, endpoint):
@@ -474,6 +569,8 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
         graph_depth=3,
     )
     report, persisted = {"trials": []}, []
+    args.client_memory_mib = 1 if condition == "client_memory" else 1024
+    args.trial_timeout = 0.05 if condition == "deadline" else 600
     await benchmark.trial(args, "ours", "field", 0, report, lambda: persisted.append(True))
     metric = report["trials"][0]
     assert persisted == [True] and state["affinity_calls"] > 0
@@ -487,5 +584,9 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
         assert metric["safety_stop"] == (
             "descendant_cpu_affinity"
             if condition in {"escaped", "empty"}
+            else "benchmark_client_rss"
+            if condition == "client_memory"
+            else "complete_trial_deadline"
+            if condition == "deadline"
             else "unverifiable_cpu_affinity"
         )

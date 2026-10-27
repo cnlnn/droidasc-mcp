@@ -4,7 +4,21 @@ import json
 
 from .worker_errors import response_limit
 
-OPERATIONS = {"find_method_refs", "find_field_refs", "get_method_calls", "search_refs"}
+OPERATIONS = {
+    "find_method_refs",
+    "find_field_refs",
+    "get_method_calls",
+    "search_refs",
+    "find_string_refs",
+}
+
+
+def operand_query(query):
+    return query.get("operation") == "find_type_refs" and query.get("type_relation") == "operand"
+
+
+def selected_query(query):
+    return query.get("operation") in OPERATIONS or operand_query(query)
 
 
 def _size(value):

@@ -7,7 +7,7 @@ from collections import OrderedDict
 from importlib.metadata import version
 from pathlib import Path
 
-from .reference_page import OPERATIONS, reference_page
+from .reference_page import reference_page, selected_query
 
 MAX_BYTES = 4 * 1024**2
 MAX_PAGE_BYTES = 256 * 1024
@@ -79,7 +79,7 @@ class PageCache:
             self.pages[key] = encoded
             result = json.loads(encoded)
             result["query_cache"] = {"hit": True, "scope": "exact_query_page"}
-            if query.get("operation") in OPERATIONS:
+            if selected_query(query):
                 result = reference_page(result, settings.max_output_bytes)
             return result, identity, key
         return None, identity, key

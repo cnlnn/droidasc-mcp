@@ -138,6 +138,49 @@ def test_string_search_result_handoff_pagination_and_cache(tmp_path, string_refe
         service.close()
 
 
+def test_string_unseen_pages_reuse_complete_sites(string_reference_dex_files, monkeypatch):
+    service = DroidAscService(
+        replace(
+            Settings.from_env(),
+            allowed_roots=(string_reference_dex_files[0].parent,),
+            java_executable="must-not-run",
+            jadx_home=None,
+        )
+    )
+    try:
+        opened = service.open_dex_session([str(p) for p in string_reference_dex_files])
+        assert opened["status"] == "ok", opened
+        key = opened["session_id"]
+        query = {
+            "operation": "find_string_refs",
+            "value": "https://example.test/a[b]?x=1.*",
+            "offset": 0,
+            "limit": 1,
+        }
+        expected = service.analyze_dex(
+            [str(p) for p in string_reference_dex_files], **{**query, "limit": 100}
+        )
+        first = service.query_dex_session(key, **query)
+        assert first["status"] == "ok" and first["total"] == 3, first
+
+        def rescan(*args, **kwargs):
+            pytest.fail("An unseen string page must reuse the complete selected set")
+
+        monkeypatch.setattr(service.runner, "query_dex_session", rescan)
+        rest = service.query_dex_session(key, **{**query, "offset": 1, "limit": 2})
+        assert rest["query_cache"]["scope"] == "selected_reference_set"
+        assert first["items"] + rest["items"] == expected["items"]
+        assert not rest["has_more"] and rest["next_offset"] is None
+        for field in ("scanned_methods", "scanned_instructions", "methods_without_code"):
+            assert rest[field] == first[field] == expected[field]
+        empty = service.query_dex_session(key, **{**query, "offset": 100, "limit": 2})
+        assert empty["items"] == [] and empty["total"] == 3
+        repeated = service.query_dex_session(key, **{**query, "limit": 100})
+        assert repeated["items"] == expected["items"]
+    finally:
+        service.close()
+
+
 @pytest.mark.parametrize("index", [65535, 65536, 70000])
 def test_jumbo_uses_32bit_string_ids(index):
     from droidasc_mcp._dexscan import scan

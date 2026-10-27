@@ -7,7 +7,7 @@ payload. The simple cursor remains an independent differential-test path.
 import re
 import struct
 
-from .native_dex import METHOD_NAMES, WIDTHS, InvalidDex
+from .native_dex import METHOD_NAMES, TYPE_OPS, WIDTHS, InvalidDex
 
 ANY = b"[\\s\\S]"
 
@@ -142,8 +142,13 @@ def scanner(dex, targets, fields, incoming, *, accelerator=True):
         except ImportError:
             pass
         else:
+            if fields == 3:
+                from . import _dexscan
+
+                if not getattr(_dexscan, "type_operands", False):
+                    return scanner(dex, targets, fields, incoming, accelerator=False)
             mask = target_mask(dex, targets, fields)
-            pool = dex.tables[0 if fields == 2 else 3 if fields else 4][0]
+            pool = dex.tables[1 if fields == 3 else 0 if fields == 2 else 3 if fields else 4][0]
 
             def accelerated(code):
                 resume = 0
@@ -198,8 +203,8 @@ def scanner(dex, targets, fields, incoming, *, accelerator=True):
     elif dex.version < 39:
         widths[0xFE:] = bytes(2)
     tokens = [b"\\x00\\x00"]
-    reference_ops = set(range(0x52, 0x6E) if fields else METHOD_NAMES)
-    valid_ids = pool_ids(dex.tables[3 if fields else 4][0])
+    reference_ops = set(TYPE_OPS if fields == 3 else range(0x52, 0x6E) if fields else METHOD_NAMES)
+    valid_ids = pool_ids(dex.tables[1 if fields == 3 else 3 if fields else 4][0])
     for width in range(1, 6):
         opcodes = [
             bytes([op]) for op in range(1, 256) if widths[op] == width and op not in reference_ops

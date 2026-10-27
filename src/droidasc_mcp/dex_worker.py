@@ -365,10 +365,10 @@ def analyze(request: dict, root: Path) -> dict:
 
 
 def query_prepared(runner, bundle, common, query, workspace):
-    from .reference_page import OPERATIONS, reference_page
+    from .reference_page import reference_page, selected_query
 
     result = _select_query_prepared(runner, bundle, common, query, workspace)
-    if query["operation"] in OPERATIONS:
+    if selected_query(query):
         return reference_page(result, runner.settings.max_output_bytes)
     return result
 
@@ -422,10 +422,22 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
 
     operation = query["operation"]
     page = {"offset": query["offset"], "limit": query["limit"]}
+    from .reference_page import operand_query
+
+    if operand_query(query):
+        from .native_types import query_types
+
+        return {
+            **common,
+            **query_types(runner.settings, bundle, query, emit=runner.reference_spool),
+        }
     if operation == "find_string_refs":
         from .native_strings import query_strings
 
-        return {**common, **query_strings(runner.settings, bundle, query)}
+        return {
+            **common,
+            **query_strings(runner.settings, bundle, query, emit=runner.reference_spool),
+        }
     if ((bundle.parent / "xrefs.sqlite").is_file() or runner.settings.xref_cache_dir) and (
         operation in REFERENCE_OPERATIONS - {"search_refs"}
         or (

@@ -12,7 +12,11 @@ from contextlib import closing
 from pathlib import Path
 
 from benchmark_call_graph import verify_sites_in_graphs
-from benchmark_competitor_runtime import competitor_runtime_identity
+from benchmark_competitor_runtime import (
+    competitor_runtime_identity,
+    operation_receipt_path,
+    trial_operations,
+)
 from verify_mcp_reference_pages import digest, fingerprint, original_bundle, runtime_identity
 
 
@@ -78,8 +82,16 @@ def main(args):
     try:
         save()
         data = [json.loads(path.read_text()) for path in receipts]
+        for path, receipt in zip(receipts, data, strict=True):
+            for trial in receipt["trials"]:
+                if "operations_file" in trial:
+                    operations_path = operation_receipt_path(path, trial)
+                    bound.append(operations_path)
+                    report["acceptance_inputs_sha256"][str(operations_path)] = digest(
+                        operations_path
+                    )
         sources = next(
-            t["operations"][0]["result"]["sources"]
+            trial_operations(receipts[0], t)[0]["result"]["sources"]
             for t in data[0]["trials"]
             if t["implementation"] == "ours"
         )
@@ -129,6 +141,7 @@ def main(args):
                     assert receipt["harness_sha256"] == digest(helpers[2])
                     for trial in receipt["trials"]:
                         assert trial["scenario"] == "graph"
+                        operations = trial_operations(path, trial)
                         if trial["implementation"] == "competitor":
                             if trial["status"] != "passed":
                                 report["competitor_failures"].append(
@@ -149,18 +162,16 @@ def main(args):
                                                 )
                                                 if key in operation
                                             }
-                                            for operation in trial["operations"]
+                                            for operation in operations
                                             if operation.get("status") == "error"
                                         ],
                                     }
                                 )
                             continue
                         assert trial["implementation"] == "ours" and trial["status"] == "passed"
-                        opened = trial["operations"][0]["result"]
+                        opened = operations[0]["result"]
                         assert opened["sources"] == sources
-                        measured = [
-                            op for op in trial["operations"] if op["label"].startswith("query:")
-                        ]
+                        measured = [op for op in operations if op["label"].startswith("query:")]
                         assert [op["label"] for op in measured] == [
                             f"query:{repeat}:0" for repeat in range(receipt["repeats"])
                         ]

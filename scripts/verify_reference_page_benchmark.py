@@ -11,7 +11,13 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from benchmark_competitor_runtime import GRAPH_ROOT, competitor_runtime_identity, queries
+from benchmark_competitor_runtime import (
+    GRAPH_ROOT,
+    competitor_runtime_identity,
+    operation_receipt_path,
+    queries,
+    trial_operations,
+)
 from verify_mcp_reference_pages import (
     QUERIES,
     digest,
@@ -197,6 +203,11 @@ async def main(args):
     try:
         save()
         receipt = json.loads(args.receipt.read_text())
+        for trial in receipt["trials"]:
+            if "operations_file" in trial:
+                path = operation_receipt_path(args.receipt, trial)
+                inputs.append(path)
+                report["acceptance_inputs_sha256"][str(path)] = digest(path)
         assert (
             receipt["status"] == "passed"
             and receipt["input_unchanged"]
@@ -208,7 +219,9 @@ async def main(args):
         assert receipt["competitor_runtime"] == competitor_runtime_identity(args.competitor)
         assert receipt["harness_sha256"] == digest(args.benchmark_source)
         opened = next(
-            t["operations"][0]["result"] for t in receipt["trials"] if t["implementation"] == "ours"
+            trial_operations(args.receipt, t)[0]["result"]
+            for t in receipt["trials"]
+            if t["implementation"] == "ours"
         )
         assert opened["artifact_sha256"] == receipt["apk_sha256"]
         sources = opened["sources"]
@@ -221,6 +234,7 @@ async def main(args):
             for trial in receipt["trials"]:
                 assert trial["status"] == "passed"
                 assert trial["implementation"] in {"ours", "competitor"}
+                operations = trial_operations(args.receipt, trial)
                 for collection, field in collection_fields(trial, receipt["repeats"]):
                     operation, name, descriptor = QUERIES[int(field)]
                     if operation not in expected:
@@ -239,9 +253,9 @@ async def main(args):
                     report["collections"].append(row)
                     if trial["implementation"] == "ours":
                         result = await verify_native_collection(
-                            trial["operations"],
+                            operations,
                             collection,
-                            trial["operations"][0]["result"],
+                            operations[0]["result"],
                             {"operation": operation, name: descriptor},
                             truth,
                             receipt["full_collection_page_size"],
@@ -255,9 +269,9 @@ async def main(args):
                         )
                     else:
                         rows, total = competitor_collection(
-                            trial["operations"],
+                            operations,
                             collection,
-                            trial["operations"][0]["result"],
+                            operations[0]["result"],
                             field,
                             receipt["full_collection_page_size"],
                         )

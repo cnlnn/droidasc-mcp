@@ -7,6 +7,7 @@ external time/RSS caps. No OS caches are dropped; fresh servers alternate order.
 
 import argparse
 import asyncio
+import gc
 import hashlib
 import importlib.util
 import json
@@ -59,6 +60,61 @@ def digest(path):
         while block := source.read(1024**2):
             result.update(block)
     return result.hexdigest()
+
+
+class ReceiptWriter:
+    """Publish completed trials outside timing without retaining earlier response trees."""
+
+    def __init__(self, output):
+        self.output = output
+        self.directory = output.with_suffix(".trials")
+        assert not output.exists() and not self.directory.exists(), "Preserve previous attempts"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        self.directory.mkdir()
+
+    def save(self, report):
+        for index, trial in enumerate(report["trials"]):
+            if "operations" not in trial:
+                continue
+            path = self.directory / f"{index:04d}.json"
+            partial = path.with_suffix(".partial")
+            with partial.open("x", encoding="utf-8") as stream:
+                json.dump(trial["operations"], stream, separators=(",", ":"))
+                stream.write("\n")
+            partial.replace(path)
+            trial["operations_file"] = {
+                "name": path.relative_to(self.output.parent).as_posix(),
+                "sha256": digest(path),
+                "size_bytes": path.stat().st_size,
+            }
+            del trial["operations"]
+        partial = self.output.with_suffix(".partial")
+        with partial.open("x", encoding="utf-8") as stream:
+            json.dump(report, stream, indent=2)
+            stream.write("\n")
+        partial.replace(self.output)
+
+
+def operation_receipt_path(receipt, trial):
+    reference = trial["operations_file"]
+    name = Path(reference["name"])
+    assert not name.is_absolute() and ".." not in name.parts
+    path = receipt.parent / name
+    assert path.resolve().is_relative_to(receipt.parent.resolve())
+    return path
+
+
+def trial_operations(receipt, trial):
+    if "operations" in trial:
+        return trial["operations"]
+    path = operation_receipt_path(receipt, trial)
+    reference = trial["operations_file"]
+    assert path.stat().st_size == reference["size_bytes"]
+    assert digest(path) == reference["sha256"]
+    with path.open(encoding="utf-8") as stream:
+        operations = json.load(stream)
+    assert isinstance(operations, list) and digest(path) == reference["sha256"]
+    return operations
 
 
 def runtime_identity():
@@ -189,6 +245,12 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
             "fuzzy_class": True,
         }
         string = {"operation": "find_string_refs", "value": "https://"}
+        type_operand = {
+            "operation": "find_type_refs",
+            "type_descriptor": "Ljava/lang/String;",
+            "type_relation": "operand",
+            "type_match": "substring",
+        }
         graph = {
             "operation": "get_call_graph",
             "method_descriptor": graph_root,
@@ -228,6 +290,7 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
             },
         )
         string = ("apk_find_string_references", {"value": "https://"})
+        type_operand = ("apk_find_type_instructions", {"type_name": "Ljava/lang/String;"})
         owner, local = graph_root.split("->", 1)
         name, proto = local.split("(", 1)
         graph = (
@@ -248,7 +311,16 @@ def queries(implementation, key, scenario, graph_root, graph_depth):
                 **params,
             }
 
-    chosen = {"method": method, "field": field, "fuzzy": fuzzy, "string": string, "graph": graph}
+    chosen = {
+        "method": method,
+        "field": field,
+        "fuzzy": fuzzy,
+        "string": string,
+        "type": type_operand,
+        "graph": graph,
+    }
+    if scenario == "full_operands":
+        return [command(string), command(type_operand)]
     return (
         [command(method), command(field)]
         if scenario in {"concurrent", "full_concurrent"}
@@ -263,6 +335,7 @@ async def trial(args, implementation, scenario, round_number, report, save):
         "round": round_number,
         "operations": [],
         "peak_descendant_rss_bytes": 0,
+        "sampled_peak_client_rss_bytes": 0,
         "sampled_peak_temporary_logical_bytes": 0,
         "sampled_peak_temporary_allocated_bytes": None,
         "sampled_peak_temporary_file_count": 0,
@@ -318,6 +391,14 @@ async def trial(args, implementation, scenario, round_number, report, save):
         nonlocal peak, next_affinity_check
         next_disk_sample = 0
         while running:
+            if time.monotonic() - started > getattr(args, "trial_timeout", 600):
+                metric["safety_stop"] = "complete_trial_deadline"
+            client_rss = psutil.Process().memory_info().rss
+            metric["sampled_peak_client_rss_bytes"] = max(
+                metric["sampled_peak_client_rss_bytes"], client_rss
+            )
+            if client_rss > getattr(args, "client_memory_mib", 1024) * 1024**2:
+                metric["safety_stop"] = "benchmark_client_rss"
             processes = children()
             metric["peak_descendant_process_count"] = max(
                 metric["peak_descendant_process_count"], len(processes)
@@ -555,6 +636,7 @@ async def trial(args, implementation, scenario, round_number, report, save):
 
 
 async def main(args):
+    assert not args.output.exists(), "Preserve previous benchmark attempts"
     args.apk = args.apk.resolve(strict=True)
     args.cpu_affinity = select_cpus(args.workers)
     commit = subprocess.check_output(
@@ -572,6 +654,7 @@ async def main(args):
         "ours_runtime_sha256": runtime_identity(),
         "harness_sha256": digest(Path(__file__)),
         "timing_version": 2,
+        "receipt_storage_version": 2,
         "external_call_deadline_version": 1,
         "temporary_usage_sampling_seconds": 0.2,
         "logical_cpus": psutil.cpu_count(),
@@ -583,7 +666,9 @@ async def main(args):
         "cpu_wrapper_sha256": digest(Path(__file__).with_name("benchmark_cpu_wrapper.py")),
         "graph_depth": args.graph_depth,
         "memory_cap_mib": args.memory_mib,
+        "benchmark_client_memory_cap_mib": args.client_memory_mib,
         "timeout_per_call_seconds": args.timeout,
+        "timeout_per_complete_trial_seconds": args.trial_timeout,
         "repeats": args.repeats,
         "full_collection_page_size": args.page_size,
         "ours_expansion_budget_mib": args.expanded_mib,
@@ -600,17 +685,19 @@ async def main(args):
         "not added to RSS; peaks are lower bounds and include indexes/private snapshots. "
         "Allocated bytes use st_blocks where available, otherwise null; tmpfs is not process RSS. "
         "Reference totals: ours individual sites, competitor caller groups. "
-        "full_method/full_field/full_concurrent collect every page; timings include all "
+        "All full_* scenarios collect every page; timings include all "
         "response-limit retries. full_concurrent overlaps complete method and field collections. "
+        "full_operands overlaps literal string and explicit type-operand collections. "
+        "Type selection is literal descriptor substring, not broad type relations. "
         "Cross-implementation complete-site equality requires the separate offline verifier. "
         "Graphs must normalize to caller/callee pairs and check truncation.",
         "trials": [],
         "status": "running",
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
+    writer = ReceiptWriter(args.output)
 
     def save():
-        args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        writer.save(report)
 
     for number in range(args.rounds):
         for scenario in args.scenarios:
@@ -618,7 +705,12 @@ async def main(args):
             if number % 2:
                 implementations.reverse()
             for implementation in implementations:
+                gc.collect()
                 await trial(args, implementation, scenario, number, report, save)
+                gc.collect()
+                report["trials"][-1]["harness_rss_after_spill_bytes"] = (
+                    psutil.Process().memory_info().rss
+                )
     report["input_unchanged"] = report["apk_sha256"] == digest(args.apk)
     report["runtime_unchanged"] = report["ours_runtime_sha256"] == runtime_identity()
     try:
@@ -654,10 +746,14 @@ if __name__ == "__main__":
             "field",
             "fuzzy",
             "string",
+            "type",
             "graph",
             "concurrent",
             "full_method",
             "full_field",
+            "full_string",
+            "full_type",
+            "full_operands",
             "full_concurrent",
         ],
         default=["method", "field", "fuzzy", "graph", "concurrent"],
@@ -667,7 +763,9 @@ if __name__ == "__main__":
     parser.add_argument("--page-size", type=int, choices=range(1, 1001), default=1000)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--trial-timeout", type=int, default=600)
     parser.add_argument("--memory-mib", type=int, default=4096)
+    parser.add_argument("--client-memory-mib", type=int, default=1024)
     parser.add_argument("--expanded-mib", type=int, choices=range(1, 2049), default=128)
     parser.add_argument("--session-disk-mib", type=int, default=4096)
     parser.add_argument("--graph-root", default=GRAPH_ROOT)
@@ -679,7 +777,9 @@ if __name__ == "__main__":
             arguments.rounds,
             arguments.workers,
             arguments.timeout,
+            arguments.trial_timeout,
             arguments.memory_mib,
+            arguments.client_memory_mib,
             arguments.session_disk_mib,
         )
         < 1

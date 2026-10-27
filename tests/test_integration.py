@@ -37,6 +37,95 @@ from droidasc_mcp.server import build_server
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
+@pytest.mark.parametrize("kind", ["string", "type"])
+async def test_operand_and_string_complete_sets_over_real_transports(
+    transport, kind, tmp_path, smali_dex_files, string_reference_dex_files, request, monkeypatch
+):
+    fixtures = smali_dex_files if kind == "type" else string_reference_dex_files
+    paths = [str(shutil.copy(path, tmp_path)) for path in fixtures]
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_JAVA", "/missing-java-for-operand-query")
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    query = (
+        {
+            "operation": "find_type_refs",
+            "type_descriptor": "fixture.Target",
+            "type_relation": "operand",
+            "type_match": "substring",
+        }
+        if kind == "type"
+        else {"operation": "find_string_refs", "value": "https://example.test/a[b]?x=1.*"}
+    )
+    async with Client(endpoint) as client:
+        direct = await client.call_tool("asc_analyze_dex", {"dex_paths": paths, **query})
+        assert not direct.is_error and direct.structured_content["status"] == "ok", direct
+        expected = direct.structured_content["items"]
+        assert len(expected) == 3
+        opened = await client.call_tool("asc_open_dex_session", {"dex_paths": paths})
+        key = opened.structured_content["session_id"]
+        for limit in (1, 2):
+            rows, offset = [], 0
+            while True:
+                response = await client.call_tool(
+                    "asc_query_dex_session",
+                    {
+                        "session_id": key,
+                        **query,
+                        "offset": offset,
+                        "limit": limit,
+                    },
+                )
+                assert not response.is_error, response
+                result = response.structured_content
+                assert result["status"] == "ok" and "index" not in result, result
+                assert result["total"] == 3 and result["scan_errors"] == 0
+                assert result["input_id"] == opened.structured_content["input_id"]
+                assert json.loads(response.content[0].text) == result
+                if offset or limit == 2:
+                    assert result["query_cache"]["scope"] == "selected_reference_set"
+                rows.extend(result["items"])
+                if not result["has_more"]:
+                    assert result["next_offset"] is None
+                    break
+                assert result["next_offset"] == offset + len(result["items"]) > offset
+                offset = result["next_offset"]
+            assert rows == expected
+        invalid = await client.call_tool(
+            "asc_query_dex_session",
+            {
+                "session_id": key,
+                "operation": "find_type_refs",
+                "type_descriptor": "",
+                "type_relation": "operand",
+            },
+        )
+        assert invalid.is_error
+        recovered = await client.call_tool(
+            "asc_query_dex_session",
+            {
+                "session_id": key,
+                **query,
+                "offset": 99,
+            },
+        )
+        assert recovered.structured_content["items"] == []
+        closed = await client.call_tool("asc_close_dex_session", {"session_id": key})
+        assert closed.structured_content["status"] == "ok"
+        assert not closed.structured_content["cleanup_pending"]
+        ping = await client.call_tool("asc_ping", {})
+        assert ping.structured_content["dex_sessions"]["open_count"] == 0
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_byte_bounded_reference_pages_keep_every_site_without_retry(
     transport, tmp_path, large_reference_dex_file, request, monkeypatch
 ):

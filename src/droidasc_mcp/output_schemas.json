@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "ad48a46a3394fe8cbe0b418634af84e2ee39a82958d90bd5c8fa8880c04dc212",
+  "contracts_sha256": "5c2650f0d774bb32327a86f9199e303cf33bcd269d1121a2bd7406c98811f408",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "0b19a1cdbede28c1a37ac184d236d64a5da1f94256ab47263ab4fb142ce3be4e",
+  "schemas_sha256": "0abfa64d6a81c0c464f393a0adf8d134425ad914d1b43c46b98d87989e046be7",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -1186,6 +1186,18 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "type_relation": {
+          "title": "Type Relation",
+          "type": "string"
+        },
+        "type_match": {
+          "enum": [
+            "exact",
+            "substring"
+          ],
+          "title": "Type Match",
+          "type": "string"
         },
         "page_limited_by": {
           "const": "response_bytes",

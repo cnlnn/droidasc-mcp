@@ -347,6 +347,8 @@ class SourceReference(Object, total=False):
 
 
 class DexResult(Result, total=False):
+    type_relation: str
+    type_match: Literal["exact", "substring"]
     page_limited_by: Literal["response_bytes"]
     response_byte_limit: int
     member_references: list[SourceReference]

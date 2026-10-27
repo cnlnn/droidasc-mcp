@@ -34,14 +34,14 @@ def string_mask(dex, needle, sensitive, *, accelerator=True):
     return bytes(mask)
 
 
-def query_strings(settings, bundle, query):
+def query_strings(settings, bundle, query, *, emit=None):
     try:
-        return page_result(_strings(settings, bundle, query), query, settings)
+        return page_result(_strings(settings, bundle, query, emit=emit), query, settings)
     except (InvalidDex, struct.error, UnicodeError) as exc:
         raise DroidAscError("Invalid DEX string instruction scan: " + str(exc)) from exc
 
 
-def _strings(settings, bundle, query):
+def _strings(settings, bundle, query, *, emit=None):
     needle = query["value"]
     sensitive = query.get("case_sensitive", True)
     offset, limit = query.get("offset", 0), min(query.get("limit", 100), settings.max_page_size)
@@ -79,21 +79,26 @@ def _strings(settings, bundle, query):
                     dex.item(0, index)
                     if not mask[index >> 3] & (1 << (index & 7)):
                         continue
-                    if offset <= total < offset + limit:
+                    on_page = offset <= total < offset + limit
+                    if on_page or (emit is not None and emit.enabled):
                         if caller is None:
                             caller = dex.method(method_index)
-                        items.append(
-                            {
-                                "caller": caller,
-                                "dex_entry": entry,
-                                "string_index": index,
-                                "value": dex.string(index),
-                                "instruction_offset": address,
-                                "offset_unit": "code_units_from_method_start",
-                                "opcode": "const-string" if op == 0x1A else "const-string/jumbo",
-                            }
-                        )
+                        row = {
+                            "caller": caller,
+                            "dex_entry": entry,
+                            "string_index": index,
+                            "value": dex.string(index),
+                            "instruction_offset": address,
+                            "offset_unit": "code_units_from_method_start",
+                            "opcode": "const-string" if op == 0x1A else "const-string/jumbo",
+                        }
+                        if emit is not None:
+                            emit(row)
+                        if on_page:
+                            items.append(row)
                     total += 1
+    if emit is not None:
+        emit.scanned({})
     return {
         "status": "ok",
         "backend": "native-dex-string-instructions",

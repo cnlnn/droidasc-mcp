@@ -192,7 +192,7 @@ class DroidAscService:
                 "idle_ttl_seconds": self.settings.dex_session_ttl_seconds,
                 "max_disk_bytes": self.settings.max_dex_session_bytes,
                 "reuse": "validated_dex_bundle",
-                "optional_index": "explicit_build_or_first_type_or_graph_search",
+                "optional_index": "explicit_build_or_broad_type_or_graph_search",
                 "index_persistence": "session_lifetime",
                 "max_index_bytes_per_session": self.settings.max_xref_index_bytes,
                 "memory_page_cache_bytes_per_session": 4 * 1024**2,
@@ -452,16 +452,48 @@ def _normalize_dex_query(query):
             raise ValueError("search_members requires kind=method or field")
         if query.get("method_descriptor") or query.get("fuzzy_class"):
             raise ValueError("search_members uses literal value and optional exact class_name")
+    type_match = query.get("type_match", "exact")
+    if type_match not in {"exact", "substring"}:
+        raise ValueError("type_match must be exact or substring")
+    operand = operation == "find_type_refs" and query.get("type_relation") == "operand"
+    if type_match != "exact" and not operand:
+        raise ValueError("type_match=substring requires find_type_refs with type_relation=operand")
     if query.get("operation") == "find_type_refs":
         descriptor = query.get("type_descriptor")
-        if not descriptor or not re.fullmatch(r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)", descriptor):
+        if operand:
+            if not isinstance(descriptor, str) or not descriptor or descriptor.isspace():
+                raise ValueError("type_descriptor requires a nonempty type selector")
+            descriptor = descriptor.replace(".", "/")
+            if (
+                type_match == "exact"
+                and "." in query["type_descriptor"]
+                and not descriptor.startswith("[")
+                and not (descriptor.startswith("L") and descriptor.endswith(";"))
+            ):
+                descriptor = "L" + descriptor + ";"
+            query["type_descriptor"] = descriptor
+            if type_match == "exact" and any(char in descriptor for char in "*?\\^|"):
+                raise ValueError("type_descriptor requires an exact DEX type")
+            if query.get("value") or query.get("prefix"):
+                raise ValueError("operand queries use type_descriptor only")
+        if type_match == "exact" and (
+            not descriptor or not re.fullmatch(r"\[*(?:[ZBCSIJFD]|L[^.;\[\]\s:()]+;)", descriptor)
+        ):
             raise ValueError("type_descriptor requires an exact DEX type, not a fuzzy name")
         if query.get("method_descriptor") or query.get("class_name") or query.get("fuzzy_class"):
             raise ValueError("find_type_refs uses type_descriptor only")
     elif query.get("type_descriptor") or query.get("type_relation", "all") != "all":
         raise ValueError("type_descriptor and type_relation require find_type_refs")
-    if query.get("type_relation", "all") not in {"all", "instruction", "declaration", "annotation"}:
-        raise ValueError("type_relation must be all, instruction, declaration, or annotation")
+    if query.get("type_relation", "all") not in {
+        "all",
+        "instruction",
+        "declaration",
+        "annotation",
+        "operand",
+    }:
+        raise ValueError(
+            "type_relation must be all, instruction, declaration, annotation, or operand"
+        )
     if query.get("operation") == "find_field_refs":
         descriptor = query.get("field_descriptor")
         owner_type = r"L[^.;\[\]\s:()]+;"

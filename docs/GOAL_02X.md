@@ -1,5 +1,377 @@
 # 0.2.x incremental completion goal
 
+## Current implementation plan, 2026-10-27
+
+Status: goal execution active; B1 implementation and local acceptance in progress. This section is the
+single current execution ledger and ordered backlog. Older sections below retain
+historical decisions and receipts; their candidate/release statuses do not override
+this section. The cross-platform/package requirements and invariants below still apply.
+The maintainer requested continuous goal-mode execution on 2026-10-27: finish each
+batch's gates and automatically advance to the next without repeated confirmation.
+Publication is separate; this instruction does not approve another release.
+
+### Baseline and evidence
+
+- Product baseline: published v0.2.4, commit
+  `5eddd07d5bbe362c2273938501cdda363c4f1d73`; initially clean main.
+- Comparator: aimardcr/asc-mcp
+  `848c711f1d80a1c2577283f1fa5f475ff734aa40`, checked against GitHub on 2026-10-27.
+  Inventory covers 25 tools, two resources, three prompts and 87 non-context parameters;
+  inventory coverage is not proof of equivalent behavior.
+- Fresh MCP evidence: `artifacts/competitor-gap-audit-20261027/probe.json` and
+  `type-scope.json`; harnesses, fixtures and both tools/list responses are adjacent.
+  Preserve these originals. Promote relevant fixture generation and regression checks
+  into tests/scripts during B1 so acceptance does not depend on ignored local files.
+- `evidence-check.json` verifies current runtime identity against the preserved
+  2026-10-24 performance receipts and 36 linked evidence files. Timing was not rerun
+  on 2026-10-27. New implementation acceptance requires new measurements.
+- Confirmed gaps: type-instruction semantic mismatch/mandatory full index; missing
+  complete-result string caching; excessive complete-reference pagination; fragmented
+  artifact/session interfaces; eager preparation/storage cost; single-module AAB scope;
+  Java/dexlib2 dependency for the exercised shared-data DEX 041 class inventory.
+- Tool-schema size and interface fragmentation support an ergonomics hypothesis, not
+  a measured model-success deficit. Existing manifest/resources/signing, multi-hop graph
+  and ASC Java class source are present. Comparator graph failures and incorrect field
+  sites are not correctness targets. Neither product resolves all runtime/reflection edges.
+
+### Compatibility and scope decisions
+
+- Keep existing tools, defaults, flat reference rows, literal string-substring matching,
+  exact Dalvik identities, offset units and explicit error behavior. Add new behavior
+  explicitly; changing an existing default requires a separately recorded decision.
+- Keep `type_relation=instruction` as the existing broad instruction/catch/member-type
+  relation set. Do not silently redefine it as explicit type operands. Keep `all`,
+  `declaration` and `annotation` unchanged, including their existing index path.
+- B1 adds `type_relation=operand` and `type_match=exact|substring`, default `exact`.
+  `substring` is allowed only for the new operand scope, is case-sensitive and literal,
+  and matches normalized Dalvik descriptors. Exact mode retains array dimensions and
+  existing dotted-name normalization. Empty selectors fail validation; regex is not added.
+  Cache identities include both fields. Reject non-default type_match on other scopes.
+- Preserve original-input checks, immutable identities, instruction validation, bounded
+  output/cache/disk reservations, cancellation and full owned-process cleanup. Reuse the
+  existing selected-result spool/publication machinery; no full-APK resident worker pool,
+  second session database or independent parallel cache implementation.
+- No runtime dependency, version bump, tag/main publication, release withdrawal or
+  broad architecture replacement is part of B1. Existing graph limits stay explicit.
+  Preparation/compression changes and unified handles are separate batches.
+
+### Ordered batches
+
+| Batch | Deliverable | Dependency | State |
+| --- | --- | --- | --- |
+| P0 | Source-backed plan and compatibility decisions | Current audit | complete |
+| B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | in progress |
+| B2 | Compact reference output and resumable full-result collection | B1 accepted | deferred |
+| B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | deferred |
+| B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
+| B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
+| B6 | Native DEX 041 logical views and query coverage | B5 accepted | deferred |
+
+Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
+A failed optimization does not block unrelated later capabilities indefinitely: retain its
+failure and residual gap, then record the revised order. Never call the overall gap closed
+because a batch or patch release passed.
+
+### B1 work packages
+
+1. **B1.1: Freeze semantics with failing regressions.** Promote the current type/string
+   probes into deterministic tests. Separate actual type-operand opcodes from field/method
+   owner types, prototypes, catches, declarations and annotations. Cover exact object and
+   array descriptors, literal substring, dotted names, missing targets, invalid selectors,
+   multiple DEX entries, repeated use sites and deterministic global ordering. Preserve
+   the existing broad-instruction fixture result instead of relabeling its extra rows as
+   false positives. Decode original instruction streams independently for expected sites.
+2. **B1.2: Add the narrow native query path.** Route operand queries before automatic index
+   selection in `dex_worker.py`; use checked instruction traversal and existing selector
+   helpers, with a small dedicated module if separation warrants it. Update validation in
+   `service.py`, tool annotations/docs in `server.py` and generated schema sources/caches.
+   Native and Python fallback paths must agree. A cold operand query, including no-match,
+   must neither build/restore an all-relations index nor require Java. Existing indexes
+   must not change its semantics. Old broad relation queries retain their current behavior.
+3. **B1.3: Reuse complete selected results.** Extend `native_strings.py` and the new operand
+   scanner to stream complete selected sets through `runner.reference_spool`. Integrate
+   `reference_page.py`, `reference_cache.py`, `sessions.py` and worker routing with a
+   query-aware eligibility predicate: only operand type queries gain the native cache path,
+   not every `find_type_refs` variant. Keep the existing quotas/reservations and validated
+   atomic publication. Do not collect unbounded rows in a Python list.
+4. **B1.4: Verify page/cache lifecycle.** Exclude offset/limit from complete-set identity,
+   retain every result-affecting selector and backend/input/schema identity, and retain
+   exact-page caching as a separate layer. For fitting sets, new offsets and changed page
+   sizes reuse the published set without rescanning. Oversized/quota-unavailable sets use
+   the correct uncached path. Cover partial writes, corruption, invalidation, cancellation,
+   concurrent same/different selectors, close/expiry and reservation release. Preserve all
+   diagnostics and every const-string/jumbo value/site, including Unicode and long values.
+5. **B1.5: Bound pages and verify handoff.** Apply byte-bounded complete prefixes to the
+   newly cached paths; next_offset advances by emitted rows and collection has no gaps or
+   duplicates. A single unpageable row remains an explicit response_limit. Check offset 0,
+   middle, beyond-end, empty results, varying limits and repeated full collections through
+   both stdio and HTTP. Verify cache-hit/uncached response equality after excluding only
+   documented cache-execution metadata, not semantic fields or scan diagnostics.
+6. **B1.6: Correct claims and freeze acceptance.** Update `COMPETITOR_API_AUDIT.md` to
+   distinguish broad type relations, exact operands and competitor substring/regex behavior.
+   Literal substring support is not regex parity. Update tool descriptions/schema fixtures
+   from actual behavior. Run the gates below and record source, harness, input and package
+   identities. B1 completion does not imply B2-B6 or live-model parity.
+
+### B1 acceptance matrix
+
+| Gate | Required evidence |
+| --- | --- |
+| Semantic accuracy | Original-byte expected sites including DEX entry, caller, opcode, referenced type/string and code-unit offset; exact old-query compatibility; native/Python equality |
+| Cold query topology | Empty/nonempty operand query creates no xrefs.sqlite/calls.sqlite and invokes no full-index builder/restore or Java; instrument invocation counts, not just filenames |
+| Cache mechanism | Fitting first query scans once; later unseen offsets and full repeats scan zero additional times; selector separation, quotas and all lifecycle failures tested |
+| Real transports | stdio and HTTP collect every page, preserve diagnostics/identity, recover from invalid input and release sessions/processes/files |
+| Large inputs | Taobao, WeChat, Douyin plus a frozen held-out input; independent string/type sites; cached-versus-uncached equality and unchanged method/field reference regressions |
+| Performance | Matched baseline/candidate/comparator full collections; process-start-to-first-useful, first complete, repeated complete and concurrent complete times; page/call/retry counts and resource costs |
+| Distribution | Final commit passes Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-native-wheel gates, real transports, signing, Rust and stability checks; no required skipped cells |
+
+Use `tests/test_xref_index.py`, `test_string_refs.py`, `test_reference_cache.py`,
+`test_reference_page.py`, `test_sessions.py`, `test_service.py`, `test_server.py`,
+`test_tool_registry.py` and `test_integration.py`, plus focused new operand tests.
+Extend `scripts/verify_string_references.py` and add an independent operand verifier;
+reuse the existing CPU-budget and full-page benchmark harnesses rather than inventing
+different timing boundaries. Standard schema/quality checks remain:
+
+```sh
+uv run ruff check .
+uv run ruff format --check .
+uv run python scripts/compile_input_schemas.py --check
+uv run python scripts/compile_output_schemas.py --check
+uv run python scripts/audit_competitor.py artifacts/aimard-asc-mcp
+```
+
+Run targeted tests during implementation, then the complete configured source suite and
+CI matrix at candidate freeze. Fixture/tool setup follows `.github/workflows/ci.yml`;
+missing tools or unavailable Windows/model access are blockers, not skipped passes.
+Fresh evidence root: `artifacts/competitor-gap-b1-<date>/`, with separate baseline,
+candidate, comparator, failed attempts and a final hash-bound summary. No existing probe
+or historical benchmark output is overwritten. Add tracked reproduction instructions.
+
+For performance, use the same interpreter, inherited two/four-CPU affinity, worker and
+RSS/temp budgets for both products, with full-page accuracy before ratios. Use at least
+five alternating paired rounds and retain every trial; expand noisy cells rather than
+selecting favorable rounds. Report medians and paired spread. A >5% and >100-ms median
+regression in an existing complete workflow requires investigation/repetition before B1
+acceptance; these are proposed engineering gates, not prior measured thresholds. A fitting
+string/type selected-set workload must demonstrate scan elimination and repeatable
+complete-collection improvement, not just a cache-hit flag. If timings remain inconclusive,
+record mechanism completion separately and leave performance acceptance open. Estimate
+p95 only from a separately declared sample of at least 30 repetitions. Report process RSS,
+retained disk and tmpfs separately; startup includes preprocessing and initialization.
+
+### Later batch boundaries and completion conditions
+
+- **B2:** Opt-in grouped references/common identity tables plus stable, versioned cursors;
+  flat responses/defaults remain compatible. Reconstruction must equal every flat site and
+  diagnostic. Cover a single caller spanning pages, cursor mismatch/expiry, response caps
+  and resumed collection. Measure bytes, page count and end-to-end latency together;
+  fewer pages alone are not success. No blanket response-limit increase or dropped fields.
+- **B3:** One artifact identity for inventory/manifest/resources/signing and lazy DEX work;
+  existing sessions/path tools remain adapters. Reuse current ownership/lifetime logic,
+  bind every operation to verified content and preserve resource/prompt links. Choose the
+  advertised tool surface and migration policy before coding; do not advertise both a full
+  duplicate wrapper set and the current giant selector by default. First freeze real-model
+  baseline tasks, then compare success, tool calls, retries, schema tokens and complete task
+  time with unchanged model/provider settings. Prompts describe user tasks only; expected
+  identities, known findings and scoring rules stay in offline judges. No model-access
+  result is implied by the current tools/list byte counts.
+- **B4:** Profile read/hash/inflate/directory/index/worker/transport phases; adopt only
+  measured removal or bounded reuse of duplicated immutable work. Keep first-use costs
+  visible and validate input mutation, concurrency and cleanup. Rejected compression,
+  larger SQLite batches and micro-optimizations in STARTUP_STORAGE_EXPERIMENTS.md are not
+  defaults to retry without new evidence. No total-memory claim from process RSS alone.
+- **B5:** Add explicit multiple/all-module AAB selection while keeping default base behavior.
+  Preserve module/original-entry provenance and reject or explicitly select duplicate
+  classes. Verify base-to-feature and feature-to-feature references plus unified inventory,
+  empty/invalid modules and manifest/resource routing. Current fresh evidence demonstrates
+  only the comparator's unified class inventory, not its cross-module graph correctness.
+- **B6:** Introduce validated DEX 041 physical/logical address views, initially inventory and
+  instruction queries without Java; keep pinned dexlib2 normalization as an explicit
+  compatibility path. Verify shared strings/tables, nonzero header offsets, all logical
+  files, malformed layouts, original-byte provenance and original-input integrity with an
+  independent oracle. Decompiler/source handoff is a separate gate; native class enumeration
+  alone does not justify removing normalization or claiming full 041 support.
+
+### Execution ledger and next action
+
+| Item | Current record |
+| --- | --- |
+| Current task | B1.1-B1.5 implemented on codex/competitor-gap-b1; current local source regression passes 1599 cases without skips; B1 acceptance remains open |
+| Next action | Finish the new full-string/type/parallel large-input MCP receipts and offline verification; collect matched baseline/candidate/comparator measurements, then final CI/package gates |
+| Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
+| Planning checks | Current configured source suite, Ruff and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
+| Open dependencies | Large-input full MCP/type/string benchmark matrix and final Windows/package CI remain unrun; real-model access is a later B3 gate |
+| Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
+| Release state | No new release/version selected; development completion and publication approval remain distinct |
+
+Initial test setup selected the host's JDK 8 and failed fixture assembly, preserved as
+`artifacts/competitor-gap-b1-20261027/baseline/string-red.xml`. Rerun with the existing
+`/opt/tools/environment/jdk-17/bin/java`; this setup error is not the intended regression.
+
+B1 local progress, 2026-10-27 (not batch/release acceptance):
+
+- `baseline/string-red-final.xml` reproduces a new page invoking another worker;
+  `baseline/type-red.xml` reproduces the unsupported operand scope. The earlier broad
+  `https://` test selected four sites, not the intended three-site literal; its failed
+  `string-red-jdk17.xml` is retained as test-development evidence, not a product finding.
+- `candidate/string-green.xml`: 134 string/cache/page cases pass. A complete result is
+  streamed through the existing bounded spool; cache reads no longer add method-target
+  fields to string/type rows. No separate cache database or quota increase was introduced.
+- `candidate/operand-native.xml`: 281 native/type/string/cache/legacy-index/service cases
+  pass. The seven explicit type opcodes use the checked C cursor's new mode 3 and an
+  independent Python token path; old native binaries fall back rather than misparse mode 3.
+- `candidate/type-cache-lifecycle-final.xml`: 99 cases pass, including no-match/index-present
+  paths instrumented against index lookup/build/restore, unchanged ten broad type relations,
+  cache quotas, cancellation, same-selector coalescing and cleanup. First lifecycle run
+  rejected an exact selector validation gap; that failure remains in type-cache-lifecycle.xml.
+- `candidate/real-transports.xml`: all four selected stdio/HTTP string/type cases pass;
+  complete repeats, different page sizes, input identity, invalid-selector recovery and
+  session cleanup checked. Other transport cases were deliberately deselected in this run.
+- `candidate/wide-operand-pages.xml`: four cases preserve all 100 long string/type sites
+  across byte-limited pages, both with a fitting cache and a deliberately overflowing lease.
+- `candidate/source-full-first.xml`: 1541 tests pass without skips on local Linux/Python 3.13.
+  This precedes the dotted-name fix below and is not the final source or Windows/package gate.
+- Exact dotted names beginning with `L` exposed an additive-selector normalization bug.
+  `baseline/dotted-l-red.xml` reproduces it; `candidate/dotted-l-green.xml` passes four cases.
+  Current full-suite revalidation in `candidate/source-full-second.xml` passes all 1549
+  tests without failures/errors/skips on local Linux/Python 3.13, including the wide-page and
+  dotted-name regressions. Both schema checks, Ruff lint/format, diff checks and the pinned
+  competitor inventory audit pass. These are not new Windows or exact-package receipts.
+- New `scripts/verify_type_operands.py` compares complete site multisets and scan diagnostics
+  against Androguard 4.1.4 decoding of every original DEX instruction. The positive fixture
+  has two sites; Termux verifies 219 selected sites over 272074 instructions and 18613 methods.
+  The Termux receipt binds the current post-normalization runtime; the earlier fixture
+  receipts retain their own pre-fix runtime hashes. These are scanner, not MCP/performance gates.
+- `candidate/taobao-type-oracle.json` independently verifies all 56791 selected type operand
+  sites over 12495817 instructions and 606974 methods, with original/runtime/verifier hashes
+  unchanged. This still does not close large-input MCP paging or comparative latency gates.
+- Pure-Python `setup.py build_ext` could not import setuptools in the runtime venv. Rebuilt
+  the optional accelerator with `uv pip install --python .venv/bin/python --no-deps --offline -e .`;
+  this adds no product dependency. The oracle's initial offline 4.1.3 request was unavailable;
+  the locally cached, explicitly pinned acceptance dependency is Androguard 4.1.4.
+
+Reproduce the focused checks from the repository root with the existing fixture toolchain:
+
+```sh
+export DROIDASC_MCP_JAVA=/opt/tools/environment/jdk-17/bin/java
+export DROIDASC_MCP_JADX_HOME="$PWD/artifacts/jadx-1.5.5"
+.venv/bin/pytest tests/test_type_operands.py tests/test_string_refs.py tests/test_reference_cache.py tests/test_reference_page.py -q
+.venv/bin/pytest tests/test_integration.py -q -k operand_and_string_complete_sets_over_real_transports
+PYTHONPATH="$PWD/src" uv run --no-project --offline --with androguard==4.1.4 python scripts/verify_type_operands.py artifacts/device-corpus-20260921/com.termux.apk --type-descriptor 'Ljava/lang/String;' --type-match substring --output artifacts/competitor-gap-b1-20261027/candidate/termux-type-oracle-rerun.json
+```
+
+Full-suite runs also configure DROIDASC_MCP_DEXLIB_HOME, DROIDASC_MCP_RUST_ASC,
+ASC_TEST_EXPECT_FIXTURE=1 and the existing public/complex APK and mapping inputs, following
+the CI matrix. Use fresh receipt names; preserve earlier failures and runtime-bound results.
+
+Full-collection acceptance extension, 2026-10-27:
+
+- The existing `benchmark_competitor_runtime.py` now exposes `full_string`, `full_type`
+  and concurrent `full_operands`, keeping its common timer/CPU/process/resource monitor.
+  Exact old scenarios are unchanged. It now refuses to overwrite an existing receipt.
+  `candidate/operand-benchmark-red.xml` preserves the five missing-capability failures;
+  `candidate/operand-benchmark-green.xml` passes the 134 existing/extended harness cases.
+- New `scripts/verify_operand_page_benchmark.py` replays every recorded MCP request,
+  continuation and retry, checks input provenance and native scan diagnostics, then
+  compares every site with independent Androguard original-byte decoding. Comparator
+  caller groups are expanded to sites; duplicate sites, byte offsets and targets remain
+  significant. Native string indexes are checked independently as well. Verification is
+  outside measured calls and binds original, runtime, harness and decoder source hashes.
+  `candidate/operand-verifier-red.xml` preserves the initially absent verifier;
+  `candidate/operand-harness-verifiers.xml` passes 169 combined harness/acceptance cases,
+  including altered provenance, diagnostics, arguments, missing/extra pages and duplicates.
+- `candidate/termux-operands-smoke.json` is a failed configuration attempt: a 2048 MiB
+  expansion reservation needs more than the 8192 MiB session budget (7x normalization
+  reserve plus index/metadata). No safety limit was weakened. With an explicit 128 MiB
+  expansion budget, `termux-operands-smoke-budget-fixed.json` completes all six fresh-server
+  trials and two repeats. `termux-operands-smoke-verified.json` independently accepts all
+  16 collections, preserving 35 string and 219 type operand sites. One round is only a
+  harness smoke test, not the required five-round performance result.
+- Large-input runs use an explicit 768 MiB expansion and 8192 MiB session budget with the
+  original cache quotas and common 4096 MiB descendant RSS cap. They do not inherit the
+  invalid 2048/8192 reservation combination above. No product runtime edit or native
+  rebuild occurs during a frozen benchmark.
+- The additional B1 holdout is frozen before its new operand/cache measurements:
+  `artifacts/device-corpus-20260921/org.fdroid.fdroid.apk`, SHA-256
+  `985f5181d48bb6bafd54083a048b391271e0ab28385881cc41294fb01a222762`.
+  It is held out from B1 tuning, not claimed to be absent from all historical corpus work.
+  The old product has a separate detached checkout at
+  `artifacts/competitor-gap-b1-20261027/baseline/source`; no current runtime is replaced by it.
+- The first five-round Taobao attempt, `candidate/taobao-operands-cpu2.json`, failed rather
+  than completing. At 13:34:40 local time the kernel killed the benchmark client PID 762938
+  with exit 137 and 5817680 KiB anonymous RSS. It retained all prior response trees and
+  repeatedly serialized a cumulative inline report. The last saved report is still
+  `status=running`; no ratio or successful subset is promoted to performance acceptance.
+  The kernel evidence is recorded in `taobao-operands-cpu2-failure.json`; the exact earlier
+  harness is preserved as `benchmark-operand-retained-responses.py`. Post-failure checks
+  found no remaining benchmark server/worker descendants. This is a harness failure,
+  not a product-worker memory measurement.
+- The corrected harness streams each finished trial's full operations to an immutable,
+  size/hash-bound `.trials/NNNN.json` sidecar, releases that response tree and atomically
+  updates a compact report outside measured calls. Both reference verifiers read one trial
+  at a time, verify sidecar identities and still support historical inline receipts.
+  `candidate/bounded-benchmark-red.xml` preserves six missing-capability failures;
+  `candidate/bounded-harness-verifiers.xml` passes 175 cases, including sidecar tampering,
+  changed sizes, missing files, path traversal, immutable prior trials and legacy input.
+  Fresh large-input revalidation starts with a two-round parallel smoke before repeating
+  the required complete five-round matrix. This does not weaken product cache limits.
+- `candidate/taobao-operands-bounded-smoke.json` now completes four alternating fresh-server
+  trials (two rounds, two full repeats, concurrent string/type). All transport, CPU and
+  original/runtime identity gates pass. Benchmark-client RSS sampled after spilling each
+  trial is 202/255/270/261 MiB, instead of retaining every earlier response tree; these are
+  post-trial samples, not peak process memory claims. Separate offline site acceptance is
+  still required, and two rounds do not meet the five-round performance gate.
+- `candidate/taobao-operands-bounded-smoke-verified.json` independently accepts all 16
+  complete MCP collections from those four trials: exactly 2163 string-use and 56791
+  explicit type-operand sites per corresponding collection, zero missing or extra sites
+  for either implementation. Native string indexes and counts for all 12495817 instructions,
+  606974 methods and 33709 methods without code match original-byte decoding. The verifier
+  checks the source-to-original DEX mapping, all page/retry metadata and sidecar hashes;
+  original, product runtime and verifier/decoder sources remain unchanged. The oracle's
+  temporary bundle is removed. This closes this Taobao correctness cell, not the remaining
+  corpus, five-round latency, baseline, Windows or package cells.
+- The v0.2.4 baseline wheel was built offline from the detached, unchanged baseline source
+  and installed only under `baseline/runtime`, not over the active environment. Its import
+  and native accelerator paths were read back from that directory; the baseline accelerator
+  correctly lacks the new `type_operands` capability. Use an explicit per-command PYTHONPATH
+  to select it for old-string measurements, and current `src` for candidate measurements.
+- The next frozen harness additionally samples and caps its own client RSS (1024 MiB by
+  default, separate from descendant RSS) and bounds complete-trial elapsed time (600 s by
+  default). A bound violation stops only owned descendants, retains all recorded attempts
+  and fails the trial; partial collections are not accepted. `client-rss-guard-red.xml` and
+  `trial-deadline-red.xml` preserve the missing-stop regressions; `runtime-safety-guards.xml`
+  passes 177 cases. The graph receipt verifier was also adapted to the hash-bound sidecars.
+  A broader unconfigured harness check passed 190 cases but skipped four JVM-fixture cases;
+  those skips are not acceptance and are being rerun in the fully configured source gate.
+- `candidate/wechat-operands-first.json` completes one fresh paired round with two complete
+  concurrent string/type collections per server, under an explicit 180 s complete-trial
+  bound. Both servers pass transport/CPU/resource/identity checks. Independent decoding is
+  pending; this single paired round does not establish performance acceptance.
+- `candidate/source-full-freeze.xml` passes all 1599 tests with zero failures/errors/skips
+  on local Linux/Python 3.13 in 582.81 s, including the configured graph-fixture cases that
+  were skipped in the narrower unconfigured run. Product files remain the same frozen
+  runtime as the large-input receipts. This candidate is ready for development-branch CI;
+  Windows/canonical-sdist/native-wheel gates and the remaining B1 matrix are still open.
+
+Reproduce full-collection smoke and verification (choose new output names):
+
+```sh
+PYTHONPATH="$PWD/src" uv run --offline --no-sync --with ./artifacts/aimard-asc-mcp python scripts/benchmark_competitor_runtime.py artifacts/device-corpus-20260921/com.termux.apk --scenarios full_string full_type full_operands --rounds 1 --repeats 2 --workers 2 --expanded-mib 128 --session-disk-mib 8192 --output artifacts/competitor-gap-b1-20261027/candidate/termux-operands-rerun.json
+PYTHONPATH="$PWD/src" uv run --offline --no-sync --with ./artifacts/aimard-asc-mcp --with androguard==4.1.4 python scripts/verify_operand_page_benchmark.py artifacts/competitor-gap-b1-20261027/candidate/termux-operands-rerun.json artifacts/device-corpus-20260921/com.termux.apk --output artifacts/competitor-gap-b1-20261027/candidate/termux-operands-rerun-verified.json
+```
+
+Next acceptance work: The v0.2.4 baseline lacks operand scope; do not compare its broader type query to
+the new narrow result as equal semantics. Independently project/verify any baseline
+equivalent workflow and count all of its work, or report that baseline cell unavailable.
+Finish WeChat/Douyin and a frozen held-out input, full MCP site equality, cache fit/overflow
+coverage and the five-round comparisons before calling performance accepted. No benchmark
+speed ratio follows from the scanner oracle or scan-elimination tests above.
+
+Update this ledger after each work package with current/next task, changed modules,
+commands, evidence paths, verified outcomes, failed attempts and blockers. Preserve original
+receipts and record decisions before changing public behavior. Completion means the named
+gates passed on the same frozen runtime, not that tests were added or a time budget ended.
+
 ## Release candidate v0.2.4, 2026-10-27
 
 The maintainer approved freezing the current workflow increment, correcting the stale

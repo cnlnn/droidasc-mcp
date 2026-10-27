@@ -40,13 +40,15 @@ static uint32_t u32(const unsigned char *p) {
 
 /* Mode 2 uses a compact bitset for the 32-bit string pool, including jumbo IDs. */
 static int reference_opcode(unsigned int op, int fields) {
+    if (fields == 3) return op == 0x1c || op == 0x1f || op == 0x20 || (op >= 0x22 && op <= 0x25);
     if (fields == 2) return op == 0x1a || op == 0x1b;
     if (fields == 1) return op >= 0x52 && op <= 0x6d;
     return (op >= 0x6e && op <= 0x72) || (op >= 0x74 && op <= 0x78) || op == 0xfa || op == 0xfb;
 }
 
 static int valid_mask(Py_ssize_t length, int fields, Py_ssize_t pool) {
-    return fields >= 0 && fields <= 2 && pool >= 0 && pool <= INT_MAX &&
+    return fields >= 0 && fields <= 3 && pool >= 0 && pool <= INT_MAX &&
+        (fields != 3 || pool <= 65536) &&
         length == (fields == 2 ? pool / 8 + (pool % 8 != 0) : 65536);
 }
 
@@ -312,7 +314,7 @@ static int parse_class_selection(PyObject *args, int bulk, ClassSelection *scan,
     if (scan->method_offset < 0 || scan->method_offset > scan->length ||
         scan->method_pool > (uint64_t)(scan->length-scan->method_offset)/8 ||
         scan->field_pool > 65536 || scan->method_pool > 65536 || scan->strings < 0 || scan->protos < 0 ||
-        width_length != 256 || !valid_mask(mask_length, scan->fields,
+        width_length != 256 || scan->fields > 2 || !valid_mask(mask_length, scan->fields,
             scan->fields == 2 ? scan->strings : scan->fields ? scan->field_pool : scan->method_pool) ||
         scan->access < 0 || scan->access > 2) {
         PyErr_SetString(PyExc_ValueError, "Invalid DEX selection buffers or tables");
@@ -483,7 +485,7 @@ static PyObject *select_methods(PyObject *self, PyObject *args) {
         PyBytes_AsStringAndSize(mask, &mask_raw, &mask_length) < 0) return NULL;
     data = (const unsigned char *)raw;
     if (!PyList_Check(methods) || method_offset < 0 || method_offset > length ||
-        strings < 0 || protos < 0 || width_length != 256 || !valid_mask(mask_length, fields, pool))
+        strings < 0 || protos < 0 || width_length != 256 || fields > 2 || !valid_mask(mask_length, fields, pool))
         goto invalid_select;
     selected = PyList_New(0);
     if (!selected) return NULL;
@@ -988,7 +990,8 @@ static struct PyModuleDef module = {
 PyMODINIT_FUNC PyInit__dexscan(void) {
     PyObject *result = PyModule_Create(&module);
     if (!result) return NULL;
-    if (PyModule_AddIntConstant(result, "buffer_inputs", 1) < 0) {
+    if (PyModule_AddIntConstant(result, "buffer_inputs", 1) < 0 ||
+        PyModule_AddIntConstant(result, "type_operands", 1) < 0) {
         Py_DECREF(result);
         return NULL;
     }

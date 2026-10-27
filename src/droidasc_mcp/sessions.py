@@ -17,10 +17,10 @@ from .memory_cache import PageCache
 from .reference_cache import (
     MAX_SESSION_BYTES,
     MIN_ENTRY_BYTES,
-    OPERATIONS,
     ReferenceCache,
     selector,
 )
+from .reference_page import operand_query, selected_query
 from .runner import _check_cancelled
 
 
@@ -188,7 +188,7 @@ class DexSessions:
                 | DISCOVERY_OPERATIONS
                 | STRUCTURE_OPERATIONS
             ):
-                native_read = query.get("operation") in {
+                native_read = operand_query(query) or query.get("operation") in {
                     "find_method_refs",
                     "get_method_calls",
                     "find_field_refs",
@@ -204,7 +204,7 @@ class DexSessions:
                     int.from_bytes(
                         hashlib.sha256(
                             json.dumps(
-                                selector(query) if query.get("operation") in OPERATIONS else query,
+                                selector(query) if selected_query(query) else query,
                                 sort_keys=True,
                             ).encode()
                         ).digest()[:2],
@@ -254,7 +254,7 @@ class DexSessions:
                     self._drop(key)
 
     def _reference_cache(self, entry, root, query):
-        if query.get("operation") not in OPERATIONS:
+        if not selected_query(query):
             return None
         with self.lock:
             if entry.references is None:

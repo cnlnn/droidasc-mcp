@@ -130,6 +130,8 @@ class ReferenceCache:
                     raise ValueError("Incomplete reference page")
                 for row in items:
                     target = row.get("field_descriptor", row.get("callee"))
+                    if target is None:
+                        continue
                     row["target_dex_entry"] = definitions.get(target)
                     row["target_resolution"] = (
                         "defined_in_input" if target in definitions else "not_defined_in_input"

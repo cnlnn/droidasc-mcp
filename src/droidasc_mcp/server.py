@@ -64,7 +64,11 @@ MethodName = Annotated[
 ]
 FieldId = Annotated[str | None, Field(description="Full field identity: Lpkg/C;->name:type")]
 TypeId = Annotated[
-    str | None, Field(description="Exact DEX type including array dimensions, for find_type_refs")
+    str | None,
+    Field(
+        description="DEX type including array dimensions; operand scope also accepts "
+        "dotted names or literal substrings"
+    ),
 ]
 Value = Annotated[
     str | None,
@@ -91,8 +95,15 @@ FieldAccess = Annotated[
     Field(description="Instruction field-access filter, for find_field_refs"),
 ]
 TypeRelation = Annotated[
-    Literal["all", "instruction", "declaration", "annotation"],
-    Field(description="Static type relation filter applied before pagination"),
+    Literal["all", "instruction", "declaration", "annotation", "operand"],
+    Field(
+        description="operand selects explicit type operands without an index; "
+        "instruction includes member types and catches"
+    ),
+]
+TypeMatch = Annotated[
+    Literal["exact", "substring"],
+    Field(description="Case-sensitive type matching; substring requires type_relation=operand"),
 ]
 SourceFormat = Annotated[
     Literal["auto", "java", "smali"],
@@ -550,6 +561,7 @@ def build_server(
         field_access: FieldAccess = "all",
         type_descriptor: TypeId = None,
         type_relation: TypeRelation = "all",
+        type_match: TypeMatch = "exact",
         source_format: SourceFormat = "auto",
         debug_info: DebugInfo = False,
         kind: ReferenceKind = "string",
@@ -604,7 +616,8 @@ def build_server(
         optionally selects its prototype. Ambiguous names fail without choosing an overload.
         find_field_refs requires field_descriptor (Lpkg/C;->name:I).
         field_access filters reads/writes; inheritance and reflective accesses are not resolved.
-        find_type_refs reports exact type operands, declarations and annotation types/values.
+        find_type_refs reports static type relations. type_relation=operand selects explicit
+        instruction type operands without an index; type_match optionally selects substrings.
         build_xref_index builds a bounded complete static index; one-shot indexes are temporary.
         get_call_graph uses bounded frontiers or an index for multi-hop static exploration.
         Graph depth/node/edge/byte boundaries and unresolved dynamic sites are explicit.
@@ -628,6 +641,7 @@ def build_server(
             field_access=field_access,
             type_descriptor=type_descriptor,
             type_relation=type_relation,
+            type_match=type_match,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,
@@ -711,6 +725,7 @@ def build_server(
         field_access: FieldAccess = "all",
         type_descriptor: TypeId = None,
         type_relation: TypeRelation = "all",
+        type_match: TypeMatch = "exact",
         source_format: SourceFormat = "auto",
         debug_info: DebugInfo = False,
         kind: ReferenceKind = "string",
@@ -768,8 +783,9 @@ def build_server(
         get_call_graph uses bounded frontiers or an index for multi-hop static exploration.
         Inspect truncation_reasons and unresolved_sites; graph edges are declared operands.
         An optional configured durable cache restores matching indexes across server restarts.
-        find_type_refs builds/reuses that index; subsequent method/field queries also reuse it.
-        type_descriptor is exact (including arrays); type_relation filters before pagination.
+        find_type_refs with type_relation=operand scans explicit type operands without an index,
+        using exact or literal substring type_match. Other type scopes build/reuse the index.
+        instruction includes member-type and catch relations; exact matching preserves arrays.
         search_members scans declarations or reuses an existing index; kind=method/field.
         value is a case-sensitive literal substring of the full descriptor, not regex.
         class_name restricts exact owner. search_strings scans DEX string-pool values
@@ -790,6 +806,7 @@ def build_server(
             field_access=field_access,
             type_descriptor=type_descriptor,
             type_relation=type_relation,
+            type_match=type_match,
             source_format=source_format,
             debug_info=debug_info,
             kind=kind,

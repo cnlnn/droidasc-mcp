@@ -93,6 +93,15 @@ DYNAMIC_NAMES = {
     0xFD: "invoke-custom/range",
     0xFE: "const-method-handle",
 }
+TYPE_OPS = {
+    0x1C: "const-class",
+    0x1F: "check-cast",
+    0x20: "instance-of",
+    0x22: "new-instance",
+    0x23: "new-array",
+    0x24: "filled-new-array",
+    0x25: "filled-new-array/range",
+}
 
 
 class Dex:
