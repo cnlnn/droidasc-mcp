@@ -222,11 +222,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B2 bounded cache chunks pass 265 focused/real-transport tests and five-round Douyin equality; method/field latency improves, operand latency residual remains |
-| Next action | Confirm profile costs, freeze current B2 runtime for CI and held-out measurements, consolidate frozen B1 gates without relabeling older source receipts |
+| Current task | B2 aca6b27 all 25 CI jobs accepted with package readback; B1 frozen b64 passes all eight current baseline revision matrices and source/evidence bridge |
+| Next action | Refresh current-b64 comparator operand matrices at both CPU budgets, retain comparator accuracy exclusions, then finalize B1/B2 acceptance before B3 |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Remaining corpus performance matrix stays open; CI 40498703094 accepts frozen B1 b64f85c, not B2; real-model access is a later B3 gate |
+| Open dependencies | Current-b64 comparator performance refresh and final batch summaries stay open; B1 CI 40498703094 and B2 CI 40586951801 cover their distinct runtimes; real-model access is a B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -1159,6 +1159,109 @@ Full-collection acceptance extension, 2026-10-27:
   succeeds. These are profiler observations, not acceptance speed ratios. Remaining
   grouped costs include per-site grouping and more cache reads than flat (139), so the
   measured operand latency residual has not been waved away by a lower encode count.
+- The same changed runtime is committed/pushed only to the development branch as
+  `aca6b27` (`perf: group validated cache chunks without flat formatting`). Repository-wide
+  Ruff/format and diff checks pass. New CI must cover this runtime rather than borrowing
+  `92c721f` results; current `aca6b27` CI `40586951801` is running. Earlier CI `40584948495`
+  is now terminal success in all 25 jobs, including the previously failing Windows source
+  cell; it covers the exit observer fix, not the later cache-chunk runtime change.
+- Held-out `fdroid-bounded-chunks-five-rounds.json` passes 20 fresh-server trials, ten pairs
+  and 80 full collections, unchanged identities, four CPUs and no retries. Flat/grouped
+  operand first/repeat/startup medians are 0.9448/0.9600, 0.1647/0.2156, 1.7957/1.8239 s;
+  member medians are 0.2528/0.2673, 0.1280/0.1519, 1.1026/1.1096 s. Every first/repeat pair
+  is slower here (operand repeats +30.8 to +58.2 ms, members +19.5 to +27.2 ms).
+  Operand pages drop 8/6 but text bytes increase 1,291,212/1,319,304; member pages stay 6/6
+  and text bytes drop 964,100/824,864. This preserves the small-input grouping overhead and
+  payload regression rather than selecting only the favorable large-member workload.
+  B2 has a verified useful opt-in case, not universal speed/size superiority; final
+  cross-platform/package acceptance and the explicit residual assessment remain open.
+- `candidate/b64-source-bridge.json` binds 210 evidence/input/helper files using
+  `audit_b64_source_bridge.py` in the B1 artifact directory. All four original-byte decoder
+  reports differ from frozen b64 in exactly `reference_cache.py`; all scanners, schemas,
+  native binary and worker paths are byte-identical. Their 160 product decoder collections
+  pass. Fresh b64 cache-parity reports match that exact runtime and pass all 16 collections.
+  The Douyin comparator's 20 failed string collections remain failed. The bridge also checks
+  b64 CI's exact commit/25 successful jobs and all eight 1,693-test source JUnit files with
+  zero failures/errors/skips. This establishes source/evidence continuity for unchanged
+  decoding plus separately retested caching; it does not relabel old timings as current
+  or mark B1 accepted. Original evidence and helper hashes are actually rechecked.
+- `candidate/b64-holdout-revisions-cpu{2,4}.json` refreshes the published-v0.2.4 versus
+  frozen-b64 comparison, with unchanged input/runtime/helper hashes. Each passes 40 fresh
+  trials, 20 alternating pairs and 100 full result/diagnostic comparisons. No first,
+  repeated or startup median crosses both existing regression thresholds. Seconds,
+  baseline/candidate:
+
+  | CPU | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 0.1409/0.1448 | 0.0239/0.0224 | 1.0324/1.0023 |
+  | 2 | method | 0.2476/0.2454 | 0.1145/0.1138 | 1.1064/1.1142 |
+  | 2 | field | 0.1343/0.1366 | 0.0206/0.0212 | 0.9792/0.9941 |
+  | 2 | concurrent | 0.2818/0.2786 | 0.1291/0.1274 | 1.1184/1.1344 |
+  | 4 | string | 0.1417/0.1468 | 0.0244/0.0232 | 0.9820/0.9808 |
+  | 4 | method | 0.2453/0.2480 | 0.1147/0.1144 | 1.0997/1.0886 |
+  | 4 | field | 0.1356/0.1355 | 0.0221/0.0205 | 0.9786/0.9707 |
+  | 4 | concurrent | 0.2577/0.2487 | 0.1308/0.1249 | 1.0924/1.1033 |
+
+  These small holdout deltas are compatibility/regression evidence, not an unconditional
+  performance win. The current large-input refresh uses the same four scenarios, five
+  alternating pairs, two repeats and original budgets; no runtime edits during timing.
+- `candidate/b64-taobao-revisions-cpu{2,4}.json` each passes 40 fresh-server trials,
+  20 alternating pairs and 100 complete result/diagnostic comparisons, with unchanged
+  identities. No first/repeat/startup median crosses both regression thresholds. Seconds,
+  published baseline/frozen b64:
+
+  | CPU | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 3.7971/0.6430 | 1.0204/0.2268 | 5.3964/2.2222 |
+  | 2 | method | 3.2121/3.2704 | 2.7569/2.8656 | 4.7458/4.9003 |
+  | 2 | field | 0.3063/0.3027 | 0.0452/0.0451 | 1.9105/1.8498 |
+  | 2 | concurrent | 3.4987/3.4142 | 2.9248/2.8432 | 5.0556/5.0170 |
+  | 4 | string | 3.8462/0.6669 | 1.0108/0.2330 | 5.3210/2.1055 |
+  | 4 | method | 3.3336/3.1902 | 2.8301/2.7259 | 4.7972/4.6740 |
+  | 4 | field | 0.3063/0.3069 | 0.0428/0.0446 | 1.7244/1.7521 |
+  | 4 | concurrent | 3.4413/3.2237 | 3.0731/2.7860 | 4.9019/4.6793 |
+
+  Every string first/repeat pair improves at both budgets. Four-CPU concurrent first/repeat
+  pairs also all improve; two-CPU method/concurrent deltas are mixed, so do not generalize
+  that win. Remaining refresh is predeclared unchanged: WeChat then Douyin, two then four
+  CPUs, the same four complete workflows/five alternating rounds/two repeats and budgets.
+  All original receipts remain separate, including the earlier noisy Douyin post-fix sample.
+- The four predeclared WeChat/Douyin revision matrices also pass on frozen b64:
+  `candidate/b64-{wechat,douyin}-revisions-cpu{2,4}.json`. Each has 40 trials, 20 pairs,
+  100 full-result/diagnostic comparisons and unchanged identities. Together with Taobao
+  and the holdout, all eight current matrices now cover 320 fresh-server trials, 160 pairs
+  and 800 complete collections. `candidate/b64-revision-gate-summary.json`, generated by
+  `summarize_b64_revisions.py`, rechecks all 320 operation-sidecar hashes/sizes, original
+  APKs, runtime/helpers and paired complete-result digests (464 file bindings total).
+  Every one of its 32 input/CPU/workflow cells passes the >5% AND >100-ms median regression
+  gate for first/repeated/startup completion; first-useful-page checks also pass. The summary
+  preserves every paired delta, first-page time, page/retry count, peak process RSS and
+  retained temporary bytes separately. This is the published-baseline regression gate,
+  not current comparator parity or the entire B1 acceptance.
+  Current frozen-b64 repeated string medians versus published v0.2.4 are 0.1100/1.4799 s
+  (WeChat two CPUs), 0.1151/1.4601 (four), 0.4902/1.6928 (Douyin two), and 0.4909/1.6642
+  (four). Every paired large-input string first/repeat improves; no holdout speedup claim.
+  The original noisy post-fix Douyin receipt and the failed pre-fix fifteen-pair concurrent
+  sample remain preserved, not overwritten or pooled across different runtimes.
+- B2 CI `40586951801` is now terminal success, all 25 jobs bound to exact commit
+  `aca6b2740a318f90894feb34f74b78bc711180b6`. Saved `aca-ci-run.json`, full logs and all eight
+  source/signing artifact directories under the B2 evidence root. Each Linux/Windows
+  Python 3.10-3.13 JUnit reports 1,777 tests, zero failures/errors/skips. Full logs confirm
+  both canonical-sdist and exact installed-wheel suites pass in every distribution cell;
+  no skip is permitted by fixture acceptance. All eight cells use canonical sdist SHA-256
+  `06cddf938f514e10c053e83495b443a5298af86e0cea5f6576bc9cca0942b645`.
+  `aca-ci-package-readback.json` hashes all eight downloaded build artifacts and checks
+  NOTICE byte-for-byte in every sdist/wheel. Rust, signing and stability jobs also succeed.
+  This closes current B2 cross-platform/package gates, not its documented performance
+  tradeoffs or the remaining B1 comparator-refresh dependency; nothing was published.
+- Remaining B1 measurement is explicitly frozen: use b64 helpers/runtime and the pinned
+  comparator on holdout, Taobao, WeChat and Douyin at two/four CPUs, five alternating
+  rounds and two complete repeats, scenarios full_string/full_type/full_operands and
+  unchanged 768-MiB expansion/8192-MiB session limits. Write fresh
+  `candidate/b64-<input>-operands-cpu<2|4>.json` receipts. Keep the independently established
+  Douyin comparator string failure excluded from equal-correctness ratios; do not repair
+  comparator data or silently omit its failed semantic cell. B1's current baseline gate
+  is closed, while this current-runtime comparator refresh and final batch summary stay open.
 
 Reproduce alternating old/new complete-workflow regression timing (fresh output required):
 
