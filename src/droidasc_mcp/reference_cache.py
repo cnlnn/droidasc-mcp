@@ -58,7 +58,7 @@ def _connect(path):
     return db
 
 
-def _page_rows(db, start, stop):
+def _page_blocks(db, start, stop):
     if start >= stop:
         return
     blocks = db.execute(
@@ -74,7 +74,7 @@ def _page_rows(db, start, stop):
         if not first <= position < first + count:
             raise ValueError("Noncontiguous reference blocks")
         selected = rows[position - first : min(stop - first, count)]
-        yield from selected
+        yield selected, raw_bytes, first < start
         position += len(selected)
     if position != stop:
         raise ValueError("Incomplete reference blocks")
@@ -141,18 +141,20 @@ class ReferenceCache:
                     if offset < 0 or limit <= 0:
                         return None
                     stop = min(offset + limit, total)
-                    rows = _page_rows(db, offset, stop)
+                    blocks = _page_blocks(db, offset, stop)
                     items, size, limited = [], 0, False
-                    for row in rows:
-                        _check_cancelled()
-                        row_size = len(json.dumps(row, separators=(",", ":")).encode())
-                        if row_size > maximum:
-                            raise ValueError("Invalid reference row size")
-                        size += row_size
-                        if size > maximum:
-                            limited = True
+                    read_budget = maximum
+                    for rows, raw_bytes, partial in blocks:
+                        # Allow the skipped prefix and one final bounded block.
+                        if partial:
+                            read_budget += raw_bytes
+                        size += raw_bytes
+                        for row in rows:
+                            _check_cancelled()
+                            items.append(row)
+                        if size >= read_budget:
+                            limited = offset + len(items) < stop
                             break
-                        items.append(row)
                 if not limited and len(items) != min(limit, max(0, total - offset)):
                     raise ValueError("Incomplete reference page")
                 for row in items:

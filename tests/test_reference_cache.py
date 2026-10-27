@@ -201,6 +201,82 @@ def test_repeated_identities_fit_existing_quota_without_losing_page_boundaries(c
         assert result["total"] == len(rows) and result["diagnostic"] == 41
 
 
+def test_cached_page_does_not_reencode_rows_to_compute_read_budget(cached, monkeypatch):
+    cache, _ = cached
+    cache.settings = replace(cache.settings, max_page_size=1000)
+    query = NEW_QUERIES[0]
+    rows = [
+        {"caller": "Lowner;->m()V", "value": "a" * 700, "instruction_offset": i}
+        for i in range(2000)
+    ]
+    publish(cache, query, rows)
+    encode = json.dumps
+    sizing_calls = []
+
+    def observe(value, *args, **kwargs):
+        if (
+            isinstance(value, dict)
+            and "instruction_offset" in value
+            and kwargs.get("separators") == (",", ":")
+        ):
+            sizing_calls.append(value["instruction_offset"])
+        return encode(value, *args, **kwargs)
+
+    monkeypatch.setattr(json, "dumps", observe)
+    result = cache.read({**query, "offset": 127, "limit": 1000})
+    assert result["status"] == "ok" and result["has_more"]
+    assert result["items"] == rows[127 : result["next_offset"]]
+    assert len(encode(result).encode()) + 1 <= MAX_VALUE_BYTES
+    assert not sizing_calls, "Stored block byte counts already bound the cache read"
+
+
+@pytest.mark.parametrize("maximum", [1024, 64 * 1024, MAX_VALUE_BYTES])
+@pytest.mark.parametrize("offset", [0, 7, 127, 999, 1001])
+def test_block_budget_preserves_exact_byte_bounded_prefix(cached, monkeypatch, maximum, offset):
+    cache, _ = cached
+    rows = [
+        {"value": 'a\\"\n' * (3000 if i % 11 == 0 else 70), "instruction_offset": i // 2}
+        for i in range(1000)
+    ]
+    query = {**NEW_QUERIES[0], "offset": offset, "limit": 1000}
+    publish(cache, query, rows)
+    cache.settings = replace(cache.settings, max_page_size=1000, max_output_bytes=maximum)
+    decode = reference_cache.decode_block
+    decoded_bytes = []
+
+    def observe(encoded, count, raw_bytes):
+        decoded_bytes.append(raw_bytes)
+        return decode(encoded, count, raw_bytes)
+
+    monkeypatch.setattr(reference_cache, "decode_block", observe)
+    result = cache.read(query)
+    expected = reference_cache.reference_page(
+        {
+            "status": "ok",
+            "total": len(rows),
+            "diagnostic": 41,
+            "items": rows[offset : offset + query["limit"]],
+            "offset": offset,
+            "limit": query["limit"],
+            "has_more": False,
+            "truncated": False,
+            "next_offset": None,
+            "query_cache": {
+                "hit": True,
+                "scope": "selected_reference_set",
+                "budget_bytes": cache.budget,
+                "stored_bytes": cache.used,
+            },
+        },
+        maximum,
+    )
+    assert result == expected
+    assert len(json.dumps(result).encode()) + 1 <= maximum
+    assert sum(decoded_bytes) <= maximum + 2 * MAX_BLOCK_BYTES
+    if offset < 999:
+        assert len(decoded_bytes) < 20
+
+
 @pytest.mark.parametrize(
     "encoded,count,raw_bytes",
     [
@@ -468,6 +544,26 @@ def test_post_publication_changes_invalidate_without_breaking_query(cached, muta
 
 class Cancelled(BaseException):
     pass
+
+
+def test_cancelled_block_read_keeps_complete_cache_reusable(cached, monkeypatch):
+    cache, _ = cached
+    publish(cache, rows=ROWS * 100)
+    original_check = reference_cache._check_cancelled
+    calls = 0
+
+    def cancel():
+        nonlocal calls
+        calls += 1
+        if calls == 5:
+            raise Cancelled()
+
+    monkeypatch.setattr(reference_cache, "_check_cancelled", cancel)
+    with pytest.raises(Cancelled):
+        cache.read({**QUERY, "limit": 100})
+    assert cache.entries and not cache.pending
+    monkeypatch.setattr(reference_cache, "_check_cancelled", original_check)
+    assert cache.read(QUERY)["items"][0]["instruction_offset"] == 0
 
 
 def test_cancellation_during_verification_cleans_owned_lease(cached, monkeypatch):

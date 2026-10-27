@@ -10,6 +10,24 @@ The maintainer requested continuous goal-mode execution on 2026-10-27: finish ea
 batch's gates and automatically advance to the next without repeated confirmation.
 Publication is separate; this instruction does not approve another release.
 
+The maintainer subsequently challenged independent reimplementation when the comparator
+already has working code. Subsequent work is reuse-first: identify the exact upstream
+function, port it directly where possible, and adapt only its interface/lifetime/bounds
+or demonstrated defects. Record source revision and notices for copied/adapted code.
+The checked comparator and this repository both declare Apache-2.0; the comparator
+contains `LICENSE` and no separate `NOTICE` in the pinned tree. Preserve upstream
+attribution and mark modifications when incorporating code; no comparator code has yet
+been incorporated by the cache-read fix.
+
+B2's first reuse target is `AscHandler.findrefs_structured` in
+`artifacts/aimard-asc-mcp/asc_mcp/analysis/asc_handler.py`: group by caller, accumulate
+targets and retain every evidence entry. `ReferenceHit`/`ReferencePage` in `models.py`
+provide the existing grouped shape. Port this behavior into the current session adapter
+before considering a new identity-table representation. Keep original row identities,
+ordering and duplicate evidence reconstructible, splitting a large caller across bounded
+pages as necessary. The comparator's demonstrated instruction-location defect is confined
+to that locator; it is not a reason to reject reuse of its grouping or workflow logic.
+
 ### Baseline and evidence
 
 - Product baseline: published v0.2.4, commit
@@ -61,7 +79,7 @@ Publication is separate; this instruction does not approve another release.
 | --- | --- | --- | --- |
 | P0 | Source-backed plan and compatibility decisions | Current audit | complete |
 | B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | in progress |
-| B2 | Compact reference output and resumable full-result collection | B1 accepted | deferred |
+| B2 | Compact reference output and resumable full-result collection | B1 runtime frozen; B1 final acceptance remains open | next: upstream grouping adaptation |
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | deferred |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
@@ -71,6 +89,14 @@ Execution order changes need an evidence-backed entry here, not a silent expansi
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
 failure and residual gap, then record the revised order. Never call the overall gap closed
 because a batch or patch release passed.
+
+Execution adjustment following the maintainer's reuse-first correction: freeze the B1
+cache-read candidate and its evidence, then implement the upstream grouping adaptation
+while final B1 parity/package checks remain explicitly open against that frozen candidate.
+This avoids holding an independent output improvement behind another full timing matrix.
+B1 is not marked accepted by this scheduling change; its missing gates remain required
+before combined acceptance, and B3 still depends on accepted B1/B2 behavior. Do not modify
+the frozen B1 runtime or relabel its timings as measurements of later B2 code.
 
 ### B1 work packages
 
@@ -196,11 +222,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1 Taobao two-CPU five-round comparator cell accepted; product runtime CI passes all 25 jobs; revision wrapper passes 1649 full-source tests; B1 remains open |
-| Next action | Finish alternating old/new Taobao regression timing, then four-CPU and remaining corpus cells; run CI for the added revision wrapper and retain all measured residuals |
+| Current task | B1 bounded cache-read fix under real-MCP verification; the original 15-pair concurrent regression remains preserved, not superseded by a profile |
+| Next action | Finish fixed-runtime comparison against both the pre-fix snapshot and v0.2.4, revalidate affected cells, complete uncached/cached parity and final package CI |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Large-input performance matrix remains open; CI 40465990968 passes both prior failure classes on b9f98c8; the later revision wrapper needs its own matrix; real-model access is a later B3 gate |
+| Open dependencies | Remaining corpus performance matrix stays open; CI 40468194811 accepts pre-fix 046045b, not the subsequent cache-read change or final doc-inclusive archive; real-model access is a later B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -508,6 +534,455 @@ Full-collection acceptance extension, 2026-10-27:
   retries. Concurrent peak descendant RSS is 160616448/930967552 bytes, but ours also
   retains up to 119199188 sampled temporary bytes versus zero comparator trial files.
   These tmpfs/storage costs are not erased by lower process RSS; B2/B4 remain real work.
+- `taobao-final-revisions-cpu2.json` passes 40 fresh-server trials and 20 alternating
+  baseline/candidate pairs. All 100 complete collections preserve exact result/diagnostic
+  digests, including duplicates and ordering; original, imported runtime and helper hashes
+  remain unchanged. This old/new equality is separate from the original-byte operand oracle.
+  First/repeated complete-query medians (baseline/candidate, seconds) are strings
+  7.1629/1.1386 and 1.7751/0.3518; methods 5.5796/5.6088 and 5.0073/4.7714; fields
+  0.5274/0.4999 and 0.0685/0.0670; method/field concurrency 5.9610/5.3779 and
+  4.4398/4.6008. Startup-to-complete medians are respectively 10.0530/3.9529,
+  8.5184/8.5546, 3.4258/3.4005 and 8.9238/7.9805. No median crosses both regression
+  thresholds. Concurrent repeats are nevertheless 0.1610 s (3.63%) slower in aggregate,
+  with paired deltas -0.1309 to +0.3118 s; method repeat deltas range -0.4606 to
+  +0.4853 s. Preserve this noise rather than claiming every legacy query improved.
+  All five paired string rounds improve first/repeated/startup completion; first-query
+  savings range 4.8120-7.4731 s and repeated savings 1.1649-1.6108 s. No p95 claim.
+- The same revision receipt's checksum-verified operation sidecars give first useful-page
+  medians (baseline/candidate, seconds): string 4.8454/3.6048, method 4.0640/4.0322,
+  field 3.4258/3.4005 and concurrent 3.7559/3.3312. Across ten complete collections per
+  single-query scenario, string page/retry totals fall from 90/20 to 40/0; method pages
+  remain 360, field pages 10 and concurrent pages 370, with zero legacy-query retries.
+  String speedup includes removed response-limit retries and fewer byte-bounded pages,
+  not only selected-set scan reuse. Peak retained temporary logical bytes for concurrent
+  legacy work are 125404628/118209317; these remain separate from descendant RSS.
+- Commit 046045b adds the revision wrapper and its distribution inclusion checks;
+  CI `40468194811` passes all 25 jobs. All eight downloaded source JUnit files contain
+  1649 tests with zero failures/errors/skips; canonical-sdist/exact-wheel, Rust, signing
+  and stability jobs pass as well. This accepts the wrapper's final code commit, not B1
+  performance completeness or a release. Subsequent ledger-only edits do not change runtime.
+- `taobao-final-operands-cpu4.json` passes 30 trials with five alternating rounds, two
+  complete repeats and unchanged per-call/trial/RSS/disk budgets. Independent
+  `taobao-final-operands-cpu4-verified.json` accepts all 80 complete collections against
+  original DEX bytes (2163 string sites, 56791 type sites); full diagnostics, input,
+  runtime, helper/sidecar identities and oracle cleanup pass. First/repeated complete-query
+  medians (ours/comparator, seconds) are strings 0.9337/2.0783 and 0.3176/0.5310;
+  types 12.1646/14.2156 and 6.6850/11.3457; concurrent 12.1548/18.4767 and
+  6.9438/12.4987. Startup-to-complete medians are 2.8724/3.1821, 14.0950/15.3609
+  and 14.0514/19.5508. Every paired first/repeated complete query favors ours, but
+  string startup savings span -0.1133 to +0.3423 s: one round is slower, so no robust
+  string startup-win claim. Type/concurrent startup savings span 0.3634-1.2958 s and
+  4.5264-5.7343 s. Four-CPU old/new regression timing is the next running cell.
+- Four-CPU first useful-page medians expose a remaining tradeoff: string 2.5686/3.0934 s,
+  type 7.5881/4.2066 s, concurrent 2.6199/4.6624 s (ours/comparator). Our type first page
+  is slower despite faster complete collection; total counts/complete scan and selected-set
+  publication occur before that page. Concurrent first useful result can be a string page,
+  not evidence that its type page is ready. Page totals remain 40/20, 610/400 and 650/420,
+  zero retries. Concurrent descendant RSS peaks at 160595968/1338667008 bytes, while ours
+  retains up to 119199188 temporary logical bytes versus zero comparator trial files.
+  This is not universal latency or total-memory superiority; preserve first-page and
+  preparation costs for subsequent measured work instead of hiding them in full-result ratios.
+- Two-CPU checksum-verified first useful-page medians likewise separate this tradeoff:
+  strings 3.4362/5.1860 s, types 9.2727/7.0332 s and concurrent 3.5501/7.4841 s.
+  Thus the slower standalone type first-page path appears in both CPU cells, not just
+  one four-CPU sample; the accepted improvement is complete collection and repeat reuse.
+- `taobao-final-revisions-cpu4.json` passes another 40 fresh-server trials, 20 alternating
+  pairs and 100 complete collections with exact old/new result/diagnostic digests and
+  unchanged original/runtime/helper identities. First/repeated complete medians
+  (baseline/candidate, seconds) are string 5.5113/0.9147 and 1.4342/0.2914; method
+  4.4877/4.4756 and 3.8720/3.7813; field 0.4014/0.3894 and 0.0624/0.0620; concurrent
+  4.5881/4.4602 and 3.9280/3.8409. Startup-to-complete medians are 7.5504/2.8975,
+  6.4420/6.5053, 2.3763/2.3816 and 6.6332/6.4099. No median crosses both regression
+  thresholds. Method startup paired deltas nevertheless range -0.0252 to +0.3572 s;
+  field startup ranges -0.3230 to +0.3012 s. Preserve these rather than declaring all
+  starts faster. All paired string first/repeat/startup completions improve; first-query
+  savings range 4.3050-4.7076 s, repeated savings 1.0741-1.3563 s. Taobao's two/four-CPU
+  cells are now complete on the frozen runtime, not the full multi-input B1 matrix.
+- Frozen F-Droid holdout `holdout-final-operands-cpu{2,4}.json` each passes 30 fresh
+  trials. Each corresponding `-verified.json` independently accepts all 80 complete
+  collections (62 strings, 1772 type sites), diagnostics, source/sidecar identities and
+  oracle cleanup. The frozen holdout and product runtime were not tuned after observation.
+  Medians in seconds, ours/comparator:
+
+  | CPU | Complete query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 0.1965/0.6569 | 0.0347/0.0344 | 1.3948/1.6568 |
+  | 2 | type | 1.4369/1.1196 | 0.1961/0.3497 | 2.6452/2.1005 |
+  | 2 | concurrent | 1.4768/2.1499 | 0.2343/0.5740 | 2.7066/3.1605 |
+  | 4 | string | 0.2022/0.5143 | 0.0339/0.0424 | 1.3699/1.4702 |
+  | 4 | type | 1.4002/0.8939 | 0.1971/0.3698 | 2.6116/1.9010 |
+  | 4 | concurrent | 1.4000/1.4807 | 0.2310/0.4844 | 2.5648/2.4265 |
+
+  Every paired holdout type first/startup completion is slower: first-query deltas
+  +0.2457 to +0.3665 s at two CPUs and +0.4891 to +0.6058 s at four. Conversely every
+  paired type repeat is faster, by 0.1237-0.1593 s and 0.1428-0.1891 s. Four-CPU
+  concurrent startup is also consistently slower by 0.0959-0.2002 s despite faster
+  complete-query execution; retain preparation in the end-to-end result. One-page string
+  repeats are approximately tied, not a demonstrated holdout warm-string speedup.
+  Type first useful-page medians are 2.4951/2.0328 s (two CPUs) and 2.4623/1.8281 s
+  (four); concurrent first useful-page medians are 1.5477/2.1495 and 1.4115/1.6725 s.
+  Page totals at either budget are string 10/10, type 30/20 and concurrent 40/30, no
+  retries. Concurrent descendant RSS peaks are 146423808/603648000 bytes (two CPUs)
+  and 145096704/753905664 (four); ours additionally retains 19400357 temporary bytes.
+  These are measured residual gaps for B2/B4, not grounds to change holdout selectors,
+  skip slow pairs or advertise unconditional parity. Old/new holdout gates follow next.
+- `holdout-final-revisions-cpu{2,4}.json` each passes 40 trials, 20 alternating pairs,
+  100 full collections and exact old/new result/diagnostic equality; all bound identities
+  remain unchanged. Neither CPU cell crosses both existing-workflow regression thresholds.
+  Complete-query medians in seconds, baseline/candidate:
+
+  | CPU | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 0.1942/0.2056 | 0.0342/0.0347 | 1.4011/1.4421 |
+  | 2 | method | 0.3532/0.3335 | 0.1468/0.1464 | 1.5870/1.5853 |
+  | 2 | field | 0.1739/0.1783 | 0.0288/0.0248 | 1.4015/1.3777 |
+  | 2 | concurrent | 0.4034/0.4078 | 0.1790/0.1730 | 1.6083/1.6344 |
+  | 4 | string | 0.1976/0.1988 | 0.0316/0.0291 | 1.3356/1.3556 |
+  | 4 | method | 0.3290/0.3332 | 0.1469/0.1511 | 1.5085/1.4886 |
+  | 4 | field | 0.1830/0.1799 | 0.0278/0.0318 | 1.3412/1.3335 |
+  | 4 | concurrent | 0.3439/0.3444 | 0.1706/0.1664 | 1.4887/1.5124 |
+
+  Two-CPU string first complete is 5.87% slower but only 11.4 ms, with all five pairs
+  +1.5 to +31.7 ms; four-CPU field repeat is 14.39% slower but only 4.0 ms. Report
+  absolute and relative changes together, not percentages alone. Four-CPU method startup
+  paired deltas span -0.0625 to +0.2266 s despite a slightly better median. Both revisions
+  use 10/20/10/30 pages across string/method/field/concurrent repeats, with zero retries.
+  Concurrent retained temporary bytes are 19685760/19370367 at both budgets; descendant
+  RSS peaks are 144973824/143818752 (two CPUs), 145612800/146010112 (four).
+- Remaining first-useful-page medians were extracted from checksum-verified operation
+  sidecars, separately from full completion: four-CPU Taobao string 3.5414/2.5903 s,
+  method 2.8332/2.8443, field 2.3763/2.3816 and concurrent 2.4456/2.4432
+  (baseline/candidate). Held-out method first pages are 1.5254/1.5231 s at two CPUs
+  and 1.4443/1.4227 at four; concurrent first pages are 1.4681/1.4983 and
+  1.3604/1.3786. One-page string/field first-use times equal their complete times above.
+  No product or harness edits occurred during these frozen measurements. Next run the
+  identical five-round matrices for WeChat and Douyin; no B1/B2 transition or release yet.
+- WeChat `wechat-final-operands-cpu{2,4}.json` each passes 30 fresh-server trials,
+  five alternating rounds and two complete repeats. Each corresponding `-verified.json`
+  independently accepts all 80 complete collections: 738 string sites and 44002 type
+  sites, zero missing/extra, all diagnostics (865327 methods, 21430036 instructions,
+  41085 methods without code), source/sidecar identities and oracle cleanup checked.
+  Complete-query medians in seconds, ours/comparator:
+
+  | CPU | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 0.7639/3.9464 | 0.1321/0.2239 | 3.8718/5.2028 |
+  | 2 | type | 12.6511/12.4559 | 5.0406/7.3298 | 15.9441/13.7062 |
+  | 2 | concurrent | 12.7732/20.8444 | 4.9439/8.7880 | 15.8802/22.1218 |
+  | 4 | string | 0.8717/2.8934 | 0.1582/0.2867 | 4.4134/4.4672 |
+  | 4 | type | 14.1040/11.8395 | 5.2331/7.8975 | 17.8205/13.2176 |
+  | 4 | concurrent | 13.0560/15.9160 | 5.3227/8.6917 | 15.9782/17.3129 |
+
+  Every paired type repeat improves (2.2663-2.6990 s at two CPUs, 2.4415-3.1448 s
+  at four), but type startup is consistently slower by 1.7273-2.4740 s and
+  2.8982-5.4985 s respectively. Four-CPU type first-query execution is also slower in
+  every pair by 1.4595-3.5045 s. All paired concurrent complete first/repeated/startup
+  timings improve; startup savings span 5.7609-7.0391 s (two CPUs) and 1.3347-4.0862 s
+  (four). String first/repeat improves in every pair, but four-CPU string startup savings
+  range -0.0637 to +0.9127 s. No universal startup win or CPU-scaling claim follows.
+  Type first useful-page medians are 11.1395/6.6669 s (two CPUs), 12.4648/5.3019 s
+  (four); string first pages are 3.7839/5.2028 and 4.2989/4.4672; concurrent first
+  pages are 4.4236/9.0382 and 3.7086/6.3392. First-page evidence is taken from
+  checksum-verified operation sidecars, not inferred from full completion.
+- WeChat page totals at both budgets are string 20/10, type 460/220 and concurrent
+  480/230, with zero retries. Concurrent descendant RSS peaks are
+  167116800/1067143168 bytes (two CPUs) and 162824192/1581793280 (four); ours also
+  retains up to 182581790 temporary logical bytes, versus zero comparator trial files.
+  These remain B2 output-repetition and B4 preparation/first-scan gaps. Measurements
+  use the same shared host, not a dedicated performance machine; retain all alternating
+  pairs and do not turn the comparison into an isolated microbenchmark claim.
+- `wechat-final-revisions-cpu{2,4}.json` each passes 40 real-MCP trials, 20 paired
+  comparisons and 100 exact full-result/diagnostic comparisons with unchanged bound
+  identities. However, the four-CPU method first-complete median is 4.8732/5.1461 s
+  (baseline/candidate): +0.2729 s, +5.60%, exceeding both regression thresholds.
+  The receipt's `passed` status proves functional equality, not this performance gate.
+  Its paired deltas span -0.1033 to +0.5017 s; repeated medians 4.2223/4.2475 s and
+  startup-to-complete 7.9416/7.9203 s do not cross the gate. The two-CPU method first
+  medians are 4.9252/4.8097 s, also not a regression. Preserve the four-CPU first
+  failure and investigate phases before accepting the WeChat revision cell.
+  Next predeclared repetition: ten alternating full-method rounds at four CPUs, two
+  complete repeats, identical frozen input/runtime/helpers and resource budgets,
+  `wechat-method-regression-repeat-cpu4.json`. Retain all ten rounds and aggregate
+  with the original five rather than choosing a favorable subset. No source fix yet.
+- Ranked diagnosis hypotheses and falsifiers: (1) host/transport scheduling variation,
+  which predicts no consistent regression in the declared larger alternating sample;
+  (2) block-read/decompression overhead, which predicts slower cached-page aggregates in
+  both first and repeated collections; (3) initial compression/publication, which predicts
+  consistently slower first pages. Existing sidecars show 37 successful method pages for
+  each collection, no retries, and retained selected sets of 7631024/475311 bytes
+  (baseline/candidate). Candidate first-page call times are lower in three of five pairs;
+  warm totals are close, so neither compression hypothesis is yet established. The first
+  failing round combines +0.2443 s first-page time and +0.2226 s subsequent-page sum;
+  the last combines only +0.0210 s first-page time with +0.2763 s subsequent-page sum.
+  Do not patch the codec based solely on a whole-workflow median.
+- `wechat-method-regression-repeat-cpu4.json` passes all 20 fresh-server trials,
+  ten alternating pairs, 40 full result/diagnostic comparisons and unchanged bound
+  identities. Predeclared ten-round medians (baseline/candidate, seconds) are first
+  4.83095/4.80580, repeated 4.00250/3.98390 and startup 7.58580/7.62095. Combining
+  every original and added round, fifteen-pair medians are first 4.8448/4.8564
+  (+0.0116 s, +0.24%), repeated 4.0380/4.0223 and startup 7.6199/7.7090
+  (+0.0891 s, +1.17%). Neither added nor combined sample crosses both thresholds.
+  All-fifteen first-query paired deltas span -0.4462 to +0.5017 s, median +0.0595 s,
+  with ten slower pairs; this is not a method speedup claim. Repeated paired deltas
+  span -0.4433 to +0.1730 s; startup spans -0.4140 to +0.4579 s. No p95 estimate.
+  The added sample's first-page call medians are 1.01615/0.99540 s, later-page sums
+  2.94895/2.95630 s and warm-page sums 3.10590/3.10945 s. A sustained codec or
+  publication regression is not reproduced; host/transport variation is consistent
+  with these measurements but not independently proven as the cause. Keep the original
+  gate failure, accept the expanded no-material-regression cell, and make no speculative
+  runtime change. Small residual differences remain visible.
+- Original five-round WeChat revision medians in seconds, baseline/candidate (the
+  four-CPU method first-query row is the preserved initial failure, superseded only for
+  gate assessment by the full fifteen-pair analysis above):
+
+  | CPU | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- | --- |
+  | 2 | string | 5.5049/0.7785 | 2.0547/0.1293 | 8.7432/4.1084 |
+  | 2 | method | 4.9252/4.8097 | 4.0439/4.1405 | 8.2060/8.0350 |
+  | 2 | field | 0.5278/0.5227 | 0.0389/0.0386 | 3.8146/3.7575 |
+  | 2 | concurrent | 5.1806/5.1588 | 4.0492/4.0802 | 8.4122/8.4143 |
+  | 4 | string | 5.4430/0.7841 | 2.0537/0.1287 | 8.3799/3.6241 |
+  | 4 | method | 4.8732/5.1461 | 4.2223/4.2475 | 7.9416/7.9203 |
+  | 4 | field | 0.5168/0.5159 | 0.0403/0.0375 | 3.4223/3.3886 |
+  | 4 | concurrent | 4.9602/4.9493 | 4.0895/4.1151 | 7.7218/7.8352 |
+
+  No other original median crosses both thresholds. All string paired first/repeat/startup
+  completions improve; first-query savings span 4.5165-5.4843 s (two CPUs) and
+  4.4922-5.2918 s (four), repeated savings 1.8482-2.0812 and 1.8270-2.0225 s.
+  Concurrent first-query deltas span -0.1523 to +0.2996 s and -0.2057 to +0.1388 s;
+  its startup deltas span -0.1466 to +0.4144 and -0.2014 to +0.4188 s. Do not call
+  every legacy workflow faster. String pages/retries fall from 60/30 to 20/0 at both
+  budgets, while method/field/concurrent pages stay 370/10/380, with zero retries.
+  Concurrent retained temporary bytes fall from at most 189176366 to 181978353;
+  descendant RSS peaks are 159428608/157757440 (two CPUs), 158507008/157650944 (four).
+  Checksum-verified first useful-page medians are strings 5.6757/4.0040 and
+  5.4091/3.5344, methods 4.3064/4.2346 and 4.0889/4.0405, concurrent 4.1071/4.1472
+  and 3.4061/3.4815 (two then four CPUs); one-page field results equal full completion.
+  B1 remains open for Douyin and final evidence consolidation; no new publication.
+- `douyin-final-operands-cpu2.json` completes 30 fresh-server trials at unchanged
+  two-CPU/per-call/trial/RSS/disk budgets. Independent
+  `douyin-final-operands-cpu2-verified.json` deliberately remains **failed**: all 40
+  product collections pass, with 4778 string sites and 115306 type sites; all 20
+  comparator type collections pass; all 20 comparator string collections contain one
+  extra site and no missing sites. Diagnostics cover 2708565 methods, 52547329
+  instructions and 213254 methods without code. Input/runtime/helper/sidecar identities
+  and oracle cleanup pass. Timing-receipt `passed` does not override this accuracy failure.
+  The extra site is identical in every failing collection: `classes9.dex`,
+  `PushVerifyLoginPadFragment.onViewCreated`, reported `const-string` at byte offset 600.
+  The preserved independent `douyin-comparator-extra-string.json` uses the same original
+  APK SHA256 c2b49cb5f85b8432e9c73a259c9eb9b8dd8d891e853177df2ce5a14ee4f3f5b9;
+  this method has only 598 instruction bytes. Fresh expected/actual site digests match
+  the original false-positive diagnosis. Do not remove the extra row, weaken the oracle,
+  or publish an equal-correctness string/concurrent speed ratio.
+- The independently correct standalone Douyin type cell has first/repeated/startup-to-
+  complete medians 38.5059/33.5523, 14.5910/19.6587 and 44.6215/35.0845 s
+  (ours/comparator). Every paired cold execution/startup is slower: +2.0502 to +7.4640 s
+  and +6.1718 to +11.8115 s respectively. Every repeat improves by 3.3018-5.7237 s.
+  Type first useful-page medians are 29.8478/15.5341 s, with 1310/610 pages across
+  both repeats, zero retries. Descendant RSS peaks at 134410240/860991488 bytes,
+  but ours additionally retains 479995139 temporary logical bytes. Cold scan, startup,
+  output repetition and tmpfs costs remain explicit residual gaps, not an overall win.
+  Product-only string first/repeated/startup medians are 2.4139/0.6170/8.4566 s;
+  concurrent medians are 38.2469/14.6575/44.0187 s. Their complete results are correct,
+  but comparator accuracy rejects those matched comparison cells. Product string/concurrent
+  pages total 80/1390; concurrent temporary bytes peak at 480254510 and descendant RSS
+  at 165658624. All raw comparator timings remain in the original receipt, not a ratio.
+- Source inspection identifies a B4 profiling candidate, not a measured causal finding:
+  `native_types._types` visits every method's declaration metadata in Python before
+  invoking the checked instruction scanner; `native_strings._strings` can instead use
+  `class_selector`/`select_directory` for a checked native directory pass. The existing
+  bulk selector does not yet expose the new type mode. Profile this difference alongside
+  preparation/transport before changing it; do not weaken instruction/declaration checks
+  or modify the frozen runtime during the remaining B1 measurements.
+- `douyin-final-revisions-cpu2.json` passes 40 trials, 20 alternating pairs and 100
+  complete result/diagnostic equality checks with unchanged input/runtime/helpers.
+  Its functional `passed` does not close performance: method first-complete median
+  9.9752/10.5069 s (baseline/candidate) is +0.5317 s, +5.33%, crossing both thresholds.
+  Paired deltas span -0.2047 to +0.5317 s. Repeated medians 7.9911/8.0657 s and
+  startup 16.1990/16.5108 s remain below the combined gate; concurrent first/repeated
+  medians improve. Preserve this first failure independently of the earlier WeChat signal.
+  Predeclare ten additional alternating full-method rounds at two CPUs with unchanged
+  input/runtime/helpers, two complete repeats and identical budgets:
+  `douyin-method-regression-repeat-cpu2.json`. Examine first-page versus subsequent cached
+  pages under the same host/transport, block-read and first-publication hypotheses; combine
+  all fifteen pairs for assessment rather than choosing a favorable repetition. No fix yet.
+- `douyin-method-regression-repeat-cpu2.json` passes 20 fresh-server trials, ten
+  alternating pairs, 40 complete result/diagnostic checks and unchanged bound identities.
+  Ten-round first/repeated/startup medians (baseline/candidate, seconds) are
+  10.95955/9.85130, 8.19195/7.74465 and 17.62675/16.20085. All fifteen pairs combined
+  give 10.8336/9.9505, 8.1177/7.9730 and 17.3601/16.3757; neither expanded sample
+  crosses both regression thresholds. Preserve the initial +5.33% gate failure rather
+  than relabeling its receipt. No sustained material regression is reproduced, but noise
+  is substantial: all-fifteen first-query paired deltas span -3.9790 to +2.4678 s,
+  median -0.1485 s; repeated deltas -1.2012 to +2.5567 s, median -0.1088 s; startup
+  deltas -5.0969 to +1.0835 s, median +0.1734 s (eight of fifteen slower). Thus the
+  improved unpaired startup medians do not establish a robust paired startup win.
+  Added-sample first-page medians are 2.40625/2.09465 s, later-page sums
+  6.65935/6.04830 s and warm-page sums 6.38025/6.05450 s. The proposed compression/
+  block-read regressions are not supported by a consistent phase slowdown; host/transport
+  variation remains a plausible, unproven explanation. Accept the expanded engineering
+  no-material-regression gate, not a method speedup claim; no runtime patch was made.
+- Original five-round two-CPU Douyin revision medians, baseline/candidate, seconds:
+
+  | Query | First complete | Repeated complete | Startup to complete |
+  | --- | --- | --- | --- |
+  | string | 18.5561/2.8500 | 2.2662/0.6713 | 25.2790/10.2496 |
+  | method | 9.9752/10.5069 | 7.9911/8.0657 | 16.1990/16.5108 |
+  | field | 1.3436/1.3628 | 0.0741/0.0857 | 7.8059/7.7039 |
+  | concurrent | 11.5380/10.6766 | 8.1773/7.9746 | 18.3650/17.0273 |
+
+  The method first-query row remains the initial failure addressed above. No other median
+  crosses both thresholds: field repeat is +15.65% but only +11.6 ms. Every paired string
+  first/repeat/startup improves, with first savings 14.7368-20.7916 s and repeated savings
+  1.5949-2.1109 s. Concurrent paired deltas remain mixed: first -2.3499 to +0.0713 s,
+  repeated -0.9627 to +0.3101 s, startup -2.4215 to +0.2677 s. Original first useful-page
+  medians from checksum-verified sidecars are string 10.1157/9.4739, method
+  8.6397/8.4130, field 7.8059/7.7039 and concurrent 8.8122/8.5713 s. String page/retry
+  totals fall from 100/10 to 80/0; method/field/concurrent remain 720/10/730 pages,
+  zero retries. Concurrent retained temporary bytes are 491715311/477977347 and
+  descendant RSS 152223744/152952832, with storage separately reported. Method selected
+  cache files are 14442673/848047 bytes, both within unchanged 16/32-MiB quotas.
+  Next is the four-CPU Douyin matrix; all current original receipts and runtime hashes
+  remain intact, B1 is not complete, and nothing is published.
+- Before starting four-CPU Douyin revision timing, predeclare a larger method sample:
+  the standard five-round four-scenario matrix plus ten additional alternating method-only
+  rounds, regardless of the first five's result. Earlier WeChat/Douyin first-five method
+  gates were noisy; all fifteen pairs will be assessed together, while preserving both
+  original receipts. Other scenarios retain five paired rounds. This is additional
+  sampling under unchanged correctness/budget/regression criteria, not a relaxed threshold.
+- Completion-audit gap identified before B1 closure: large-input cached MCP collections
+  have original-byte site/diagnostic oracles, and fixture tests cover cache-disabled
+  pagination, but there is not yet a dedicated current-runtime receipt comparing the
+  full uncached backend result (all fields, ordered rows and duplicates) with the cached
+  large-input collections. Add that acceptance check using original-byte canonical bundles
+  and the existing recorded-page replay, for all four inputs. An uncached direct scan
+  may use the existing verifier-only large page limit to collect its complete reference
+  set; this is an offline semantic oracle, not evidence of unbounded MCP responses or
+  uncached production latency. Keep real capped MCP and fallback fixture evidence separate.
+  Do not rerun independent decoders unnecessarily or substitute a count-only comparison.
+- Four-CPU Douyin `douyin-final-operands-cpu4-verified.json` retains the same accuracy
+  verdict after all 30 timing trials: all 40 product collections and all 20 comparator
+  type collections pass; all 20 comparator string collections contain the same one
+  out-of-instruction-range extra site, with identical expected/actual site digests to the
+  two-CPU report. Full original-byte diagnostics, bound identities and cleanup pass;
+  the combined verifier correctly remains failed. Standalone type first/repeated/startup
+  medians (ours/comparator, seconds) are 38.0230/28.5369, 14.8837/21.2285 and
+  43.1341/30.2138. Every paired first/startup is slower by 7.8970-9.5980 s and
+  11.0671-13.4558 s; every repeat improves by 4.8781-7.4860 s. Type first-page
+  medians are 27.9078/10.1811 s, pages 1310/610, no retries. Descendant RSS peaks
+  at 134651904/1206304768 bytes; ours also retains 479996463 temporary logical bytes.
+  Product-only string first/repeated/startup medians are 2.4088/0.6658/7.5485 s,
+  concurrent 35.9111/14.4295/40.6201 s; the comparator string accuracy failure prevents
+  equal-correctness string/concurrent performance ratios. Product concurrent pages total
+  1390, peak descendant RSS 163618816 and temporary logical bytes 480254686.
+- `douyin-final-revisions-cpu4.json` passes 40 trials, 20 alternating pairs, 100 exact
+  full-result/diagnostic comparisons and unchanged identities. None of its single-query
+  medians crosses both regression thresholds, but the concurrent repeated-complete median
+  is 6.4142/6.8368 s (baseline/candidate): +0.4226 s, +6.59%. All five paired deltas
+  are positive, +0.0191 to +0.5427 s, so do not discard this as noise or substitute the
+  method-only expanded sample. First/startup concurrent medians are 8.0481/8.0999 and
+  12.1802/12.2169 s. Preserve this gate failure and predeclare ten additional alternating
+  concurrent-only rounds, two complete repeats, unchanged runtime/input/helpers/budgets:
+  `douyin-concurrent-regression-repeat-cpu4.json`. Assess all fifteen concurrent pairs;
+  inspect method/field page timings and cache/transport phases if the signal persists.
+  The independently predeclared method-only expansion is currently running and cannot
+  close this separate concurrent gate. B1 remains open.
+- Predeclared `douyin-method-expanded-cpu4.json` passes 20 fresh-server trials, ten
+  pairs, 40 complete result/diagnostic comparisons and unchanged identities. Its added
+  first/repeated/startup medians are 9.41525/8.92100, 7.20930/7.32425 and
+  14.36495/13.34850 s (baseline/candidate). All fifteen method pairs give
+  8.7621/8.6774, 7.0695/6.9979 and 13.2291/13.0875 s; neither sample crosses both
+  regression thresholds. Full paired deltas span -1.8352 to +1.0996 s (first),
+  -0.7141 to +1.1198 s (repeat), -2.1141 to +1.8144 s (startup); paired medians
+  are -0.0620, -0.0589 and +0.0379 s. Nine of fifteen startup pairs are slower,
+  so the favorable unpaired median is not a robust startup speedup. This closes only
+  the expanded method regression gate, not the independently failing concurrent gate.
+- `douyin-concurrent-regression-repeat-cpu4.json` passes 20 fresh-server trials, ten
+  pairs, 80 full result/diagnostic comparisons and unchanged bound identities, but the
+  expanded performance gate **still fails**. Added-ten first/repeated/startup medians
+  (baseline/candidate, seconds) are 7.48050/7.61090, 5.94580/6.14340 and
+  11.41330/11.56085. All-fifteen medians are 7.5539/7.6686, 5.9765/6.3877 and
+  11.5074/11.5917. Repeated completion regresses +0.4112 s, +6.88%, with every one
+  of fifteen paired deltas positive (+0.0191 to +0.6471 s, median +0.2438 s).
+  Added-ten alone is below the percentage threshold, but cannot replace the combined
+  sample; do not select that subset as a pass. First/startup paired deltas span
+  -0.1147 to +1.1709 s and -0.2013 to +1.5528 s. The directionally consistent repeat
+  slowdown is now actionable; profile cached-page processing, lock waiting and transport
+  before a minimal fix. Further repetitions are not a substitute for diagnosis.
+- The diagnostic helper `profile_cached_collections.py` (artifact directory) isolates
+  concurrent cached service collections without MCP transport. The first attempt used
+  simultaneous CPython 3.13 cProfile tools and failed with `Another profiling tool is
+  already active`; preserve `profile-concurrent-baseline/report.json` and the original
+  `profile_cached_collections-thread-profilers-failed.py`. The corrected helper profiles
+  one collection while the other still runs concurrently. Its valid baseline/candidate
+  receipts are `profile-concurrent-{baseline,candidate}-single/report.json`. Callbacks
+  from the concurrent thread may appear in a profile; these are not MCP timing gates.
+  The pre-fix cache encoded every restored row again solely for byte accounting:
+  approximately 113211 JSON encoder calls versus 47065 in the published baseline.
+  Bounded block decoding accounted for about 0.15 s, with zlib inflation about 0.025 s;
+  these profiles do not support blaming decompression or lock waiting for the regression.
+- Freeze the exact pre-fix runtime in `read-budget-before/droidasc_mcp` before changing
+  runtime source. `read-budget-red.xml` fails on the redundant compact row encoding,
+  while row order and final byte bounds already pass. The fix reads validated block
+  byte counts instead: allow only the skipped leading block prefix plus one final
+  bounded block. Decompressed read bytes stay at most `maximum + 2 * MAX_BLOCK_BYTES`;
+  final target resolution and `reference_page` still enforce the response prefix/cap.
+  No schema, compression format, storage quota, scanner or public contract changes.
+  `read-budget-green.xml` passes and `read-budget-focused.xml` passes 140 tests,
+  including 15 offset/output-budget comparisons with the exact full-list page formatter.
+  A subsequent cancellation test also passes and proves completed cache reuse survives
+  an interrupted read. The current source needs fresh full-suite/CI acceptance.
+- `profile-concurrent-read-budget/report.json` verifies identical ordered hashes for
+  47005 method and 489 field sites, unchanged runtime/input/helper identities and cleanup.
+  Method collections remain 72 pages; the profile now records 47064-47065 JSON encoder
+  calls, matching the old baseline rather than the pre-fix double encoding. Unprofiled
+  warm service completion is 1.1408 s in this diagnostic, not a real-MCP speed claim.
+  Predeclare five alternating real-MCP concurrent rounds against the frozen pre-fix
+  snapshot (`douyin-read-budget-isolation-cpu4.json`), then five against published
+  v0.2.4. Preserve every result and use full row/diagnostic equality in both comparisons.
+  The older corpus receipts remain bound to their pre-fix runtime; they do not prove
+  current-runtime performance or cache parity.
+- `douyin-read-budget-isolation-cpu4.json` passes ten fresh-server trials, five pairs
+  and forty complete collection comparisons, with input/runtime/helper identities
+  unchanged. The frozen baseline hashes equal the preceding 046045b candidate hashes;
+  only `reference_cache.py` differs in the new runtime. Pre-fix/fixed medians (seconds)
+  are 8.1477/7.5613 first, 6.5677/6.0571 repeat and 12.2152/11.5711 startup.
+  All five paired first/repeat/startup deltas are negative; repeat deltas span
+  -0.7284 to -0.3897 s. This isolates a real-MCP improvement from the bounded-read fix,
+  not comparator parity. The separately predeclared published-baseline test remains next.
+- Add `scripts/verify_selected_set_parity.py` to reconstruct a hash/size/inventory-checked
+  original-byte bundle and compare complete uncached string/type backend responses with
+  recorded MCP collections. Ordered rows, duplicate multiplicity and all backend fields
+  must match; extra response context must match session-open metadata. Replay checks
+  actual requests, continuations, diagnostics and provenance. Receipt/runtime/helper/
+  sidecar identities remain bound, cache scopes are counted, and failed attempts are saved.
+  This oracle is cache equivalence, not an independent instruction decoder or timing.
+  `selected-parity-initial.xml` records two fixture-assumption failures (a one-site string
+  selector and an expansion budget above the fixture limit); `selected-parity-fixed-fixture.xml`
+  records the overly strict assumption that every repeated page uses the selected-set
+  layer rather than the existing exact-page layer. Corrected fixture and scope assertions
+  pass all 27 tests in `selected-parity-cache-scopes.xml`, including real service/direct
+  backend comparison, altered row order/duplicates/metadata/context and receipt identities.
+  Both cache layers remain distinguished; large-input verification is still pending.
+  Include the verifier, its replay dependencies and tests in canonical-sdist required files.
+- The separately declared `douyin-read-budget-baseline-cpu4.json` passes ten fresh-server
+  trials/five pairs/forty complete collection comparisons and unchanged identities.
+  Published v0.2.4/fixed medians are 15.7213/9.6300 s first, 11.0441/8.4417 s repeat
+  and 22.1976/20.9054 s startup. None crosses both regression thresholds, but these
+  timings are noisy: paired first deltas span -7.9324 to +9.1860 s, repeat -19.8463 to
+  +1.4689 s and startup -12.5420 to +42.6574 s. Do not advertise a percentage speedup
+  from this sample. The cleaner isolated before/after result above supports the fix;
+  this five-pair check preserves semantic compatibility but not a stable baseline ratio.
+  A later host snapshot shows load averages 8.98/11.76/7.02 while the subsequent source
+  suite is running; that snapshot is not evidence establishing the earlier timing cause.
+- `read-budget-source-full.xml` is an interrupted local run, not a passing full suite:
+  after 794.16 s, 454 tests had passed without reported failures. Interrupt the owned
+  pytest process with SIGINT rather than keep spending the implementation turn on the
+  unusually slow local run; observed pytest/server/resource-tracker PIDs then all exit.
+  Preserve the partial XML and require the new commit's complete remote source/package
+  matrix. No required gate is waived, and the older 1649-test/CI result is not relabeled
+  as covering these changes. Focused cache/page tests and the 27 parity-verifier tests
+  remain the completed local evidence; remaining large-input parity is still open.
 
 Reproduce alternating old/new complete-workflow regression timing (fresh output required):
 
