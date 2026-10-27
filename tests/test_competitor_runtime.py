@@ -230,6 +230,8 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
 ):
     calls = []
     ours = implementation == "ours"
+    elapsed = 0.0
+    monkeypatch.setattr(benchmark, "time", SimpleNamespace(monotonic=lambda: elapsed))
 
     class Client:
         def __init__(self, endpoint):
@@ -242,7 +244,9 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
             pass
 
         async def call_tool(self, name, params, **kwargs):
-            await asyncio.sleep(0.01)
+            nonlocal elapsed
+            await asyncio.sleep(0)
+            elapsed += 0.125
             calls.append((name, params))
             if name in {"asc_open_artifact_session", "load_artifact"}:
                 result = {"status": "ok", "session_id": "s", "analysis_id": "s"}
@@ -309,7 +313,9 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
         metric["first_result_from_process_start_seconds"]
         > first_ops[0]["response_from_process_start_seconds"]
     )
-    assert metric["batch_seconds"][0] >= sum(op["seconds"] for op in first_ops) - 0.001
+    assert [op["seconds"] for op in first_ops] == [0.125] * len(first_ops)
+    assert metric["batch_seconds"][0] == sum(op["seconds"] for op in first_ops)
+    assert metric["first_result_from_process_start_seconds"] == (1 + len(first_ops)) * 0.125
     assert first_collection["response_limit_recoveries"] == (
         [{"offset": 0, "limit": 2}] if ours else []
     )

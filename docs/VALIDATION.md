@@ -17,14 +17,20 @@ Earlier evidence below retains its original runtime and scope; it is not a subst
 this candidate's final package acceptance or proof of overall performance completion.
 
 The first candidate 014969b passes all 1490 local Linux source tests with zero skips.
-CI 40430197917 passes 17 jobs but fails all eight Windows source/distribution jobs on
-one test-fixture lifetime error: the corrupt-reference-count mutation commits its SQLite
+CI 40430197917 passes 17 jobs but fails all eight Windows source/distribution jobs with
+a test-fixture lifetime error: the corrupt-reference-count mutation commits its SQLite
 transaction without closing the connection before checking file cleanup. Production cache
 cleanup correctly retains its reservation when Windows refuses deletion of that open file.
 The fixture now explicitly closes the connection, with a closed-handle assertion that also
 fails on Linux before the fix. Production runtime sources are unchanged. The failed CI,
 packages, local red test and original-oracle timeout/retry are preserved under
-artifacts/release-024-20261027; corrected-candidate receipts use its candidate2 subdirectory.
+artifacts/release-024-20261027; the SQLite-only candidate's local 1490-pass receipt is in
+candidate2. Complete downloaded logs also expose a Windows timer-resolution failure in
+the full-collection benchmark unit test: a 10-ms sleep can leave successive monotonic
+readings equal. That test now advances a module-local deterministic clock per fake response
+and asserts exact complete-collection and per-attempt durations, retaining strict last-page
+and response-limit recovery checks. Real benchmark timing code is unchanged. Superseded
+CI 40431741392 was cancelled; final source/package gates use the candidate3 subdirectory.
 The independent Douyin JVM oracle timed out once at 180 seconds and passed a separate
 same-parameter retry; this is not a product-query failure or a performance acceptance result.
 

@@ -22,8 +22,11 @@ and graph-completeness objectives remain open independently of this incremental 
 The first candidate's Windows gate exposed a leaked SQLite handle in the corruption-test
 fixture, not in the product cache. The corrected fixture commits and closes before cleanup;
 an explicit closed-handle assertion reproduces the defect on Linux too. CI 40430197917
-and its packages remain rejected. The production runtime stays frozen; all final candidate
-source/package gates are refreshed under artifacts/release-024-20261027/candidate2.
+and its packages remain rejected. Complete logs also reveal a coarse-clock Windows unit-test
+failure; deterministic fake-response timing now verifies exact full-collection accounting.
+The SQLite-only candidate passes all 1490 local tests; its CI 40431741392 is superseded and
+cancelled. Production and real benchmark runtime stay frozen; final source/package gates
+are refreshed under artifacts/release-024-20261027/candidate3.
 
 ## Consolidation history
 
