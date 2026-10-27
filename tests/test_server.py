@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from jsonschema import Draft202012Validator
 from mcp import Client
 from pydantic import TypeAdapter, ValidationError
 
@@ -62,7 +63,13 @@ async def test_every_tool_advertises_typed_wire_contract(settings):
         assert len(properties) >= 5, tool.name
         if tool.name.startswith(("asc_query_dex", "asc_analyze_dex")):
             assert properties["items"]["items"]["$ref"].endswith("/DexRow")
-            assert schema["$defs"]["DexRow"]["properties"]["instruction_offset"]["anyOf"]
+            offset_schema = schema["$defs"]["DexRow"]["properties"]["instruction_offset"]
+            Draft202012Validator.check_schema(offset_schema)
+            validator = Draft202012Validator(offset_schema)
+            for value in (None, 0, 12):
+                assert validator.is_valid(value), (tool.name, value)
+            for value in (True, 1.5, "12", [], {}):
+                assert not validator.is_valid(value), (tool.name, value)
             assert properties["status"]["enum"] == ["ok", "partial", "error", "not_applicable"]
 
 

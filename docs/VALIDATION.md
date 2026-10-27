@@ -3,6 +3,19 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## v0.2.4 release candidate, 2026-10-27
+
+The current candidate freezes the post-consolidation workflow changes described in
+CHANGELOG.md. Its initial full local assessment is preserved in
+artifacts/release-assessment-20261027/source-full.xml, including the stale nullable-schema
+assertion failure. The corrected assertion validates accepted/rejected JSON values rather
+than requiring the older `anyOf` spelling. Release acceptance must bind the frozen commit
+to fresh Linux/Windows Python 3.10-3.13 results, the canonical sdist, exact native wheels
+and original-input reference checks. New receipts live in artifacts/release-024-20261027;
+the release notes identify the final CI and package hashes after those gates pass.
+Earlier evidence below retains its original runtime and scope; it is not a substitute for
+this candidate's final package acceptance or proof of overall performance completion.
+
 ## Complete concurrency development checks, 2026-10-24
 
 The full_concurrent harness now collects every method and field page concurrently and

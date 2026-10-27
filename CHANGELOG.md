@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.4
+
+- Reuse complete selected method, field, outgoing-call and fuzzy-reference sets across
+  pages, with bounded session storage, verified publication, invalidation and cleanup.
+  Oversized sets and unavailable cache space retain the normal scan path.
+- Return byte-bounded complete reference prefixes with exact `next_offset` continuations
+  instead of requiring an oversized-page retry. `limit` remains the maximum row count.
+- Reduce nullable output-schema validation overhead while preserving the accepted value
+  types and supporting older Pydantic schema generation.
+- Add optional compact manifest/native summaries, standalone DEX entry browsing and
+  exact class/name selectors in method-tracing prompts.
+- Preserve original-byte reference accuracy checks and complete-collection/concurrency
+  measurements. Timing changes are workload-specific; universal startup, repeated-query
+  and total-memory improvements are not claimed.
+
 ## 0.2.3
 
 - Add checked native DEX references, declaration/string discovery, class outlines,

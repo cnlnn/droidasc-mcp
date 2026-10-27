@@ -34,7 +34,8 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.2.3 提供原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
+0.2.4 增加有界的完整引用集复用、按字节预算连续分页、容器摘要和裸 DEX 内容读取。
+保留原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
 回退，Smali 仍使用 ASC 官方 CLI。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
 冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
 
@@ -60,22 +61,23 @@ CPython 3.11+、x86-64 Linux 安装原生 wheel：
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+、Windows（PowerShell）：
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
 ```
 
 CPython 3.10 使用 `python3.10` 或 `py -3.10` 创建环境，并将 wheel URL 中的
 `cp311-abi3` 替换为 `cp310-cp310`。stable-ABI wheel 支持 CPython 3.11 及以上，
-Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.3.tar.gz`；
+Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.4.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
-已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为重新构建的合并版 0.2.3。
+已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为本次构建。
+历史 v0.2.4 已并入重新发布的 v0.2.3；本次发布的是其后的工作流增量。
 
 `operation="find_string_refs"`：可将字符串搜索结果的 `value` 原样传入，
 按字面子串查找 `const-string` 和 `const-string/jumbo` 使用位置，无需转义正则或构建索引。
@@ -410,7 +412,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.3.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.4.tar.gz dist/*.whl
 ```
 
 ## 许可证

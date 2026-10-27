@@ -36,7 +36,9 @@ structured data instead of unbounded terminal output.
 
 ## Install
 
-Version 0.2.3 provides checked native DEX references, discovery, structural views and lazy
+Version 0.2.4 adds bounded selected-reference reuse, byte-bounded reference continuations,
+compact artifact summaries and standalone DEX entry browsing. It retains checked native
+DEX references, discovery, structural views and lazy
 indexes. An optional C accelerator has an independent Python fallback; ASC remains the public
 Smali engine. The [native-query validation](docs/NATIVE_QUERY_VALIDATION.md) records accuracy,
 workload-specific cold-query improvements and the remaining startup/first-result cost.
@@ -64,22 +66,23 @@ CPython 3.11+ on x86-64 Linux:
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+ on Windows (PowerShell):
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.3/droidasc_mcp-0.2.3-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
 ```
 
 For CPython 3.10, create the environment with `python3.10` or `py -3.10` and replace
 `cp311-abi3` in the wheel URL with `cp310-cp310`. The stable-ABI wheels support CPython 3.11
 and newer; the Linux wheels require glibc 2.34 or newer. The canonical source archive is
-`droidasc_mcp-0.2.3.tar.gz`. Source installation retains the Python fallback if no compiler is
+`droidasc_mcp-0.2.4.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. If you installed a withdrawn 0.2.3-0.2.9 package,
-use `--force-reinstall --no-cache-dir` to replace it with the consolidated 0.2.3 build.
+use `--force-reinstall --no-cache-dir` to replace it with this build. The withdrawn historical
+v0.2.4 was consolidated into v0.2.3; this release contains the subsequent workflow changes.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 

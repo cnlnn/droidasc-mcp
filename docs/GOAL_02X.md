@@ -1,5 +1,26 @@
 # 0.2.x incremental completion goal
 
+## Release candidate v0.2.4, 2026-10-27
+
+The maintainer approved freezing the current workflow increment, correcting the stale
+nullable-schema assertion and publishing v0.2.4 only after fresh source, cross-platform
+and exact-package acceptance. The published baseline is consolidated v0.2.3 at 12a4fc5;
+the withdrawn historical v0.2.4 is not this candidate. Existing tags and releases remain
+unchanged. Release scope is selected-reference reuse, byte-bounded paging, compact artifact
+summaries, raw DEX entry browsing and method-selector handoff, not overall goal completion.
+
+The initial local assessment is retained under artifacts/release-assessment-20261027:
+1487 passed, one stale `anyOf` assertion failed and two Rust checks lacked configuration;
+the two Rust transport checks passed separately after configuration. The corrected test
+checks nullable-integer acceptance and rejects unrelated JSON types without prescribing
+the equivalent schema encoding. Fresh release evidence belongs under
+artifacts/release-024-20261027; old CI results do not approve this candidate.
+Final CI, package and publication receipts are recorded with the release, after the frozen
+commit is accepted. Startup/storage, universal repeat-query superiority and broader workflow
+and graph-completeness objectives remain open independently of this incremental release.
+
+## Consolidation history
+
 Status: active. On 2026-10-23 the maintainer requested consolidation of v0.2.3-v0.2.9
 into a freshly built and accepted v0.2.3, preserving all current source improvements and
 v0.2.2 and earlier releases. The seven releases, assets and tag objects were backed up
