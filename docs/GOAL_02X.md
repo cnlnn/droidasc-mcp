@@ -196,11 +196,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1.1-B1.5 implemented on codex/competitor-gap-b1; current local source regression passes 1599 cases without skips; B1 acceptance remains open |
-| Next action | Finish the new full-string/type/parallel large-input MCP receipts and offline verification; collect matched baseline/candidate/comparator measurements, then final CI/package gates |
+| Current task | B1 selected-set block storage follow-up passes 1628 full-source cases without skips and the Douyin MCP smoke; independent decoding, new CI and B1 acceptance remain open |
+| Next action | Verify block storage on complete Douyin MCP collections and original bytes, then finish holdout, matched baseline/candidate/comparator measurements and fresh source/CI/package gates |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
-| Planning checks | Current configured source suite, Ruff and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Large-input full MCP/type/string benchmark matrix and final Windows/package CI remain unrun; real-model access is a later B3 gate |
+| Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
+| Open dependencies | Large-input benchmark matrix remains open; CI run 40458754727 passed for pre-follow-up candidate 3b1de37, not current block storage; real-model access is a later B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -352,6 +352,73 @@ Full-collection acceptance extension, 2026-10-27:
   were skipped in the narrower unconfigured run. Product files remain the same frozen
   runtime as the large-input receipts. This candidate is ready for development-branch CI;
   Windows/canonical-sdist/native-wheel gates and the remaining B1 matrix are still open.
+- Candidate commit `3b1de370bbfcebbd7547c1681ade2ca6259fca02` is pushed only to
+  `codex/competitor-gap-b1`; CI run `40458754727` is active. No main merge, tag or release
+  was performed. CI completion and downloaded per-cell receipts must still be inspected.
+- `candidate/wechat-operands-first-verified.json` accepts all eight full MCP collections:
+  738 string-use and 44002 type-operand sites, with zero missing/extra sites for both
+  products. Native diagnostics match 865327 methods, 21430036 instructions and 41085
+  methods without code. Original, runtime and all bound verifier/sidecar inputs are
+  unchanged; oracle cleanup is verified. The one-round performance limitation remains.
+- `candidate/douyin-operands-first.json` fails the explicit 180 s complete-trial bound for
+  both products. Ours returns all 4778 string sites but only the first 1000 of 115306 type
+  sites before another long worker query is stopped. The comparator completes its first
+  pair of collections but not its second. This is a measured remaining gap, not a pass.
+- `candidate/douyin-spool-diagnostic.json` confirms the cache cause through the existing
+  native scanner/spool: the 16 MiB lease raises `SQLITE_FULL` after 60658 stored rows while
+  13.6 GB of temporary storage remains available, so no complete set is published. The
+  same uncached page and diagnostics compare equal. In-process scans with and without
+  the spool take about 52 s each; they are diagnostic, not matched MCP performance numbers.
+- **Evidence-backed B1.3 follow-up:** retain the current spool, publication, identity and
+  quota architecture, but encode selected rows in bounded independently compressed
+  SQLite blocks instead of one repeated JSON string per site. Keep the 16/32 MiB entry/
+  session limits, flat public response, exact ordering and byte-page bounds unchanged.
+  Bound both writer buffers and decompression, reject malformed blocks, and repeat legacy
+  method/field, cancellation, quota, source/transport and package gates. A storage-only
+  estimate from the comparator's complete first type collection yields 29.7 MB raw row
+  JSON versus 2.0 MB in 901 blocks (128 rows/64 KiB targets); this is motivation, not an
+  accuracy oracle or accepted implementation. This is selected-result storage, not a retry
+  of previously rejected whole-APK preparation/compression changes. B1 remains unaccepted;
+  commit 3b1de37 and its CI remain the pre-follow-up baseline, not evidence for new code.
+- CI run `40458754727` completed successfully for `3b1de37`: all 25 jobs pass, including
+  Linux/Windows source, distribution, signing, Rust and stability gates. The eight downloaded
+  source JUnit receipts each contain 1599 tests and zero skips/errors/failures. These are
+  pre-block-storage results; they cannot close the new candidate's cross-platform gate.
+- The selected-set follow-up stores at most 128 rows or a 64 KiB target per compressed
+  SQLite block; a single legal wide row retains its existing 256 KiB bound. Decoding has
+  explicit compressed/uncompressed bounds, rejects extra streams/trailing data, and reads
+  only blocks intersecting the requested page. Public rows, duplicates, offsets and quotas
+  are unchanged. An accounting regression initially charged the last compressed block
+  rather than the owned SQLite/receipt files; `block-accounting-red.xml` preserves it.
+  The corrected accounting is checked against actual owned file sizes.
+- `candidate/block-cache-bounds.xml` passes 98 cases; `block-scanner-transport.xml` passes
+  all 249 selected scanner/string/type/cache/page/real-stdio-and-HTTP cases without skips.
+  Corrupt layouts/payloads, decompression bombs, wide rows, byte paging, cancellation and
+  actual storage accounting are covered. The wide-operand fixture now uses deterministic
+  distinct high-entropy identities, so the unchanged 64 KiB overflow case still overflows
+  after compression rather than accidentally becoming a fitting-cache test. Historical
+  failed block-cache attempts are retained. Large-input evidence is being regenerated.
+- `candidate/douyin-operands-blocks-smoke.json` completes both fresh-server trials with
+  two full concurrent string/type collections per product. Ours now completes all 115306
+  type sites; its first unseen type page reports selected-set reuse and 3174751 retained
+  bytes for both stored queries, within the unchanged 32 MiB session/16 MiB entry quotas.
+  The first/repeated complete pairs take 95.0581/36.6602 s versus 145.8802/58.4986 s for
+  the comparator in this one paired round. All source/input/resource checks pass, but
+  this is not the five-round performance gate. The complete-trial bound is explicitly
+  600 s for both, unlike the failed earlier 180 s run; no failed-subset ratio is used.
+- The first offline Douyin oracle attempt used an insufficient 900 s deadline: after
+  229 s only eight of 53 DEX files had been decoded. It was stopped deliberately before
+  that deadline and its original running receipt retained alongside
+  `douyin-operands-blocks-verifier-budget.json`; owned processes and the exact temporary
+  bundle were removed. Independent verification restarts under a declared 2400 s bound
+  in `douyin-operands-blocks-verified-2400s.json`. This is an offline acceptance budget,
+  not an increased product or MCP performance limit. Partial decoding is not acceptance.
+- `candidate/block-source-full.xml` passes all 1628 configured source tests in 689.59 s,
+  with zero failures/errors/skips. Ruff, formatting, both generated-schema checks and
+  whitespace checks also pass. The independent offline Douyin oracle ran concurrently
+  with this correctness suite, not with the timed MCP trial. This candidate is ready for
+  its own development-branch CI; neither the prior commit's CI nor this source gate
+  substitutes for current Windows/distribution evidence or remaining B1 performance cells.
 
 Reproduce full-collection smoke and verification (choose new output names):
 

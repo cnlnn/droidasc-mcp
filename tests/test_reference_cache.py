@@ -1,9 +1,11 @@
 """Selected reference sets share checked pages without repeating native scans."""
 
+import hashlib
 import json
 import sqlite3
 import threading
 import time
+import zlib
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import replace
@@ -16,7 +18,16 @@ import pytest
 from droidasc_mcp import reference_cache
 from droidasc_mcp.config import Settings
 from droidasc_mcp.reference_cache import ReferenceCache
-from droidasc_mcp.reference_spool import ReferenceSpool, checksum
+from droidasc_mcp.reference_spool import (
+    BLOCK_BYTES,
+    BLOCK_ROWS,
+    MAX_BLOCK_BYTES,
+    MAX_STORED_BLOCK_BYTES,
+    MAX_VALUE_BYTES,
+    ReferenceSpool,
+    checksum,
+    decode_block,
+)
 from droidasc_mcp.runner import DroidAscError
 from droidasc_mcp.service import DroidAscService
 
@@ -54,16 +65,16 @@ def test_wide_operand_pages_preserve_every_site_with_or_without_cache(
     wide_operand_dex_file, monkeypatch, kind, fits
 ):
     monkeypatch.setattr(reference_cache, "MAX_ENTRY_BYTES", (1024 if fits else 64) * 1024)
-    service = DroidAscService(
-        replace(Settings.from_env(), allowed_roots=(wide_operand_dex_file.parent,))
-    )
+    path, values, targets = wide_operand_dex_file
+    service = DroidAscService(replace(Settings.from_env(), allowed_roots=(path.parent,)))
     try:
-        key = service.open_dex_session([str(wide_operand_dex_file)])["session_id"]
+        key = service.open_dex_session([str(path)])["session_id"]
         query = (
             {
                 "operation": "find_type_refs",
                 "type_relation": "operand",
-                "type_descriptor": "Lwide/" + "Target" * 500 + ";",
+                "type_descriptor": "Lwide/",
+                "type_match": "substring",
             }
             if kind == "type"
             else {"operation": "find_string_refs", "value": "literal[a.*]"}
@@ -88,9 +99,9 @@ def test_wide_operand_pages_preserve_every_site_with_or_without_cache(
         assert all(row["caller"] == f"Lwide/Caller;->{kind}s()V" for row in rows)
         assert all("target_resolution" not in row for row in rows)
         if kind == "string":
-            assert all(row["value"] == "literal[a.*]" * 300 for row in rows)
+            assert [row["value"] for row in rows] == values
         else:
-            assert all(row["type_descriptor"] == query["type_descriptor"] for row in rows)
+            assert [row["type_descriptor"] for row in rows] == targets
         references = service.sessions.entries[key].references
         assert bool(references.entries) == fits
         assert not references.pending
@@ -156,6 +167,144 @@ def test_pages_preserve_duplicates_metadata_and_independent_responses(cached):
     assert second["prototypes"] == ["()V"] and not second["has_more"]
     assert cache.read(QUERY)["items"]
     assert cache.read({**QUERY, "offset": 2**80})["items"] == []
+
+
+def test_repeated_identities_fit_existing_quota_without_losing_page_boundaries(cached):
+    cache, _ = cached
+    cache.settings = replace(cache.settings, max_page_size=1000)
+    query = {**NEW_QUERIES[1], "type_descriptor": "Ljava/lang/String;"}
+    rows = [
+        {
+            "caller": (
+                f"Lcom/example/application/SharedOwner{i // 4};->convert(Ljava/lang/Object;)V"
+            ),
+            "dex_entry": "classes.dex",
+            "type_descriptor": "Ljava/lang/String;",
+            "opcode": "check-cast",
+            "offset_unit": "code_units_from_method_start",
+            "instruction_offset": i % 4,
+        }
+        for i in range(2000)
+    ]
+    rows[128] = dict(rows[127])
+    ticket = cache.begin(query)
+    assert ticket["budget_bytes"] == 64 * 1024
+    assert len(json.dumps(rows).encode()) > ticket["budget_bytes"] * 5
+    write_scan(cache, ticket, rows)
+    cache.finish(ticket, publish=True)
+    assert cache.entries, "Repeated reference identities should fit the unchanged storage quota"
+    assert cache.used == sum(p.stat().st_size for p in Path(ticket["directory"]).iterdir())
+    assert cache.used <= ticket["budget_bytes"]
+    for offset, limit in ((0, 129), (127, 3), (137, 311), (777, 700), (1999, 10), (2001, 10)):
+        result = cache.read({**query, "offset": offset, "limit": limit})
+        assert result["items"] == rows[offset : offset + limit]
+        assert result["total"] == len(rows) and result["diagnostic"] == 41
+
+
+@pytest.mark.parametrize(
+    "encoded,count,raw_bytes",
+    [
+        (zlib.compress(b"[{}]"), 0, 4),
+        (zlib.compress(b"[{}]"), True, 4),
+        (zlib.compress(b"[{}]"), BLOCK_ROWS + 1, 4),
+        (zlib.compress(b"[{}]"), 1, MAX_BLOCK_BYTES + 1),
+        (zlib.compress(b"[{}]"), 1, 3),
+        (zlib.compress(b"[{}]"), 1, 5),
+        (zlib.compress(b"[{}]"), 2, 4),
+        (zlib.compress(b"[{}]")[:-1], 1, 4),
+        (zlib.compress(b"[{}]") + b"trailing", 1, 4),
+        (zlib.compress(b"[{}]") * 2, 1, 4),
+        (zlib.compress(b"x" * (MAX_BLOCK_BYTES * 8)), 1, 4),
+        (b"x" * (MAX_STORED_BLOCK_BYTES + 1), 1, 4),
+        (b"invalid", 1, 4),
+        ("text", 1, 4),
+        (zlib.compress(b"[\xff]"), 1, 3),
+        (zlib.compress(b"oops"), 1, 4),
+        (zlib.compress(b"{}"), 1, 2),
+        (zlib.compress(b"[42]"), 1, 4),
+    ],
+)
+def test_compressed_block_rejects_invalid_or_unbounded_input(encoded, count, raw_bytes):
+    with pytest.raises(ValueError):
+        decode_block(encoded, count, raw_bytes)
+
+
+def test_spool_buffer_and_single_wide_row_remain_bounded(cached):
+    cache, _ = cached
+    ticket = cache.begin(NEW_QUERIES[0])
+    rows = [{"value": "x" * 1000, "instruction_offset": i} for i in range(500)]
+    rows.insert(233, {"value": "x" * (MAX_VALUE_BYTES - 12)})
+    assert len(json.dumps(rows[233], separators=(",", ":")).encode()) == MAX_VALUE_BYTES
+    with ReferenceSpool(ticket, cache.root, cache.settings.max_output_bytes) as spool:
+        for row in rows:
+            spool(row)
+            assert spool.enabled
+            assert len(spool.buffer) < BLOCK_ROWS
+            assert spool.buffer_bytes < BLOCK_BYTES
+        spool.scanned({})
+        spool.finish({"status": "ok", "total": len(rows)})
+    path = Path(ticket["directory"]) / "data.sqlite"
+    with closing(sqlite3.connect(path)) as db:
+        blocks = db.execute(
+            "SELECT first_row,row_count,raw_bytes,value FROM sites ORDER BY first_row"
+        )
+        restored = []
+        for first, count, raw_bytes, encoded in blocks:
+            assert first == len(restored)
+            assert raw_bytes <= MAX_BLOCK_BYTES
+            restored.extend(decode_block(encoded, count, raw_bytes))
+    assert restored == rows
+    cache.finish(ticket, publish=True)
+    assert cache.entries and not cache.pending
+    assert cache.used == sum(p.stat().st_size for p in path.parent.iterdir())
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "UPDATE sites SET first_row=-1 WHERE first_row=0",
+        "UPDATE sites SET first_row=129 WHERE first_row=128",
+        "UPDATE sites SET first_row=127 WHERE first_row=128",
+        "DELETE FROM sites WHERE first_row=128",
+        "UPDATE sites SET row_count=0 WHERE first_row=0",
+        "UPDATE sites SET row_count=129 WHERE first_row=0",
+        "UPDATE sites SET raw_bytes=300000 WHERE first_row=0",
+        "UPDATE sites SET value=zeroblob(300000) WHERE first_row=0",
+    ],
+)
+def test_invalid_block_layout_cannot_publish(cached, statement):
+    cache, _ = cached
+    ticket = cache.begin(QUERY)
+    write_scan(cache, ticket, rows=ROWS * 100)
+    directory = Path(ticket["directory"])
+    path = directory / "data.sqlite"
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute(statement)
+    receipt_path = directory / "complete.json"
+    receipt = json.loads(receipt_path.read_text())
+    receipt.update(size=path.stat().st_size, sha256=checksum(path))
+    receipt_path.write_text(json.dumps(receipt))
+    cache.finish(ticket, publish=True)
+    assert not cache.entries and not cache.pending and not directory.exists()
+    assert cache.used == 0
+
+
+def test_corrupt_block_payload_falls_back_without_escaping_cache(cached):
+    cache, _ = cached
+    ticket = cache.begin(QUERY)
+    write_scan(cache, ticket)
+    directory = Path(ticket["directory"])
+    path = directory / "data.sqlite"
+    with closing(sqlite3.connect(path)) as db, db:
+        db.execute("UPDATE sites SET value=?", (b"invalid zlib",))
+    receipt_path = directory / "complete.json"
+    receipt = json.loads(receipt_path.read_text())
+    receipt.update(size=path.stat().st_size, sha256=checksum(path))
+    receipt_path.write_text(json.dumps(receipt))
+    cache.finish(ticket, publish=True)
+    assert cache.entries
+    assert cache.read(QUERY) is None
+    assert not cache.entries and cache.used == 0 and not directory.exists()
 
 
 @pytest.mark.parametrize("rows", [[], [{"field_descriptor": "Lz;->field:I"}]])
@@ -256,7 +405,7 @@ def test_incomplete_or_corrupt_publication_never_reused(cached, mutation):
         receipt[{"checksum": "sha256", "key": "key", "schema": "schema"}[mutation]] = "wrong"
     elif mutation == "count":
         with closing(sqlite3.connect(path)) as db, db:
-            db.execute("DELETE FROM sites WHERE rowid=2")
+            db.execute("UPDATE sites SET row_count=row_count+1 WHERE rowid=0")
         with pytest.raises(sqlite3.ProgrammingError, match="closed database"):
             db.execute("SELECT 1")
         receipt.update(size=path.stat().st_size, sha256=checksum(path))
@@ -362,8 +511,13 @@ def test_worker_discards_ineligible_or_over_budget_sets(cached, failure):
     ticket = cache.begin(QUERY)
     with ReferenceSpool(ticket, cache.root, cache.settings.max_output_bytes) as spool:
         if failure == "disk_limit":
-            for _ in range(128):
-                spool({"callee": "Lx;->m()V", "padding": "x" * 4096})
+            for index in range(128):
+                spool(
+                    {
+                        "callee": "Lx;->m()V",
+                        "padding": hashlib.shake_256(str(index).encode()).hexdigest(2048),
+                    }
+                )
         else:
             spool(
                 {

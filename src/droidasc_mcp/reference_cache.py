@@ -13,7 +13,17 @@ from pathlib import Path
 from .memory_cache import signature
 from .reference_page import OPERATIONS as OPERATIONS
 from .reference_page import reference_page
-from .reference_spool import MAX_VALUE_BYTES, RECEIPT_BYTES, SCHEMA, checksum, file_identity
+from .reference_spool import (
+    BLOCK_ROWS,
+    MAX_BLOCK_BYTES,
+    MAX_STORED_BLOCK_BYTES,
+    MAX_VALUE_BYTES,
+    RECEIPT_BYTES,
+    SCHEMA,
+    checksum,
+    decode_block,
+    file_identity,
+)
 from .runner import _check_cancelled
 
 MAX_SESSION_BYTES = 32 * 1024**2
@@ -46,6 +56,28 @@ def _connect(path):
             db.close()
         raise
     return db
+
+
+def _page_rows(db, start, stop):
+    if start >= stop:
+        return
+    blocks = db.execute(
+        "SELECT rowid,row_count,raw_bytes,CASE WHEN length(value)<=? THEN value END "
+        "FROM sites WHERE rowid >= COALESCE((SELECT max(rowid) FROM sites WHERE rowid<=?),0) "
+        "AND rowid<? ORDER BY rowid",
+        (MAX_STORED_BLOCK_BYTES, start, stop),
+    )
+    position = start
+    for first, count, raw_bytes, encoded in blocks:
+        _check_cancelled()
+        rows = decode_block(encoded, count, raw_bytes)
+        if not first <= position < first + count:
+            raise ValueError("Noncontiguous reference blocks")
+        selected = rows[position - first : min(stop - first, count)]
+        yield from selected
+        position += len(selected)
+    if position != stop:
+        raise ValueError("Incomplete reference blocks")
 
 
 class ReferenceCache:
@@ -108,24 +140,19 @@ class ReferenceCache:
                     limit = min(query.get("limit", 100), self.settings.max_page_size)
                     if offset < 0 or limit <= 0:
                         return None
-                    # SQLite integer parameters are signed 64 bit; larger offsets are empty.
-                    stop = min(offset + limit, 2**63 - 1)
-                    start = min(offset, 2**63 - 1)
-                    rows = db.execute(
-                        "SELECT CASE WHEN length(CAST(value AS BLOB))<=? THEN value END "
-                        "FROM sites WHERE rowid>? AND rowid<=? ORDER BY rowid",
-                        (maximum, start, stop),
-                    )
+                    stop = min(offset + limit, total)
+                    rows = _page_rows(db, offset, stop)
                     items, size, limited = [], 0, False
-                    for (encoded,) in rows:
+                    for row in rows:
                         _check_cancelled()
-                        if encoded is None:
+                        row_size = len(json.dumps(row, separators=(",", ":")).encode())
+                        if row_size > maximum:
                             raise ValueError("Invalid reference row size")
-                        size += len(encoded.encode())
+                        size += row_size
                         if size > maximum:
                             limited = True
                             break
-                        items.append(json.loads(encoded))
+                        items.append(row)
                 if not limited and len(items) != min(limit, max(0, total - offset)):
                     raise ValueError("Incomplete reference page")
                 for row in items:
@@ -222,17 +249,32 @@ class ReferenceCache:
                 with closing(_connect(path)) as db:
                     meta = _read_metadata(db, min(MAX_VALUE_BYTES, self.settings.max_output_bytes))
                     total = meta["base"]["total"]
-                    count, last = db.execute("SELECT count(*), max(rowid) FROM sites").fetchone()
                     if (
                         meta["schema"] != SCHEMA
                         or meta["key"] != key
                         or meta["base"]["status"] != "ok"
                         or type(total) is not int
-                        or total < 0
-                        or count != total
-                        or (last or 0) != total
+                        or not 0 <= total < 2**63
                         or not isinstance(meta["definitions"], dict)
                     ):
+                        return
+                    expected_row = 0
+                    for first, count, raw_bytes, block_bytes in db.execute(
+                        "SELECT rowid,row_count,raw_bytes,length(value) FROM sites ORDER BY rowid"
+                    ):
+                        _check_cancelled()
+                        if (
+                            first != expected_row
+                            or type(count) is not int
+                            or not 1 <= count <= BLOCK_ROWS
+                            or type(raw_bytes) is not int
+                            or not 2 <= raw_bytes <= MAX_BLOCK_BYTES
+                            or type(block_bytes) is not int
+                            or not 0 < block_bytes <= MAX_STORED_BLOCK_BYTES
+                        ):
+                            return
+                        expected_row += count
+                    if expected_row != total:
                         return
                 if expected != file_identity(path) or identity != signature(
                     self.settings, self.root

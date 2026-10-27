@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -151,16 +152,17 @@ def large_reference_dex_file(tmp_path_factory):
 @pytest.fixture(scope="session")
 def wide_operand_dex_file(tmp_path_factory):
     root = tmp_path_factory.mktemp("wide-operand-pages")
-    value = "literal[a.*]" * 300
-    target = "Lwide/" + "Target" * 500 + ";"
+    entropy = [hashlib.shake_256(str(i).encode()).hexdigest(1500) for i in range(100)]
+    values = ["literal[a.*]" + item for item in entropy]
+    targets = ["Lwide/T" + item + ";" for item in entropy]
     (root / "Operands.smali").write_text(
         ".class public Lwide/Caller;\n.super Ljava/lang/Object;\n"
         ".method public static strings()V\n.registers 1\n"
-        + f'const-string v0, "{value}"\n' * 100
+        + "".join(f'const-string v0, "{value}"\n' for value in values)
         + "return-void\n.end method\n"
         + ".method public static types()V\n.registers 1\n"
-        + f"const-class v0, {target}\n" * 100
+        + "".join(f"const-class v0, {target}\n" for target in targets)
         + "return-void\n.end method\n",
         encoding="utf-8",
     )
-    return assemble_smali(tmp_path_factory, (root,))[0]
+    return assemble_smali(tmp_path_factory, (root,))[0], values, targets

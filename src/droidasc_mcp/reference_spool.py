@@ -4,11 +4,16 @@ import hashlib
 import json
 import os
 import sqlite3
+import zlib
 from contextlib import suppress
 from pathlib import Path
 
-SCHEMA = 1
+SCHEMA = 2
 MAX_VALUE_BYTES = 256 * 1024
+BLOCK_ROWS = 128
+BLOCK_BYTES = 64 * 1024
+MAX_BLOCK_BYTES = MAX_VALUE_BYTES + 2
+MAX_STORED_BLOCK_BYTES = MAX_BLOCK_BYTES + 1024
 RECEIPT_BYTES = 8192
 PAGE_FIELDS = {
     "items",
@@ -40,6 +45,33 @@ def checksum(path, check=lambda: None):
     return digest.hexdigest()
 
 
+def decode_block(encoded, count, raw_bytes):
+    if (
+        type(count) is not int
+        or not 1 <= count <= BLOCK_ROWS
+        or type(raw_bytes) is not int
+        or not 2 <= raw_bytes <= MAX_BLOCK_BYTES
+        or not isinstance(encoded, bytes)
+        or not 0 < len(encoded) <= MAX_STORED_BLOCK_BYTES
+    ):
+        raise ValueError("Invalid reference block bounds")
+    decoder = zlib.decompressobj()
+    try:
+        raw = decoder.decompress(encoded, raw_bytes + 1)
+    except zlib.error as exc:
+        raise ValueError("Invalid compressed reference block") from exc
+    if len(raw) != raw_bytes or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+        raise ValueError("Incomplete or oversized reference block")
+    rows = json.loads(raw.decode("utf-8"))
+    if (
+        not isinstance(rows, list)
+        or len(rows) != count
+        or not all(isinstance(r, dict) for r in rows)
+    ):
+        raise ValueError("Invalid reference block rows")
+    return rows
+
+
 class ReferenceSpool:
     def __init__(self, ticket, root, max_output_bytes):
         self.db = None
@@ -47,6 +79,8 @@ class ReferenceSpool:
         self.complete = False
         self.definitions = {}
         self.rows = 0
+        self.buffer = []
+        self.buffer_bytes = 2
         self.path = None
         self.limit = min(MAX_VALUE_BYTES, max_output_bytes)
         if ticket is None:
@@ -76,7 +110,10 @@ class ReferenceSpool:
             self.db.execute("PRAGMA cache_size=-2048")
             self.db.execute("PRAGMA journal_mode=OFF")
             self.db.execute("PRAGMA temp_store=MEMORY")
-            self.db.execute("CREATE TABLE sites (value TEXT NOT NULL)")
+            self.db.execute(
+                "CREATE TABLE sites (first_row INTEGER PRIMARY KEY, row_count INTEGER NOT NULL, "
+                "raw_bytes INTEGER NOT NULL, value BLOB NOT NULL)"
+            )
             self.db.execute("CREATE TABLE metadata (value TEXT NOT NULL)")
             self.enabled = True
         except (OSError, sqlite3.Error, KeyError, TypeError, ValueError):
@@ -92,14 +129,30 @@ class ReferenceSpool:
         if not self.enabled:
             return
         try:
-            encoded = json.dumps(row, separators=(",", ":"))
-            if len(encoded.encode()) > self.limit:
+            encoded = json.dumps(row, separators=(",", ":")).encode()
+            if len(encoded) > self.limit:
                 self.close()
                 return
-            self.db.execute("INSERT INTO sites VALUES (?)", (encoded,))
+            if self.buffer and self.buffer_bytes + len(encoded) + 1 > BLOCK_BYTES:
+                self._flush()
+            self.buffer_bytes += len(encoded) + bool(self.buffer)
+            self.buffer.append(encoded)
             self.rows += 1
+            if len(self.buffer) == BLOCK_ROWS or self.buffer_bytes >= BLOCK_BYTES:
+                self._flush()
         except (OSError, sqlite3.Error):
             self.close()
+
+    def _flush(self):
+        if not self.buffer:
+            return
+        raw = b"[" + b",".join(self.buffer) + b"]"
+        self.db.execute(
+            "INSERT INTO sites VALUES (?,?,?,?)",
+            (self.rows - len(self.buffer), len(self.buffer), len(raw), zlib.compress(raw, 1)),
+        )
+        self.buffer.clear()
+        self.buffer_bytes = 2
 
     def scanned(self, definitions):
         self.complete = True
@@ -111,6 +164,7 @@ class ReferenceSpool:
         try:
             if self.rows != result["total"]:
                 return
+            self._flush()
             encoded = json.dumps(
                 {
                     "schema": SCHEMA,
@@ -144,6 +198,8 @@ class ReferenceSpool:
 
     def close(self):
         self.enabled = False
+        self.buffer.clear()
+        self.buffer_bytes = 2
         if self.db is not None:
             with suppress(sqlite3.Error):
                 self.db.close()

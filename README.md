@@ -429,11 +429,14 @@ unvalidated data behind a successful response or start background whole-program 
 A resident cache holds up to 32 serialized pages / 4 MiB per session (256 KiB per
 page). It avoids worker startup for repeated exact pages, and invalidates on implementation,
 engine or index-file identity changes. It never retains parsed DEX or worker processes.
-Selected method, field, outgoing-call and fuzzy-reference queries also stream complete
-matched site sets to private session storage. Later pages reuse that checked set rather
-than scanning the input again. This cache reserves at most 32 MiB per session, with a
-16-MiB entry/build limit, within `DROIDASC_MCP_MAX_DEX_SESSION_BYTES`. Reservation is lazy;
+Selected method, field, outgoing-call, fuzzy-reference, string and operand-only type
+queries also stream complete matched site sets to private session storage. Later pages
+reuse that checked set rather than scanning the input again. This cache reserves at most
+32 MiB per session, with a 16-MiB entry/build limit, within
+`DROIDASC_MCP_MAX_DEX_SESSION_BYTES`. Reservation is lazy;
 insufficient space, oversized sets or cache failures preserve the normal scan path.
+Selected rows use independently compressed, bounded blocks; public flat rows and page
+offsets are unchanged. Compression does not relax entry, session or response-size limits.
 First-query cost includes writing and checking the complete selected set. Reuse reports
 `query_cache.scope=selected_reference_set`, its reserved budget and retained bytes.
 Input/backend changes invalidate reuse; session close/expiry removes the stored sets.
