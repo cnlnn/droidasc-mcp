@@ -139,6 +139,8 @@ def main():
                 "scripts/verify_signing.py",
                 "scripts/benchmark_call_graph.py",
                 "scripts/benchmark_competitor_runtime.py",
+                "scripts/benchmark_revisions.py",
+                "tests/test_revision_benchmark.py",
                 "scripts/benchmark_cpu_wrapper.py",
                 "scripts/verify_fuzzy_references.py",
                 "scripts/verify_string_references.py",

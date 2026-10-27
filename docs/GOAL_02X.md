@@ -196,11 +196,11 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1 block storage passes full-source and original-byte Douyin/holdout checks; CI exposed an acceptance-harness sampling race, now reproduced and fixed locally; B1 remains open |
-| Next action | Rerun full source and CI after monitor completion/short test-ID fixes, then finish matched baseline/candidate/comparator measurements and remaining large-input cells |
+| Current task | B1 Taobao two-CPU five-round comparator cell accepted; product runtime CI passes all 25 jobs; revision wrapper passes 1649 full-source tests; B1 remains open |
+| Next action | Finish alternating old/new Taobao regression timing, then four-CPU and remaining corpus cells; run CI for the added revision wrapper and retain all measured residuals |
 | Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
 | Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | Large-input performance matrix remains open; CI 40464186953 exposed Linux monitor completion and Windows oversized test-ID failures; preserve both and verify the follow-up rather than reuse previous green CI; real-model access is a later B3 gate |
+| Open dependencies | Large-input performance matrix remains open; CI 40465990968 passes both prior failure classes on b9f98c8; the later revision wrapper needs its own matrix; real-model access is a later B3 gate |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -463,6 +463,57 @@ Full-collection acceptance extension, 2026-10-27:
   complete string/type collections with unchanged identities and verified cleanup. Full
   source/CI reruns remain open for this test-and-harness-only follow-up; product runtime
   bytes are unchanged from the independently accepted b719624 candidate.
+- The next five-round Taobao two-CPU measurement uses the frozen b9f98c8 harness and
+  three separate scenarios: complete string, complete operand-type and concurrent complete
+  string/type collections. Keep all 30 fresh-server trials in
+  `candidate/taobao-final-operands-cpu2.json`; the earlier single/two-round smokes are not
+  substituted for it. No product source edits or native rebuilds occur during measurement.
+- Baseline regression timing needs alternation between the **product revisions**, not
+  all old runs after all new runs. `scripts/benchmark_revisions.py` reuses the same
+  supervised real-MCP trial, CPU wrapper, resource bounds and hash-bound spill writer;
+  it alternates baseline/candidate each round and replays every page/retry after timing.
+  Complete rows and diagnostics must match after removing only per-session identity and
+  already-documented cache/page execution fields. Each revision's actual imported package
+  and native extension are read back under the same interpreter before/after the run.
+  Old v0.2.4 has no equivalent operand scope, so this comparison admits only full string,
+  method, field and method/field concurrency, never old broad-type queries as operands.
+  `revision-harness-red.xml` records the initially missing wrapper; 15 focused identity,
+  replay, tampering, response-limit recovery, alternation/spill/environment restoration
+  checks pass in `revision-harness-replay.xml`. Real revision acceptance is still pending.
+- `revision-holdout-smoke.json` completes eight fresh baseline/candidate servers across
+  full string, method, field and method/field concurrency. All 20 complete collection
+  digests (two repeats, including both concurrent queries) match across revisions, with
+  original/runtime/helper identities unchanged. This is a functional one-round smoke,
+  not the five-round no-regression gate. Full configured source then passes 1649 tests
+  without failures/errors/skips in `revision-source-full.xml` (276.36 s).
+- `taobao-final-operands-cpu2.json` completes all 30 alternating trials. Independent
+  `taobao-final-operands-cpu2-verified.json` accepts all 80 complete collections for both
+  products: 2163 string sites and 56791 type sites, zero missing/extra sites, all scan
+  diagnostics and original/runtime/sidecar identities checked, oracle cleanup verified.
+  Median first/repeated complete-query times (ours/comparator, seconds) are string
+  1.0642/3.9659 and 0.3462/0.5914; type 14.4626/17.9456 and 7.5950/12.9306; concurrent
+  13.8202/24.9468 and 7.6494/14.0488. Process-start-to-complete medians are respectively
+  3.7589/5.2888, 17.0175/19.2732 and 16.1403/26.1577. Every paired round favors ours for
+  these metrics: startup paired savings range 1.1620-1.6597 s (string), 1.7662-3.6100 s
+  (type), and 8.3783-10.4694 s (concurrent). This closes this two-CPU Taobao comparison
+  cell, not the four-CPU/other-input matrix or old-version regression gate. No p95 claim.
+- CI `40465990968` completed all 25 jobs successfully on b9f98c8, including the previous
+  Windows test-ID and Linux installed-wheel failure cells. Downloaded per-source receipts
+  are being inspected. The newly added revision wrapper/source gate is a later change;
+  this green CI is not relabeled as its canonical-distribution acceptance.
+- All eight downloaded source JUnit files from CI 40465990968 contain 1634 tests with
+  zero failures/errors/skips (Linux/Windows, Python 3.10-3.13). Taobao's five-round operand
+  comparison still exposes output/storage costs: across both repeats, native/competitor
+  page counts are 40/20 for strings, 610/400 for types and 650/420 concurrently, with zero
+  retries. Concurrent peak descendant RSS is 160616448/930967552 bytes, but ours also
+  retains up to 119199188 sampled temporary bytes versus zero comparator trial files.
+  These tmpfs/storage costs are not erased by lower process RSS; B2/B4 remain real work.
+
+Reproduce alternating old/new complete-workflow regression timing (fresh output required):
+
+```sh
+PYTHONPATH="$PWD/src" uv run --offline --no-sync --with ./artifacts/aimard-asc-mcp python scripts/benchmark_revisions.py artifacts/large-device-corpus-20260921/com.taobao.taobao-10.62.0.apk --baseline-runtime artifacts/competitor-gap-b1-20261027/baseline/runtime --candidate-runtime src --scenarios full_string full_method full_field full_concurrent --rounds 5 --repeats 2 --workers 2 --expanded-mib 768 --session-disk-mib 8192 --output artifacts/competitor-gap-b1-20261027/candidate/taobao-revisions-rerun.json
+```
 
 Reproduce full-collection smoke and verification (choose new output names):
 
