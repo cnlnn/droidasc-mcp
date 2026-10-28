@@ -105,7 +105,7 @@ because a batch or patch release passed.
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | accepted at 29ef91f; original-byte oracle, raw stdio/HTTP, 25/25 CI jobs |
-| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility and package gates pass at 29ef91f; remaining guidance and cool-host preservation gates |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility passes at 29ef91f; three-profile guidance fixed; final candidate/package and cool-host preservation gates remain |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
 session/handle workflow already ported. Ship no changed default yet: opt-in
@@ -263,11 +263,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G5/B6.1 accepted; G6 instruction guidance and final preservation acceptance active |
-| Next action | Complete original-byte 041/native-query, malformed/alias/quota and real-transport evidence; preserve source handoff and verify combined platform/package gates in G6 |
+| Current task | G5/B6.1 accepted; G6 final candidate/package and preservation acceptance active |
+| Next action | Validate corrected three-profile model instructions through final Linux/Windows/source/package gates; run fresh matched large-APK preservation only on a cool stable host |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
-| Planning checks | Frozen G4 final source 1856 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12; later G5 candidate is not covered by G4's receipts |
-| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 native view, source handoff and combined acceptance |
+| Planning checks | G5 at 29ef91f passes 25/25 CI jobs, 1964 tests per source/sdist/wheel suite with zero skips; corrected G6 guidance passes four targeted checks, not yet final distribution acceptance; G2 model matrix remains separate 12/12 |
+| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 final candidate/package and cool-host preservation acceptance |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -546,9 +546,16 @@ receipts and preserved failures. A fresh G4 raw-MCP baseline fails at DEX prepar
 `backend_unavailable` without Java/standalone Smali; the native candidate succeeds.
 
 This acceptance is the native-format small goal, not completed B6 or competitor parity.
-G6 still corrects the remaining model-facing workflow text that describes mandatory 041
-normalization, then validates its final candidate. The fresh large-APK preservation gate
-remains open: CPU Tctl stayed 95-100.625 C after local load stopped. Preserve the successful
+G6 corrects the remaining model-facing workflow text in all three profiles: original-byte
+core queries need neither Java nor JADX; optional Java source and legacy standalone
+conversion retain their separate dependencies. Actual in-process MCP instructions and
+`droidasc://analysis-guide` checks fail for all three profiles before the change, then pass
+with the existing workflow-prompt check (four passed, five deselected in 0.82 seconds).
+Receipts are `g6-guidance-red.xml` and `g6-guidance-green.xml`. This later candidate adds
+three tests (1967 expected in the full suite); G5's 1964-test CI does not cover its changed
+instructions. Final candidate/source/package validation remains required.
+The fresh large-APK preservation gate remains open: CPU Tctl stayed 95-100.625 C after
+local load stopped and the latest metadata-only check still observes 99.125 C. Preserve the successful
 functional/package evidence, but do not call the interrupted local suite or missing hot-host
 benchmark passes. No additional version, tag, release or main publication is approved.
 

@@ -132,3 +132,16 @@ async def test_workflow_prompts_and_resource(settings):
         )
         assert "Lpkg/C;->f(I)V" in result.messages[0].content.text
         assert "unresolved dynamic" in result.messages[0].content.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("profile", ["legacy", "artifact_preview", "artifact"])
+async def test_dex041_guidance_matches_native_and_optional_boundaries(settings, profile):
+    from dataclasses import replace
+
+    async with Client(build_server(replace(settings, tool_profile=profile))) as client:
+        guide = await client.read_resource("droidasc://analysis-guide")
+        for text in (client.instructions, guide.contents[0].text):
+            assert "DEX 041 core queries read original physical bytes without Java or JADX" in text
+            assert "Legacy 041 CLI references retain standalone dexlib2/JDK conversion" in text
+            assert "source_format=java" in text and "optional JADX" in text
