@@ -361,6 +361,18 @@ The first independent ownership/snapshot verifier now has an explicit `--artifac
 path so the optimized preparation, not only legacy preparation, is checked against every
 original DEX byte and pure-Python class identity. Full source/CI/package gates are pending.
 
+The first handle ownership run fails `session_capacity`: its acceptance helper used
+the default 2 GiB session limit with a conservative 512 MiB preparation reservation.
+Set only this helper's artifact-handle budget to the same 8 GiB used by the matched
+timing harness; product defaults/quotas are unchanged. Retain the failed receipt and
+exact first budget-helper snapshot. All three reruns validate every class/owner and
+original snapshot byte. A two-path regression then catches an invalid no-argument
+`Settings()` in the helper's legacy branch; the corrected helper passes both legacy
+and handle cells (`verifier-budget-green-retry1.xml`). The initial full local run has
+1827 passes and two Rust skips because it set the wrong Rust environment variable;
+the corrected Rust-only run passes both cells. This split local evidence is not a
+zero-skip full gate; final CI must supply that gate for the frozen candidate.
+
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
 ```sh

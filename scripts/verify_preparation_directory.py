@@ -108,11 +108,17 @@ def main(args):
         "verifier_sha256": digest(Path(__file__)),
         "scope": "all_standard_direct_apk_dex_classes_owners_and_snapshot_bytes",
         "artifact_handle": args.artifact_handle,
+        "session_disk_budget_bytes": 8 * 1024**3 if args.artifact_handle else None,
         "oracle": "pure_python_original_dex_cursor_accelerator_false",
         "notes": "Accuracy diagnostic only; whole-oracle memory is not product RSS or MCP latency.",
     }
     try:
-        settings = Settings(allowed_roots=(args.apk.parent,), java_executable="java-must-not-run")
+        budget = {"max_dex_session_bytes": 8 * 1024**3} if args.artifact_handle else {}
+        settings = Settings(
+            allowed_roots=(args.apk.parent,),
+            java_executable="java-must-not-run",
+            **budget,
+        )
         if args.artifact_handle:
             from droidasc_mcp.service import DroidAscService
 
