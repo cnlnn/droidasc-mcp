@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "rounds": 3,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "task_timeout_seconds": 600,
+  "tasks": [
+    {
+      "id": "fdroid_inventory",
+      "artifact": "artifacts/device-corpus-20260921/org.fdroid.fdroid.apk",
+      "request": "Inspect this Android artifact: {artifact}. Report its original SHA-256, package name, version name/code, minimum and target SDK, all DEX entry names, native ABIs, and signing certificate SHA-256 fingerprints. Distinguish certificate/container inventory from cryptographic verification. Close any analysis handles you opened."
+    },
+    {
+      "id": "douyin_inventory",
+      "artifact": "artifacts/large-device-corpus-20260921/com.ss.android.ugc.aweme-39.1.0.apk",
+      "request": "Inspect this Android artifact: {artifact}. Report its original SHA-256, package name, version name/code, minimum and target SDK, all DEX entry names, native ABIs, and signing certificate SHA-256 fingerprints. Distinguish certificate/container inventory from cryptographic verification. Close any analysis handles you opened."
+    },
+    {
+      "id": "fdroid_manifest_to_code",
+      "artifact": "artifacts/device-corpus-20260921/org.fdroid.fdroid.apk",
+      "request": "In {artifact}, find the launcher activity from the manifest. Resolve any activity alias to its target. Locate that class in DEX, list its declared onCreate overloads with full descriptors, and show the first 40 instructions of each overload. Include original artifact identity, DEX entry provenance and instruction offsets in the report. Close any analysis handles you opened."
+    },
+    {
+      "id": "fdroid_resource_read",
+      "artifact": "artifacts/device-corpus-20260921/org.fdroid.fdroid.apk",
+      "request": "In {artifact}, list all entries under assets/ in lexical order, then read and show the complete contents of assets/logback.xml. Include the original artifact SHA-256 and exact entry path, and state any decoding or truncation limitations. Close any analysis handles you opened."
+    }
+  ]
+}
