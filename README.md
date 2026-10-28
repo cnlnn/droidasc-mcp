@@ -240,7 +240,8 @@ content-addressed evidence store. Do not modify APK files between pages.
 
 Available in v0.2.3.
 It accepts 1-64 explicit `.dex` paths under the allowed roots, with a combined size bounded by
-`DROIDASC_MCP_MAX_APK_BYTES`. Directories, APKs, CompactDex and DEX 041 containers are not accepted.
+`DROIDASC_MCP_MAX_APK_BYTES`. Directories, APKs and CompactDex are not accepted by this tool.
+DEX 041 containers are supported, with the combined limit of 64 logical DEX files.
 
 ```text
 asc_analyze_dex(dex_paths=["/samples/classes.dex", "/samples/classes2.dex"])
@@ -262,6 +263,21 @@ method bodies or runtime coverage are complete. The tool preserves input bytes, 
 temporary analysis containers, and invokes ASC's public module entry point in the supervised worker.
 Containers are not installable APKs and are removed after success, failure, timeout or cancellation.
 Temporary disk usage can approach twice the combined input size, plus ZIP overhead.
+
+DEX 041 inventory, focused references, discovery, structure and indexes read each logical
+header against the original physical bytes without Java. One physical snapshot backs the
+logical entries; `snapshot_entry`, `stored_size_bytes`, `logical_header_offset` and
+`logical_size_bytes` distinguish storage from logical ownership. The original physical
+SHA-256 is retained in `sha256`/`container_sha256`. Shared later pools are supported, and
+every logical header and checksum is validated before publication.
+
+ASC class/Smali source uses a temporary selected-header view when needed, recording its
+separate `source_view` hash. Explicit Java source still uses JADX 1.5.5/JDK 17+ and a bounded,
+temporary dexlib2 standalone conversion; the JADX distribution supplies the required jars.
+The legacy `operation="find_refs"` adapter retains its previous standalone DEX 041 conversion
+and requires `DROIDASC_MCP_DEXLIB_HOME` (Google Smali 3.0.9) plus JDK 17+, not JADX.
+Use focused reference operations for native DEX 041 queries. Conversion views reserve up to
+seven times the original physical bytes plus metadata; they never replace the original snapshot.
 
 Duplicate class definitions are rejected with `status="error", code="duplicate_class"` rather
 than selecting one silently (up to 20 conflicts are returned). `get_manifest` returns
@@ -298,7 +314,7 @@ release their reservations. Concurrent preparation has reserved disk/count capac
 
 ### Exact methods and Smali
 
-Core DEX queries, discovery, indexes and structural views do not need Java or JADX.
+Core focused DEX queries, discovery, indexes and structural views do not need Java or JADX.
 `source_format=auto` (the default) and `smali` use ASC 0.1.2.post3 directly.
 Set `debug_info=true` to include upstream debug directives.
 

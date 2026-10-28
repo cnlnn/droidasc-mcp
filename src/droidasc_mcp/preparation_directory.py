@@ -40,7 +40,11 @@ class PreparationDirectory:
         # owned class strings reach the background SQLite writer, including on Windows.
         archive.fp.flush()
         try:
-            names = class_names(self.root / "analysis.apk", archive.getinfo(record["dex_entry"]))
+            names = class_names(
+                self.root / "analysis.apk",
+                archive.getinfo(record.get("snapshot_entry", record["dex_entry"])),
+                header_offset=record.get("logical_header_offset", 0),
+            )
         except InvalidDex as exc:
             raise ArchiveError("invalid_dex", str(exc)) from exc
         record["class_count"] = len(names)

@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "3c4efb79d7eabc20eb17ad4e9c0de47d8375a2e59830691df952384469e5f02b",
+  "contracts_sha256": "6e486a2c2ce43b1bdd317dc4071c33a2ecaba9b37505deebd5cfb4b8c8d279a2",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "492206b3b64e6dbfd9adf89e5a267511bb5323df82ba39b9cbfbf7a5bea59d6e",
+  "schemas_sha256": "2380bb4828e972a10d9c9d88100f39035db318f74f2a408b7456f4a0e72cbdc0",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -123,6 +123,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -353,6 +385,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -786,6 +850,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -1017,6 +1113,29 @@
           "title": "ClassRow",
           "type": "object"
         },
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "QueryCache": {
           "additionalProperties": true,
           "properties": {
@@ -1082,6 +1201,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -1216,6 +1367,9 @@
           "title": "Definition Count",
           "type": "integer"
         },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/ClassRow"
@@ -1235,6 +1389,29 @@
     },
     "DexGraphResult": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "DexRow": {
           "additionalProperties": true,
           "properties": {
@@ -1535,6 +1712,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -1668,6 +1877,9 @@
         "definition_count": {
           "title": "Definition Count",
           "type": "integer"
+        },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
         },
         "method_descriptor": {
           "title": "Method Descriptor",
@@ -1750,6 +1962,29 @@
     },
     "DexIndexResult": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "Index": {
           "additionalProperties": true,
           "properties": {
@@ -1830,6 +2065,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -1964,6 +2231,9 @@
           "title": "Definition Count",
           "type": "integer"
         },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
+        },
         "index": {
           "$ref": "#/$defs/Index"
         },
@@ -1984,6 +2254,29 @@
     },
     "DexInfoResult": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "Source": {
           "additionalProperties": true,
           "properties": {
@@ -2018,6 +2311,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -2151,6 +2476,9 @@
         "definition_count": {
           "title": "Definition Count",
           "type": "integer"
+        },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
         }
       },
       "required": [
@@ -2161,6 +2489,29 @@
     },
     "DexInstructionPage": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "InstructionRow": {
           "additionalProperties": true,
           "properties": {
@@ -2263,6 +2614,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -2397,6 +2780,9 @@
           "title": "Definition Count",
           "type": "integer"
         },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/InstructionRow"
@@ -2436,6 +2822,29 @@
     },
     "DexMemberPage": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "MemberRow": {
           "additionalProperties": true,
           "properties": {
@@ -2551,6 +2960,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -2685,6 +3126,9 @@
           "title": "Definition Count",
           "type": "integer"
         },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
+        },
         "items": {
           "items": {
             "$ref": "#/$defs/MemberRow"
@@ -2735,6 +3179,29 @@
     },
     "DexReferencePage": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "DexRow": {
           "additionalProperties": true,
           "properties": {
@@ -3074,6 +3541,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -3207,6 +3706,9 @@
         "definition_count": {
           "title": "Definition Count",
           "type": "integer"
+        },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
         },
         "items": {
           "items": {
@@ -3742,6 +4244,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -4206,6 +4740,29 @@
     },
     "DexSourceResult": {
       "$defs": {
+        "CompatibilityView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "const": "standalone_040_legacy_asc",
+              "title": "Kind",
+              "type": "string"
+            },
+            "requires_java": {
+              "title": "Requires Java",
+              "type": "boolean"
+            },
+            "sources": {
+              "items": {
+                "$ref": "#/$defs/Source"
+              },
+              "title": "Sources",
+              "type": "array"
+            }
+          },
+          "title": "CompatibilityView",
+          "type": "object"
+        },
         "Source": {
           "additionalProperties": true,
           "properties": {
@@ -4240,6 +4797,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -4283,6 +4872,33 @@
             "kind"
           ],
           "title": "SourceReference",
+          "type": "object"
+        },
+        "SourceView": {
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "enum": [
+                "selected_header_at_zero_physical_offsets",
+                "dexlib2_reencoded_standalone_040"
+              ],
+              "title": "Kind",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "view_sha256": {
+              "title": "View Sha256",
+              "type": "string"
+            }
+          },
+          "title": "SourceView",
           "type": "object"
         }
       },
@@ -4414,6 +5030,9 @@
           "title": "Definition Count",
           "type": "integer"
         },
+        "compatibility_view": {
+          "$ref": "#/$defs/CompatibilityView"
+        },
         "source": {
           "title": "Source",
           "type": "string"
@@ -4469,6 +5088,9 @@
         "span_unit": {
           "title": "Span Unit",
           "type": "string"
+        },
+        "source_view": {
+          "$ref": "#/$defs/SourceView"
         }
       },
       "required": [
@@ -4562,6 +5184,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -4948,6 +5602,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -5357,6 +6043,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -5704,6 +6422,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -5958,6 +6708,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",
@@ -6341,6 +7123,38 @@
             "declared_class_count": {
               "title": "Declared Class Count",
               "type": "integer"
+            },
+            "snapshot_entry": {
+              "title": "Snapshot Entry",
+              "type": "string"
+            },
+            "stored_size_bytes": {
+              "title": "Stored Size Bytes",
+              "type": "integer"
+            },
+            "original_dex_version": {
+              "title": "Original Dex Version",
+              "type": "string"
+            },
+            "container_sha256": {
+              "title": "Container Sha256",
+              "type": "string"
+            },
+            "container_size_bytes": {
+              "title": "Container Size Bytes",
+              "type": "integer"
+            },
+            "logical_header_offset": {
+              "title": "Logical Header Offset",
+              "type": "integer"
+            },
+            "logical_size_bytes": {
+              "title": "Logical Size Bytes",
+              "type": "integer"
+            },
+            "normalization": {
+              "title": "Normalization",
+              "type": "string"
             }
           },
           "title": "Source",

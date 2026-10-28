@@ -5,7 +5,8 @@
 Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
 assessment complete. On 2026-10-29 the maintainer requested small, independently
 accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
-G3/B4 and G4/B5 are accepted with explicit residuals; G5/B6.1 is active;
+G3/B4 and G4/B5 are accepted with explicit residuals; G5/B6.1 is locally verified
+and G6/B6.2 combined acceptance is active;
 the previously paused goal-controller status remains separate from this scoped work.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
@@ -103,8 +104,8 @@ because a batch or patch release passed.
 | G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | accepted at 631fcbc; 12/12 model tasks, 25/25 CI jobs; aggregate schema/latency residuals |
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
-| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | active; original physical backing plus zero-payload logical aliases, checked C/Python addressing |
-| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | pending |
+| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | locally verified; shared original backing, C/Python parity, raw stdio/HTTP; final batch gates pending |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; public source/legacy handoff corrected; frozen candidate gates next |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
 session/handle workflow already ported. Ship no changed default yet: opt-in
@@ -262,7 +263,7 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G4/B5 accepted; G5/B6.1 native physical-view integration active |
+| Current task | G4/B5 accepted; G5 native physical views locally verified; G6 combined acceptance active |
 | Next action | Complete original-byte 041/native-query, malformed/alias/quota and real-transport evidence; preserve source handoff and verify combined platform/package gates in G6 |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
 | Planning checks | Frozen G4 final source 1856 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12; later G5 candidate is not covered by G4's receipts |
@@ -490,6 +491,50 @@ source view reuses the upstream handoff without importing private ASC APIs; its 
 ZIP consumes an explicit reservation in the existing session owner. The corrected source,
 native and directory selection passes 173 cases. Further malformed/alias/quota/transport,
 full-source and G6 platform/package acceptance are still required for this later candidate.
+
+The expanded native/lifecycle suite passes 115 cases. It covers malformed later headers,
+invalid/empty/cyclic aliases, original backing CRC including unselected tails, older native
+ABI fallback, 64/65 logical-file limits, selected-header source bytes, one-shot ownership,
+capacity rejection, concurrent close and failure/cancellation release. A first alias test
+exposed a non-header selector falling back to the first native header; physical magic now
+determines the accelerator ABI, so both native and Python paths reject it. New instruction
+fixtures independently identify string/type/field/method sites at code-unit offsets 0/2/4/6,
+plus self-call graph and broad declaration-index coverage for every logical file.
+
+`scripts/verify_dex041_workflows.py` passes both actual stdio and HTTP servers with invalid
+Java and no JADX/dexlib2. Six raw/APK inputs cover unshared, forward-shared and historical
+backward-sharing pools. Complete paginated inventory, reference cache pages, call graph,
+Smali contents, malformed-input recovery and owned file/process cleanup are checked against
+original-byte fixture decoding. Raw receipts are `workflows-corrected/`; preserve the first
+helper attempt (incorrect focused tool names) rather than counting it as product failure.
+
+Public ASC's source shortcut needs the upstream selected-header view for later logical
+files. Explicit Java source uses the existing bounded dexlib2 conversion on the selected
+logical file, using the optional JADX jars when standalone Smali is absent. Legacy
+`find_refs` retains its pre-native standalone conversion and original entry names, using
+standalone Smali/JDK, not JADX. `source_view` and `compatibility_view` distinguish these
+temporary derived bytes from the unchanged original snapshot hashes. Reservations remain
+in the existing session owner; no private ASC API, extra cache or persistent store is added.
+The 36-query public compatibility probe passes after preserving the original failures.
+
+The complete suite collects 1964 cases. The first local run was deliberately interrupted
+at CPU Tctl 100.5 C (1232 passed, four test-adapter failures); the old pipeline test wrapper
+needed to forward the new optional header selector. Its original log/XML remain retained.
+Do not count this interrupted run as a pass. Full configured source and cross-platform
+sdist/exact-wheel gates move to CI. Large Taobao/WeChat/Douyin preservation timings remain
+pending a cool/stable host; do not run additional local load or claim latency parity from
+the hot host, and do not terminate unrelated user processes to obtain a benchmark.
+
+Native 041 reproduction (each output directory must be new):
+
+```sh
+uv run python scripts/verify_dex041_workflows.py --output-directory artifacts/041-workflow
+uv run pytest tests/test_native_dex041.py tests/test_dex_views.py tests/test_sessions.py
+uv run pytest tests/test_dex041_source.py
+```
+
+The last command requires configured optional JADX/Smali/JDK fixtures. Required CI runs
+set `ASC_TEST_EXPECT_FIXTURE=1`, so missing configured cells fail instead of becoming passes.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 

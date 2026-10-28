@@ -12,6 +12,9 @@ from .native_directory import stored_member_offset
 
 @contextmanager
 def query_dex(bundle, archive, info, *, mapped=True):
+    from .dex_views import resolve_view
+
+    info, header_offset = resolve_view(archive, info)
     native = False
     if mapped:
         with suppress(ImportError):
@@ -19,7 +22,7 @@ def query_dex(bundle, archive, info, *, mapped=True):
 
             native = bool(buffer_inputs)
     if not native or info.compress_type != zipfile.ZIP_STORED:
-        dex = Dex(archive.read(info))
+        dex = Dex(archive.read(info), header_offset=header_offset)
         try:
             yield dex
         finally:
@@ -49,7 +52,7 @@ def query_dex(bundle, archive, info, *, mapped=True):
                 position = region.find(needle, padding + start, padding + size)
                 return position - padding if position >= 0 else -1
 
-            dex = Dex(data, find=find)
+            dex = Dex(data, find=find, header_offset=header_offset)
             try:
                 yield dex
             finally:

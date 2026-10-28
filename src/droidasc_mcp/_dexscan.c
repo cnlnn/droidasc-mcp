@@ -728,32 +728,59 @@ finished_crc:
     return status;
 }
 
-static PyObject *mapped_classes_impl(PyObject *args, int checked) {
-    Py_ssize_t handle, offset, length;
-    unsigned int crc;
+static int valid_header_tables(const unsigned char *header, Py_ssize_t length, unsigned int minimum) {
     unsigned int position;
-    const unsigned char *data;
-    MappedRegion region;
-    PyObject *result = NULL;
-    if (!PyArg_ParseTuple(args, "nnnI", &handle, &offset, &length, &crc)) return NULL;
-    if (map_region(handle, offset, length, &region) < 0) return NULL;
-    data = region.data;
-    if (length < 112 || memcmp(data, "dex\n", 4) || data[7] ||
-        (memcmp(data+4,"035",3) && memcmp(data+4,"037",3) && memcmp(data+4,"038",3) &&
-         memcmp(data+4,"039",3) && memcmp(data+4,"040",3)) ||
-        u32(data+32) != (uint64_t)length || u32(data+36) != 112 || u32(data+40) != 0x12345678)
-        goto invalid_mapped_classes;
     for (position = 56; position <= 96; position += 8) {
-        uint32_t count = u32(data+position), start = u32(data+position+4);
+        uint32_t count = u32(header+position), start = u32(header+position+4);
         unsigned int width = position == 56 || position == 64 ? 4 :
             position == 72 ? 12 : position == 96 ? 32 : 8;
-        if ((count && (start < 112 || start % 4 || (uint64_t)start+(uint64_t)count*width > (uint64_t)length)) ||
-            (!count && start) || ((position == 80 || position == 88) && count > 65536))
-            goto invalid_mapped_classes;
+        if ((count && (start < minimum || start % 4 || (uint64_t)start+(uint64_t)count*width > (uint64_t)length)) ||
+            (!count && start) || ((position == 80 || position == 88) && count > 65536)) return 0;
     }
+    return 1;
+}
+
+static PyObject *mapped_classes_impl(PyObject *args, int checked) {
+    Py_ssize_t handle, offset, length, header_offset = 0;
+    unsigned int crc;
+    const unsigned char *data, *header;
+    MappedRegion region;
+    PyObject *result = NULL;
+    if (!PyArg_ParseTuple(args, "nnnI|n", &handle, &offset, &length, &crc, &header_offset)) return NULL;
+    if (map_region(handle, offset, length, &region) < 0) return NULL;
+    data = region.data;
+    if (length < 112 || header_offset < 0) goto invalid_mapped_classes;
+    header = data;
+    if (!memcmp(data, "dex\n041\0", 8)) {
+        Py_ssize_t cursor = 0;
+        unsigned int count = 0;
+        int found = 0;
+        /* Port the checked logical-file traversal; table addresses stay physical. */
+        while (cursor < length) {
+            uint32_t size;
+            const unsigned char *logical;
+            if (length-cursor < 120 || count++ >= 64) goto invalid_mapped_classes;
+            logical = data+cursor;
+            if (memcmp(logical, "dex\n041\0", 8) || u32(logical+36) != 120 ||
+                u32(logical+40) != 0x12345678 || u32(logical+112) != (uint64_t)length ||
+                u32(logical+116) != (uint64_t)cursor || !valid_header_tables(logical,length,120))
+                goto invalid_mapped_classes;
+            size = u32(logical+32);
+            if (size < 120 || size % 4 || size > (uint64_t)(length-cursor))
+                goto invalid_mapped_classes;
+            if (cursor == header_offset) { header = logical; found = 1; }
+            cursor += size;
+        }
+        if (!found) goto invalid_mapped_classes;
+    } else if (header_offset || memcmp(data, "dex\n", 4) || data[7] ||
+        (memcmp(data+4,"035",3) && memcmp(data+4,"037",3) && memcmp(data+4,"038",3) &&
+         memcmp(data+4,"039",3) && memcmp(data+4,"040",3)) ||
+        u32(data+32) != (uint64_t)length || u32(data+36) != 112 || u32(data+40) != 0x12345678 ||
+        !valid_header_tables(data,length,112))
+        goto invalid_mapped_classes;
     if (check_crc(handle, offset, length, crc) < 0) goto finished_mapped_classes;
-    result = class_rows(data, length, u32(data+100), u32(data+96),
-                         u32(data+68), u32(data+64), u32(data+60), u32(data+56), 1, checked);
+    result = class_rows(data, length, u32(header+100), u32(header+96),
+                         u32(header+68), u32(header+64), u32(header+60), u32(header+56), 1, checked);
     goto finished_mapped_classes;
 invalid_mapped_classes:
     PyErr_SetString(PyExc_ValueError, "Invalid mapped DEX header or tables");
@@ -991,6 +1018,7 @@ PyMODINIT_FUNC PyInit__dexscan(void) {
     PyObject *result = PyModule_Create(&module);
     if (!result) return NULL;
     if (PyModule_AddIntConstant(result, "buffer_inputs", 1) < 0 ||
+        PyModule_AddIntConstant(result, "logical_headers", 1) < 0 ||
         PyModule_AddIntConstant(result, "type_operands", 1) < 0) {
         Py_DECREF(result);
         return NULL;

@@ -264,7 +264,24 @@ class DroidAscService:
 
     def analyze_dex(self, dex_paths: list[str], **query) -> dict[str, object]:
         paths = self.settings.validate_dex_paths(dex_paths)
-        return self.runner.analyze_dex(paths, _normalize_dex_query(query))
+        normalized = _normalize_dex_query(query)
+        if normalized["operation"] in {"get_class_source", "get_method_source", "find_refs"}:
+            physical = False
+            for path in paths:
+                with path.open("rb") as stream:
+                    physical |= stream.read(8) == b"dex\n041\0"
+            if physical:
+                opened = self.sessions.open(paths)
+                if opened.get("status") != "ok":
+                    return opened
+                key = opened["session_id"]
+                try:
+                    result = self.sessions.query(key, normalized)
+                    result.pop("session_id", None)
+                    return result
+                finally:
+                    self.sessions.close(key)
+        return self.runner.analyze_dex(paths, normalized)
 
     def get_manifest(
         self, apk_path: str, *, offset: int, limit: int, backend: str = "droidasc"

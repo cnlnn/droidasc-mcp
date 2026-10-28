@@ -84,7 +84,7 @@ def test_pipeline_matches_serial_directory_and_common_metadata(
     monkeypatch.setattr(
         preparation_directory,
         "class_names",
-        lambda *args: original_names(*args, accelerator=accelerator),
+        lambda *args, **kwargs: original_names(*args, accelerator=accelerator, **kwargs),
     )
     groups = [["La/A;", "La/\U0001f600;"], [], ["Lz/Z;", "Lz/\ud800;"]]
     if duplicate:

@@ -82,7 +82,7 @@ def stored_member_offset(stream, info):
     return info.header_offset + 30 + name_size + extra_size
 
 
-def class_names(bundle, info, *, accelerator=True):
+def class_names(bundle, info, *, accelerator=True, header_offset=0):
     """Read one closed member, including before the enclosing ZIP is finalized.
 
     The caller must flush the writer first. No view/handle survives this call,
@@ -90,12 +90,14 @@ def class_names(bundle, info, *, accelerator=True):
     """
     native = None
     checked = False
+    logical_headers = False
     if accelerator:
         with suppress(ImportError):
             from . import _dexscan
 
             checked = hasattr(_dexscan, "mapped_checked_classes")
             native = _dexscan.mapped_checked_classes if checked else _dexscan.mapped_classes
+            logical_headers = getattr(_dexscan, "logical_headers", False)
     with bundle.open("rb") as stream:
         handle = stream.fileno()
         if os.name == "nt":
@@ -103,7 +105,13 @@ def class_names(bundle, info, *, accelerator=True):
 
             handle = msvcrt.get_osfhandle(handle)
         base = stored_member_offset(stream, info)
-        header = read_at(stream, base, info.file_size, 0, 112)
+        physical = read_at(stream, base, info.file_size, 0, 8) == b"dex\n041\0"
+        if header_offset and not physical:
+            raise InvalidDex("A logical header selector requires DEX 041")
+        header = read_at(stream, base, info.file_size, header_offset, 112)
+        # Older installed accelerators retain their standard-only ABI.
+        if physical and not logical_headers:
+            native = None
         if native is None:
             from .native_dex import Dex
 
@@ -112,14 +120,15 @@ def class_names(bundle, info, *, accelerator=True):
 
             if zlib.crc32(data) != info.CRC:
                 raise InvalidDex("Stored DEX snapshot CRC mismatch")
-            dex = Dex(data)
+            dex = Dex(data, header_offset=header_offset)
             try:
                 return [name for name, _ in dex.classes(accelerator=False, ordered=False)]
             finally:
                 dex.close()
         seen = set()
         try:
-            names = native(handle, base, info.file_size, info.CRC)
+            arguments = (handle, base, info.file_size, info.CRC)
+            names = native(*arguments, header_offset) if physical else native(*arguments)
         except ValueError as exc:
             raise InvalidDex(str(exc)) from exc
         if checked:
@@ -138,8 +147,14 @@ def class_names(bundle, info, *, accelerator=True):
 
 
 def class_entries(bundle, *, accelerator=True):
+    from .dex_views import resolve_view
+
     with zipfile.ZipFile(bundle) as archive:
         for info in sorted(archive.infolist(), key=lambda row: row.filename):
             if not info.filename.endswith(".dex"):
                 continue
-            yield info.filename, class_names(bundle, info, accelerator=accelerator)
+            backing, header = resolve_view(archive, info)
+            yield (
+                info.filename,
+                class_names(bundle, backing, accelerator=accelerator, header_offset=header),
+            )

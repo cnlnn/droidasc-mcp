@@ -19,6 +19,14 @@ class Source(Object, total=False):
     sha256: str
     dex_version: str
     declared_class_count: int
+    snapshot_entry: str
+    stored_size_bytes: int
+    original_dex_version: str
+    container_sha256: str
+    container_size_bytes: int
+    logical_header_offset: int
+    logical_size_bytes: int
+    normalization: str
 
 
 class Result(Object, total=False):
@@ -449,6 +457,19 @@ class DexResult(Result, total=False):
     idle_ttl_seconds: int
 
 
+class SourceView(Object, total=False):
+    kind: Literal["selected_header_at_zero_physical_offsets", "dexlib2_reencoded_standalone_040"]
+    dex_entry: str
+    logical_header_offset: int
+    view_sha256: str
+
+
+class CompatibilityView(Object, total=False):
+    kind: Literal["standalone_040_legacy_asc"]
+    requires_java: bool
+    sources: list[Source]
+
+
 class DexInfoResult(Result, total=False):
     status: Required[Literal["ok", "partial", "error", "not_applicable"]]
     input_kind: str
@@ -456,6 +477,7 @@ class DexInfoResult(Result, total=False):
     runtime_completeness: str
     has_manifest: bool
     definition_count: int
+    compatibility_view: CompatibilityView
 
 
 class ClassRow(Object, total=False):
@@ -513,6 +535,7 @@ class DexSourceResult(DexInfoResult, total=False):
     source_start: int
     source_end: int
     span_unit: str
+    source_view: SourceView
 
 
 class DexInstructionPage(DexInfoResult, total=False):

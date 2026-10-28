@@ -105,22 +105,44 @@ TYPE_OPS = {
 
 
 class Dex:
-    def __init__(self, data, *, find=None):
+    def __init__(self, data, *, find=None, header_offset=0):
         self.data = data
         self._find = find
+        if type(header_offset) is not int or header_offset < 0:
+            raise InvalidDex("Invalid DEX logical header selector")
+        self.header_offset = header_offset
         if len(data) < 112 or data[:4] != b"dex\n" or data[7] != 0:
             raise InvalidDex("Invalid standard DEX header")
-        self.version = int(bytes(data[4:7]))
-        if self.version not in {35, 37, 38, 39, 40}:
+        physical = bytes(data[4:7]) == b"041"
+        if physical:
+            from .archive_errors import ArchiveError
+            from .dex_container import logical_offsets
+
+            try:
+                offsets = logical_offsets(data)
+            except ArchiveError as exc:
+                raise InvalidDex(str(exc)) from exc
+            if header_offset not in offsets:
+                raise InvalidDex("DEX logical header selector is not a container header")
+        elif header_offset:
+            raise InvalidDex("A logical header selector requires DEX 041")
+        self.version = int(bytes(data[header_offset + 4 : header_offset + 7]))
+        if self.version not in {35, 37, 38, 39, 40, 41}:
             raise InvalidDex("Unsupported DEX version")
-        if self.u32(32) != len(data) or self.u32(36) != 112 or self.u32(40) != 0x12345678:
+        header_size = 120 if physical else 112
+        if not physical and (
+            self.u32(32) != len(data) or self.u32(36) != header_size or self.u32(40) != 0x12345678
+        ):
             raise InvalidDex("Invalid DEX size or byte order")
         self.tables = []
         for position, width in ((56, 4), (64, 4), (72, 12), (80, 8), (88, 8), (96, 32)):
-            count, offset = self.u32(position), self.u32(position + 4)
+            count, offset = (
+                self.u32(header_offset + position),
+                self.u32(header_offset + position + 4),
+            )
             if position in {80, 88} and count > 65536:
                 raise InvalidDex("DEX member pool exceeds 16-bit index range")
-            if count and offset < 112:
+            if count and offset < header_size:
                 raise InvalidDex("DEX table overlaps header")
             self.check(offset, count * width)
             self.tables.append((count, offset, width))

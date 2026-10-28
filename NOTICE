@@ -46,3 +46,13 @@ Modifications use the existing validated ZIP inventory and explicit module
 selection rather than the raw central-directory reader. Module policy, bounded
 per-module metadata routing and duplicate-class rejection are receiving-side
 extensions; upstream's silent duplicate collapse is not retained.
+
+The DEX 041 logical-offset traversal and selected-header addressing in
+src/droidasc_mcp/dex_container.py, native_dex.py and dex_views.py adapt
+asc_mcp/analysis/dex_container.py, dex041_logical_offsets and
+normalize_dex041_logical, at the same revision. Receiving-side changes retain
+strict complete-container validation and read the selected header in place,
+without relocating physical data or rewriting the original header bytes.
+The public ASC source handoff streams the upstream selected-header copy into a
+bounded query-owned ZIP; explicit Java and legacy-reference handoffs retain the
+existing bounded dexlib2 standalone conversion with separate view provenance.

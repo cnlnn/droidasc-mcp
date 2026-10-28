@@ -203,8 +203,8 @@ URI 授权规则，并标明权限来源。显式空权限清除继承要求；a
 ## 裸 DEX 分析
 
 v0.2.3 提供。输入为允许目录内的 1-64 个 `.dex`
-文件路径，总大小受 `DROIDASC_MCP_MAX_APK_BYTES` 限制。不接收目录、APK、CompactDex
-或 DEX 041 容器。
+文件路径，总大小受 `DROIDASC_MCP_MAX_APK_BYTES` 限制。本工具不接收目录、APK 或 CompactDex。
+支持 DEX 041 容器，所有输入合计最多 64 个逻辑 DEX 文件。
 
 ```text
 asc_analyze_dex(dex_paths=["/samples/classes.dex", "/samples/classes2.dex"])
@@ -222,6 +222,17 @@ asc_analyze_dex(dex_paths=["/samples/classes.dex"], operation="find_refs", kind=
 签名和 Adler-32 校验和。校验通过不代表方法体或运行时代码完整。原文件保持不变，仅在
 私有临时目录中生成分析容器，在受监管进程内调用 ASC 公共模块入口；容器不是可安装 APK。
 成功、失败、超时和取消后均清理临时文件。临时磁盘占用可能接近输入总大小的两倍，加 ZIP 开销。
+
+DEX 041 的类清单、精确引用、发现、结构视图和索引直接按逻辑 header 读取原始物理字节，不需要 Java。
+各逻辑条目共用一份物理快照；`snapshot_entry`、`stored_size_bytes`、`logical_header_offset` 和
+`logical_size_bytes` 区分实际存储与逻辑归属。`sha256`/`container_sha256` 始终标识原始物理字节。
+支持引用后续逻辑文件的共享池；发布会话前校验每个逻辑 header、签名与校验和。
+
+ASC 类源码与 Smali 在需要时使用临时选中 header 视图，`source_view` 单独记录该视图的哈希。
+显式 Java 源码仍使用 JADX 1.5.5/JDK 17+，并进行有界的临时 dexlib2 独立文件转换，所需 JAR
+可直接来自 JADX 发行包。旧 `operation="find_refs"` 适配器保留原有 DEX 041 独立文件转换，
+需要 `DROIDASC_MCP_DEXLIB_HOME`（Google Smali 3.0.9）和 JDK 17+，不需要 JADX；原生查询使用
+精确引用操作。转换视图最多按原始物理字节的七倍加元数据预留磁盘，不替换原始快照。
 
 重复类返回 `status="error", code="duplicate_class"`，最多展示 20 项冲突，不静默择一。
 `get_manifest` 返回 `status="not_applicable", code="no_manifest"`。
@@ -245,7 +256,7 @@ MCP 错误和结构化 `status`。
 `cleanup_pending` 标明是否仍等待。MCP 正常退出会清理文件，进程被强杀时仍可能留下系统临时目录。
 未知或过期 ID 返回 `session_not_found`，不会自动重新加载已变化的原文件。
 
-核心 DEX 查询、发现、结构视图和索引均不依赖 Java 或 JADX。`source_format=auto`（默认）与
+核心精确 DEX 查询、发现、结构视图和索引均不依赖 Java 或 JADX。`source_format=auto`（默认）与
 `smali` 直接使用 ASC 0.1.2.post3，可设置 `debug_info=true` 包含调试指令。
 只有显式 `source_format=java` 需要官方 [JADX 1.5.5](https://github.com/skylot/jadx/releases/tag/v1.5.5) 和 JDK 17 以上版本。
 设置 `DROIDASC_MCP_JADX_HOME` 为包含 `lib/` 的解压目录，`DROIDASC_MCP_JAVA` 为 JDK 的 `java` 路径

@@ -367,6 +367,31 @@ class DexSessions:
         )
 
         root = entry.root
+        physical_sources = [
+            source for source in entry.info.get("sources", []) if source.get("dex_version") == "041"
+        ]
+        operation = query.get("operation")
+        if physical_sources and operation in {"get_class_source", "get_method_source", "find_refs"}:
+            if operation == "find_refs":
+                size = sum(
+                    source.get("stored_size_bytes", source["size_bytes"])
+                    for source in entry.info["sources"]
+                )
+            else:
+                size = max(source["size_bytes"] for source in physical_sources)
+            normalization = operation == "find_refs" or query.get("source_format") == "java"
+            reservation = size * (7 if normalization else 1) + 1024**2
+            with self.lock:
+                failure = self._reserve(reservation, opening=False)
+                if failure:
+                    return failure
+            try:
+                return self.runner.query_dex_session(
+                    root, {**query, "_source_view_budget": reservation}
+                )
+            finally:
+                with self.lock:
+                    self.reserved -= reservation
         if query.get("operation") not in (
             INDEX_OPERATIONS | REFERENCE_OPERATIONS | DISCOVERY_OPERATIONS | STRUCTURE_OPERATIONS
         ):

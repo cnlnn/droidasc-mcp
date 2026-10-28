@@ -5,7 +5,7 @@ import struct
 import zlib
 
 
-def dex041_container(names=("A", "B"), *, shared_strings=False):
+def dex041_container(names=("A", "B"), *, shared_strings=False, references=False):
     data = bytearray()
     headers = []
     for name in names:
@@ -20,6 +20,7 @@ def dex041_container(names=("A", "B"), *, shared_strings=False):
                 "hello",
                 f"value-{name}",
             ]
+            + (["field"] if references else [])
         )
         types = sorted(
             [
@@ -37,13 +38,27 @@ def dex041_container(names=("A", "B"), *, shared_strings=False):
         data.extend(struct.pack("<3I", *types))
         proto_off = len(data)
         data.extend(struct.pack("<3I", strings.index("L"), type_index("Ljava/lang/String;"), 0))
+        fields_off = len(data) if references else 0
+        if references:
+            data.extend(
+                struct.pack(
+                    "<HHI",
+                    type_index(f"Loracle/{name};"),
+                    type_index("Ljava/lang/String;"),
+                    strings.index("field"),
+                )
+            )
         methods_off = len(data)
         data.extend(struct.pack("<HHI", type_index(f"Loracle/{name};"), 0, strings.index("hello")))
         classes_off = len(data)
         data.extend(bytes(32))
         code_off = len(data)
-        data.extend(struct.pack("<HHHHII", 1, 0, 0, 0, 0, 3))
-        data.extend(struct.pack("<3H", 0x001A, strings.index(f"value-{name}"), 0x0011))
+        code = [0x001A, strings.index(f"value-{name}")]
+        if references:
+            code += [0x011C, type_index("Ljava/lang/Object;"), 0x0162, 0, 0x0071, 0, 0]
+        code += [0x0011]
+        data.extend(struct.pack("<HHHHII", 2 if references else 1, 0, 0, 0, 0, len(code)))
+        data.extend(struct.pack(f"<{len(code)}H", *code))
         data.extend(bytes((-len(data)) % 4))
         class_data_off = len(data)
         encoded = []
@@ -52,7 +67,11 @@ def dex041_container(names=("A", "B"), *, shared_strings=False):
             encoded.append((value & 127) | 128)
             value >>= 7
         encoded.append(value)
-        data.extend(bytes([0, 0, 1, 0, 0, 9, *encoded]))
+        data.extend(
+            bytes(
+                [1, 0, 1, 0, 0, 9, 0, 9, *encoded] if references else [0, 0, 1, 0, 0, 9, *encoded]
+            )
+        )
         string_data_off = len(data)
         for index, text in enumerate(strings):
             struct.pack_into("<I", data, strings_off + index * 4, len(data))
@@ -71,6 +90,12 @@ def dex041_container(names=("A", "B"), *, shared_strings=False):
             (0x2002, 6, string_data_off),
             (0x1000, 1, map_off),
         ]
+        if references:
+            sections.insert(4, (4, 1, fields_off))
+            sections = [
+                (kind, len(strings) if kind in (1, 0x2002) else count, offset)
+                for kind, count, offset in sections
+            ]
         data.extend(struct.pack("<I", len(sections)))
         for kind, count, offset in sections:
             data.extend(struct.pack("<HHII", kind, 0, count, offset))
@@ -78,13 +103,15 @@ def dex041_container(names=("A", "B"), *, shared_strings=False):
         struct.pack_into("<5I", data, start + 32, len(data) - start, 120, 0x12345678, 0, 0)
         struct.pack_into("<I", data, start + 52, map_off)
         for field, count, offset in (
-            (56, 6, strings_off),
+            (56, len(strings), strings_off),
             (64, 3, types_off),
             (72, 1, proto_off),
             (88, 1, methods_off),
             (96, 1, classes_off),
         ):
             struct.pack_into("<II", data, start + field, count, offset)
+        if references:
+            struct.pack_into("<II", data, start + 80, 1, fields_off)
         struct.pack_into(
             "<8I",
             data,

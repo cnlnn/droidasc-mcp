@@ -192,9 +192,7 @@ def copy_dex_stream(handle, supplied_size, source, archive, entry, budget, heade
 
 
 def prepare_bundle(settings, request, root, common, directory=None):
-    import shutil
-
-    from .dex_container import expand
+    from .dex_container import read_container
 
     remaining, count = settings.max_apk_bytes, 0
     artifact = None
@@ -214,23 +212,53 @@ def prepare_bundle(settings, request, root, common, directory=None):
         if directory is not None:
             directory.accept(archive, record)
         count += 1
-        remaining -= record["size_bytes"]
+        remaining -= record.get("stored_size_bytes", record["size_bytes"])
         if request.get("prepare"):
             preparation_progress(root, count, None, "Validated DEX snapshot")
 
     def consume_file(original, index, origin=None):
-        workspace = root / f"dex-container-{index}"
-        workspace.mkdir()
-        for source, provenance in expand(settings, original, workspace):
-            try:
-                record = copy_dex(source, archive, next_entry(), remaining)
-            except DexInputError as exc:
-                exc.source_path = str(source)
-                raise
-            if provenance:
-                record.update(provenance, path=str(original))
-            append(record, origin)
-        shutil.rmtree(workspace)
+        container = read_container(settings, original)
+        if container is not None:
+            from .dex_views import view_extra
+
+            data, offsets = container
+            if len(data) > remaining:
+                raise DexInputError(
+                    "input_limit", "Combined DEX size exceeds configured size limit"
+                )
+            digest = hashlib.sha256(data).hexdigest()
+            backing = next_entry()
+            for offset in offsets:
+                entry = next_entry()
+                info = zipfile.ZipInfo(entry)
+                info.extra = view_extra(backing, offset)
+                archive.writestr(info, data if offset == 0 else b"")
+                append(
+                    {
+                        "path": str(original),
+                        "dex_entry": entry,
+                        "snapshot_entry": backing,
+                        "size_bytes": len(data),
+                        "stored_size_bytes": len(data) if offset == 0 else 0,
+                        "sha256": digest,
+                        "dex_version": "041",
+                        "declared_class_count": struct.unpack_from("<I", data, offset + 96)[0],
+                        "original_dex_version": "041",
+                        "container_sha256": digest,
+                        "container_size_bytes": len(data),
+                        "logical_header_offset": offset,
+                        "logical_size_bytes": struct.unpack_from("<I", data, offset + 32)[0],
+                        "normalization": "none_physical_logical_view",
+                    },
+                    origin,
+                )
+            return
+        try:
+            record = copy_dex(original, archive, next_entry(), remaining)
+        except DexInputError as exc:
+            exc.source_path = str(original)
+            raise
+        append(record, origin)
 
     with ExitStack() as stack:
         if request.get("artifact_path"):
@@ -269,7 +297,7 @@ def prepare_bundle(settings, request, root, common, directory=None):
                     raise
                 append(record, origin)
                 continue
-            # Only 041 requires a seekable private input for strict normalization.
+            # Physical 041 validation needs a complete, seekable private input.
             original = root / f"import-{index}.dex"
             copied = len(header)
             with original.open("wb") as output:
@@ -351,9 +379,16 @@ def analyze(request: dict, root: Path) -> dict:
         common["class_count"] = count
         common["engine_version"] = engine_version(request)
         identity = {
-            "schema": 1,
+            "schema": 2
+            if any("logical_header_offset" in item for item in common["sources"])
+            else 1,
             "engine": common["engine_version"],
-            "dex_sha256": [item["sha256"] for item in common["sources"]],
+            "dex_sha256": [
+                {"sha256": item["sha256"], "logical_header_offset": item["logical_header_offset"]}
+                if "logical_header_offset" in item
+                else item["sha256"]
+                for item in common["sources"]
+            ],
         }
         common["input_id"] = hashlib.sha256(
             json.dumps(identity, sort_keys=True).encode()
@@ -503,6 +538,33 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
         indexed = query_index(runner.settings, bundle, common, query, workspace)
         if indexed is not None:
             return {**common, **indexed}
+    source_bundle, source_metadata = bundle, {}
+    if (
+        operation in {"get_class_source", "get_method_source"}
+        and query.get("class_name") in owners
+        and any(
+            source["dex_entry"] == owners[query["class_name"]]
+            and (
+                source.get("logical_header_offset", 0)
+                or (source.get("dex_version") == "041" and query.get("source_format") == "java")
+            )
+            for source in common["sources"]
+        )
+    ):
+        from .dex_views import source_view
+
+        java_settings = (
+            runner.settings
+            if query.get("source_format") == "java" and runner.settings.jadx_home
+            else None
+        )
+        source_bundle, source_metadata = source_view(
+            bundle,
+            owners[query["class_name"]],
+            workspace,
+            query.get("_source_view_budget"),
+            java_settings=java_settings,
+        )
     if operation == "get_method_source":
         from .method_backend import query_methods
 
@@ -512,9 +574,19 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
         if operation == "get_method_source" and query.get("source_format", "auto") != "java":
-            return {**common, **asc_method_smali(runner, bundle, owners[name], query)}
-        result = query_methods(runner.settings, bundle, owners[name], query, workspace)
-        return {**common, **result, "class_name": name, "dex_entry": owners[name]}
+            return {
+                **common,
+                **asc_method_smali(runner, source_bundle, owners[name], query),
+                **source_metadata,
+            }
+        result = query_methods(runner.settings, source_bundle, owners[name], query, workspace)
+        return {
+            **common,
+            **result,
+            "class_name": name,
+            "dex_entry": owners[name],
+            **source_metadata,
+        }
     if operation == "info":
         return {**common, "status": "ok"}
     if operation == "get_manifest":
@@ -541,18 +613,25 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
         if name not in owners:
             raise DexInputError("class_not_found", "Class is absent from the supplied DEX files")
         result = runner.get_class_source(
-            bundle, class_name=name, threads=query["threads"], **page
+            source_bundle, class_name=name, threads=query["threads"], **page
         ).as_dict()
         result.update(
             {
                 "class_name": name,
                 "dex_entry": owners[name],
                 "source": "\n".join(result.pop("items")),
+                **source_metadata,
             }
         )
     elif operation == "find_refs":
+        if any(source.get("dex_version") == "041" for source in common["sources"]):
+            from .dex_views import legacy_view
+
+            source_bundle, source_metadata = legacy_view(
+                runner.settings, bundle, workspace, query.get("_source_view_budget")
+            )
         result = runner.find_refs(
-            bundle,
+            source_bundle,
             kind=query["kind"],
             value=query["value"],
             class_name=query["class_name"],
@@ -560,6 +639,7 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
             threads=query["threads"],
             **page,
         )
+        result.update(source_metadata)
     else:
         raise DexInputError("invalid_query", "Unknown DEX operation")
     return {**common, **result, "status": "ok"}

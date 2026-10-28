@@ -71,6 +71,91 @@ def test_capacity_reservations_include_imports(store, paths):
     store.runner.prepare_dex.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "operation,format,multiplier",
+    [("get_class_source", "auto", 1), ("get_method_source", "java", 7), ("find_refs", "auto", 7)],
+)
+def test_041_handoff_reserves_and_releases_only_bounded_query_space(
+    store, paths, operation, format, multiplier
+):
+    key = store.open(paths)["session_id"]
+    store.entries[key].info["sources"] = [
+        {
+            "dex_version": "041",
+            "size_bytes": 4096,
+            "stored_size_bytes": 4096,
+            "logical_header_offset": 0,
+        },
+        {
+            "dex_version": "041",
+            "size_bytes": 4096,
+            "stored_size_bytes": 0,
+            "logical_header_offset": 512,
+        },
+    ]
+    reservation = 4096 * multiplier + 1024**2
+
+    def query(root, query):
+        assert store.reserved == query["_source_view_budget"] == reservation
+        assert store.entries[key].users == 1
+        return {"status": "ok"}
+
+    store.runner.query_dex_session.side_effect = query
+    assert store.query(key, {"operation": operation, "source_format": format})["status"] == "ok"
+    assert store.reserved == 0 and store.entries[key].users == 0
+    store.settings = replace(
+        store.settings, max_dex_session_bytes=store.entries[key].size + reservation - 1
+    )
+    store.runner.query_dex_session.reset_mock()
+    assert (
+        store.query(key, {"operation": operation, "source_format": format})["code"]
+        == "session_capacity"
+    )
+    store.runner.query_dex_session.assert_not_called()
+    assert store.reserved == 0 and store.entries[key].users == 0
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("handoff failed"), KeyboardInterrupt()])
+def test_041_handoff_failure_or_cancellation_releases_reservation(store, paths, failure):
+    key = store.open(paths)["session_id"]
+    store.entries[key].info["sources"] = [
+        {"dex_version": "041", "size_bytes": 4096, "logical_header_offset": 512}
+    ]
+    store.runner.query_dex_session.side_effect = failure
+    with pytest.raises(type(failure)):
+        store.query(key, {"operation": "get_class_source"})
+    assert store.reserved == 0 and store.entries[key].users == 0
+
+
+def test_concurrent_041_handoff_pins_and_accounts_until_close(store, paths):
+    key = store.open(paths)["session_id"]
+    entry = store.entries[key]
+    entry.info["sources"] = [
+        {"dex_version": "041", "size_bytes": 4096, "logical_header_offset": 512}
+    ]
+    reservation = 4096 + 1024**2
+    store.settings = replace(store.settings, max_dex_session_bytes=entry.size + reservation)
+    entered, release = threading.Event(), threading.Event()
+
+    def query(root, query):
+        entered.set()
+        assert release.wait(3)
+        assert root.exists()
+        return {"status": "ok"}
+
+    store.runner.query_dex_session.side_effect = query
+    with ThreadPoolExecutor() as pool:
+        future = pool.submit(store.query, key, {"operation": "get_class_source"})
+        try:
+            assert entered.wait(2)
+            assert store.query(key, {"operation": "get_class_source"})["code"] == "session_capacity"
+            assert store.reserved == reservation and store.close(key)["cleanup_pending"]
+        finally:
+            release.set()
+        assert future.result()["status"] == "ok"
+    assert store.reserved == 0 and not store.entries
+
+
 @pytest.mark.parametrize("failure", [RuntimeError("failed"), KeyboardInterrupt()])
 def test_failed_or_cancelled_open_leaves_no_storage(store, paths, failure):
     roots = []
