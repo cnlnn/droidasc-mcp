@@ -5,7 +5,7 @@
 Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
 assessment complete. On 2026-10-29 the maintainer requested small, independently
 accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
-G3 is active with fresh preparation profiling;
+G3/B4 is accepted with measured residuals; G4/B5 is active;
 the previously paused goal-controller status remains separate from this scoped work.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
@@ -86,8 +86,8 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | accepted at b64f85c; cold type/startup residuals retained for B4 |
 | B2 | Compact reference output and resumable full-result collection | B1 accepted | accepted at aca6b27; opt-in large-member benefit, not universal speedup |
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
-| B4 | Measured preparation reuse/cost reduction | B3 accepted | G3 active; fresh cold-cost attribution |
-| B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
+| B4 | Measured preparation reuse/cost reduction | B3 accepted | accepted at e79f670; one private archive hash reused, copy/storage residuals |
+| B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | G4 active; checked module union and metadata routing |
 | B6 | Native DEX 041 logical views and query coverage | B5 accepted | deferred |
 
 Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
@@ -101,8 +101,8 @@ because a batch or patch release passed.
 | --- | --- | --- | --- |
 | G1 (B3.1) | One immutable artifact handle for metadata and lazy code queries | Metadata does not prepare DEX; first code query prepares once; real stdio/HTTP, original hash, lifecycle/quotas and legacy compatibility; frozen real-model inventory/navigation/resource tasks | locally accepted; 1807 source tests, four successful model workflows and clean sdist/wheel checks |
 | G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | accepted at 631fcbc; 12/12 model tasks, 25/25 CI jobs; aggregate schema/latency residuals |
-| G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | active; three-input preparation/first-query profiles and low-overhead phase attribution |
-| G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | pending |
+| G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
+| G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | active; exact-name/list/all policy and existing cross-DEX fixture reuse |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | pending |
 | G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | pending |
 
@@ -262,10 +262,10 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G2/B3 accepted with residuals; G3 cold-preparation profiling active |
-| Next action | Attribute read/hash/inflate/directory/worker costs, select one bounded reuse/removal candidate, then run matched correctness/first-use/repeat gates |
+| Current task | G3/B4 accepted with measured residuals; G4/B5 module integration active |
+| Next action | Extend checked module selection with explicit lists/all, preserve base default and ambiguity rejection, route per-module metadata, then validate cross-module references and lifecycle |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
-| Planning checks | Corrected G2 source: 1816 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; real native-only model matrix 12/12 |
+| Planning checks | G3 final local source 1831 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12 |
 | Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
@@ -372,6 +372,40 @@ and handle cells (`verifier-budget-green-retry1.xml`). The initial full local ru
 1827 passes and two Rust skips because it set the wrong Rust environment variable;
 the corrected Rust-only run passes both cells. This split local evidence is not a
 zero-skip full gate; final CI must supply that gate for the frozen candidate.
+
+G3 is accepted at `e79f670704a0228a5ef1e7bf366c1a63757536f2`; product runtime
+changes are confined to `containers.py` and `dex_worker.py` at `05dc71d`.
+`g3-acceptance.json` freezes the final source/package/runtime/original-input bindings.
+CI `40747182980` passes all 25 jobs: eight source cells and all eight canonical-sdist/
+exact-native-wheel cells each pass 1831 tests, zero skips. All eight signing comparisons,
+Rust, actual transports and stability gates pass. The final configured local suite also
+passes all 1831 tests in 286.61 seconds; earlier skipped/failed attempts remain separate.
+
+The native-only final matrix has five alternating pairs per input at two/four CPUs:
+60 fresh real-MCP trials and 120 complete collections independently checked against
+original DEX bytes, all ordered sites/diagnostics retained. Product timings run with
+invalid Java and no JADX/dexlib2 configuration; the independent JVM oracle runs only
+after timing. All three ownership checks verify every original class and snapshot byte.
+
+| Input | CPUs | First complete baseline/candidate seconds | Process-to-first complete baseline/candidate seconds |
+| --- | --- | --- | --- |
+| Taobao | 4 | 1.5500 / 1.3311 | 2.8617 / 2.4719 |
+| Taobao | 2 | 1.6784 / 1.6400 | 2.9685 / 2.9555 |
+| WeChat | 4 | 2.3211 / 2.0418 | 3.9730 / 3.6763 |
+| WeChat | 2 | 2.7288 / 2.4611 | 4.4751 / 4.2401 |
+| Douyin | 4 | 5.2143 / 4.8788 | 7.3424 / 6.9395 |
+| Douyin | 2 | 6.0916 / 5.6901 | 8.2092 / 7.8646 |
+
+These are medians, not faster-every-trial guarantees; paired noise remains, particularly
+Taobao/two CPUs. Repeat medians are 0.9-10.8 ms slower and are not this change's benefit.
+Temporary logical storage remains about 209/443/842 MB for Taobao/WeChat/Douyin; neither
+the copy cost nor total memory is reduced by this hash reuse. This is not a fresh
+competitor timing comparison or overall parity claim. Final freezing was first attempted
+before log download finished; retain `freeze-attempt1.log`; attempt 2 verifies the full
+download and all required bindings. G4 now uses the pinned upstream all-DEX enumeration
+behavior with explicit receiving-side module policy, not its unchecked raw ZIP reader or
+silent duplicate collapse. Multiple selection uses an explicit nonempty list or `*`;
+omitted module keeps base, and an exact module named `all` remains an exact name.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
