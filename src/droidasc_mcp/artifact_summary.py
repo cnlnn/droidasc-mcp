@@ -7,18 +7,12 @@ from .manifest import header
 MAX_SUMMARY_ABIS = 100
 
 
-def summarize(archive, entries, kind, module, remaining_bytes):
-    prefix = f"{module}/" if kind == "aab" else ""
-    libraries = [
-        name[len(prefix) :].split("/")
-        for name, info in entries.items()
-        if name.startswith(prefix + "lib/") and name.endswith(".so") and not info.is_dir()
-    ]
-    libraries = [parts for parts in libraries if len(parts) == 3]
-    abis = sorted({parts[1] for parts in libraries})
-    entry = prefix + "manifest/AndroidManifest.xml" if kind == "aab" else "AndroidManifest.xml"
+def manifest_header(archive, entries, entry, remaining_bytes, *, module=None):
     manifest = {"entry": entry}
+    if module is not None:
+        manifest["module"] = module
     info = entries.get(entry)
+    consumed = 0
     if info is None:
         manifest.update(status="not_applicable", code="manifest_not_found")
     else:
@@ -27,6 +21,7 @@ def summarize(archive, entries, kind, module, remaining_bytes):
                 raise ArchiveError("xml_limit", "Manifest exceeds the 4 MiB XML byte budget")
             if info.file_size > remaining_bytes:
                 raise ArchiveError("container_limit", "Manifest exceeds remaining expansion budget")
+            consumed = info.file_size
             data, complete = _read(archive, info, min(MAX_XML_BYTES, remaining_bytes))
             if not complete:
                 raise ArchiveError("invalid_archive", "Manifest entry is incomplete")
@@ -39,14 +34,51 @@ def summarize(archive, entries, kind, module, remaining_bytes):
             )
         except ArchiveError as exc:
             manifest.update(status="error", code=exc.code, message=str(exc))
-            if kind == "aab" and exc.code == "invalid_xml":
+            if module is not None and exc.code == "invalid_xml":
                 manifest["message"] += "; AAB protobuf XML is not decoded"
-    return {
+    return manifest, consumed
+
+
+def summarize(archive, entries, kind, modules, remaining_bytes):
+    prefixes = [f"{module}/" for module in modules] if kind == "aab" else [""]
+    selected = set(modules)
+    scoped_entries = (
+        (
+            (name.partition("/")[2], info)
+            for name, info in entries.items()
+            if name.partition("/")[0] in selected
+        )
+        if kind == "aab"
+        else entries.items()
+    )
+    libraries = [
+        name.split("/")
+        for name, info in scoped_entries
+        if name.startswith("lib/") and name.endswith(".so") and not info.is_dir()
+    ]
+    libraries = [parts for parts in libraries if len(parts) == 3]
+    abis = sorted({parts[1] for parts in libraries})
+    manifests = []
+    for prefix in prefixes:
+        module = prefix[:-1] if kind == "aab" else None
+        entry = prefix + "manifest/AndroidManifest.xml" if kind == "aab" else "AndroidManifest.xml"
+        manifest, consumed = manifest_header(
+            archive, entries, entry, remaining_bytes, module=module
+        )
+        remaining_bytes -= consumed
+        manifests.append(manifest)
+    result = {
         "entry_count": len(entries),
-        "native_scope": "selected_module" if kind == "aab" else "archive",
+        "native_scope": ("selected_module" if len(modules) == 1 else "selected_modules")
+        if kind == "aab"
+        else "archive",
         "native_library_count": len(libraries),
         "native_abis": abis[:MAX_SUMMARY_ABIS],
         "native_abi_count": len(abis),
         "native_abis_truncated": len(abis) > MAX_SUMMARY_ABIS,
-        "manifest": manifest,
     }
+    if kind != "aab" or len(modules) == 1:
+        result["manifest"] = manifests[0]
+    else:
+        result["manifests"] = manifests
+    return result

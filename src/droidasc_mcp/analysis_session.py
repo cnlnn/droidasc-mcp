@@ -90,7 +90,10 @@ def inspect_snapshot(path, source, before, digest, max_dex_bytes):
                 capabilities.append("dex")
             if any(name.lower().endswith((".class", ".jar")) for name in names):
                 capabilities.append("jvm-class-inventory")
-            if "AndroidManifest.xml" in names:
+            if "AndroidManifest.xml" in names or (
+                artifact_type == "aab"
+                and any(name.endswith("/manifest/AndroidManifest.xml") for name in names)
+            ):
                 capabilities.append("manifest")
             if artifact_type == "apk":
                 capabilities.append("signing")

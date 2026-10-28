@@ -71,6 +71,14 @@ Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断�
 `droidasc://analysis/{analysis_id}/class`，支持 `offset`、`limit` 和类入口的
 `class_name` 查询参数；参数值须作 URI 编码。
 
+AAB 的 `module` 默认仍选 `base`，也可传精确名称、`["base", "feature"]`
+这样的显式列表，或 `"*"` 选择全部模块，适用于 `load_artifact`、
+`asc_inspect_artifact` 和 `asc_open_artifact_session`。联合查询保留模块与原始 DEX
+来源，重复类定义直接报错。多模块摘要返回逐模块 `manifests`，不拼接成虚假单一清单；
+读取清单时，给 `apk_get_manifest` 或句柄资源 URI 指定一个已选 `module`。
+资源按含模块前缀的原始路径读取。AAB protobuf XML 解码和嵌套 split 重建仍不支持，
+原始条目字节可继续读取。
+
 ## 安装
 
 需要 Python 3.10 或更高版本。CI 覆盖 Linux 和原生

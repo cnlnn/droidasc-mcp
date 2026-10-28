@@ -407,6 +407,28 @@ behavior with explicit receiving-side module policy, not its unchecked raw ZIP r
 silent duplicate collapse. Multiple selection uses an explicit nonempty list or `*`;
 omitted module keeps base, and an exact module named `all` remains an exact name.
 
+G4 implementation reuses `_parse_cd_dex_entries`/`ArtifactHandler.list_classes`
+all-DEX traversal behavior from the pinned comparator with our checked ZIP receiver.
+`module` now accepts one name, a bounded distinct-name list, or `*`; omission retains
+base. Manifest/resource-only modules participate in explicit/all selection. Original
+module and container-entry identities accompany selected DEX snapshots and inventory.
+Existing ownership/preparation/cache/cleanup paths are reused, not duplicated.
+`apk_get_manifest` and its resource URI require a selected module when the handle
+selects multiple modules; summaries return separate bounded `manifests` and share one
+expansion budget. Exact resource paths remain unchanged. Protobuf XML decoding is
+still explicitly unsupported. No default profile or runtime dependency is added.
+
+Fresh G4 evidence is `artifacts/competitor-gap-b5-20261029/`. The initial 19-case
+red/first-green attempts include 15 acceptance-helper budget mistakes (128 MiB
+defaults against the test's 16 MiB input cap); the corrected 1 MiB requests are rerun
+against the frozen pre-G4 runtime and all 19 fail for the missing feature/validation.
+The first corrected candidate passes 19/19, then expanded selector/budget/protobuf/
+non-AAB cases and the surrounding contract/lifecycle suite pass 166/166. Further
+full source and final Linux/Windows source/package gates remain required; G4 is not
+accepted yet. Original source fixtures provide base-to-feature and feature-to-feature
+static call sites, all five original classes and four hash-bound DEX entries, through
+both stdio and HTTP with Java/JADX/dexlib2 disabled for product execution.
+
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
 ```sh

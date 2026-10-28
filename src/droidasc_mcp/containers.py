@@ -61,15 +61,85 @@ def stable_archive(path, maximum, *, preparation=False, expected_sha256=None):
                             )
 
 
-def select(entries, kind, module):
-    if module is not None and (kind != "aab" or not re.fullmatch(r"[A-Za-z0-9_.-]+", module)):
-        raise ArchiveError("invalid_query", "module selects one exact AAB module name")
+def module_selection(kind, module):
+    if module is None:
+        return None
     if kind == "aab":
-        chosen = module or "base"
+        if module == "*":
+            return module
+        names = module if isinstance(module, list) else [module]
+        if (
+            1 <= len(names) <= 100
+            and all(
+                isinstance(name, str)
+                and name not in {".", ".."}
+                and re.fullmatch(r"[A-Za-z0-9_.-]+", name)
+                for name in names
+            )
+            and len(set(names)) == len(names)
+        ):
+            return sorted(names) if isinstance(module, list) else module
+    raise ArchiveError("invalid_query", "module requires an AAB name, 1-100 distinct names, or *")
+
+
+def aab_module(name):
+    module, separator, relative = name.partition("/")
+    if (
+        separator
+        and re.fullmatch(r"[A-Za-z0-9_.-]+", module)
+        and (
+            relative == "manifest/AndroidManifest.xml"
+            or relative == "resources.pb"
+            or relative.startswith(("dex/", "res/", "lib/", "assets/"))
+        )
+    ):
+        return module
+    return None
+
+
+def available_modules(entries):
+    return sorted({module for name in entries if (module := aab_module(name)) is not None})
+
+
+def selected_modules(entries, module):
+    module = module_selection("aab", module)
+    if module == "*":
+        chosen = available_modules(entries)
+        if len(chosen) > 100:
+            raise ArchiveError("module_limit", "Select at most 100 modules")
+        return chosen
+    if isinstance(module, list):
+        if set(module) - set(available_modules(entries)):
+            raise ArchiveError("module_not_found", "An explicitly selected AAB module is absent")
+        return module
+    return [module or "base"]
+
+
+def manifest_module(entries, selection, requested):
+    chosen = selected_modules(entries, selection)
+    if requested is not None:
+        if not isinstance(requested, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+", requested):
+            raise ArchiveError("invalid_query", "Manifest requires one exact module name")
+        if requested not in chosen:
+            raise ArchiveError(
+                "module_not_selected", "Manifest module is outside the selected modules"
+            )
+        return requested
+    if len(chosen) != 1:
+        raise ArchiveError("ambiguous_module", "Select one module for this manifest read")
+    return chosen[0]
+
+
+def select(entries, kind, module):
+    module = module_selection(kind, module)
+    if kind == "aab":
+        chosen = set(selected_modules(entries, module))
+        # Follow upstream's all-entry DEX traversal, with an explicit checked module policy.
         return sorted(
             name
             for name in entries
-            if name.startswith(chosen + "/dex/")
+            if name.partition("/")[0] in chosen
+            and name.partition("/")[2].startswith("dex/")
             and name.lower().endswith(".dex")
             and not entries[name].is_dir()
         )
@@ -130,20 +200,12 @@ def capabilities(archive, entries, kind, module, budget, *, preparation=False):
         name for name in active if name.lower().endswith(".class") and not active[name][1].is_dir()
     )
     splits = sorted(name for name in entries if name.lower().endswith(".apk"))
-    modules = (
-        sorted(
-            {
-                name.split("/")[0]
-                for name in entries
-                if re.fullmatch(r"[^/]+/dex/.+", name) and name.lower().endswith(".dex")
-            }
-        )
-        if kind == "aab"
-        else []
-    )
+    modules = available_modules(entries) if kind == "aab" else []
+    chosen = selected_modules(entries, module) if kind == "aab" else []
     metadata = {
         "artifact_kind": kind,
-        "selected_module": (module or "base") if kind == "aab" else None,
+        "selected_module": chosen[0] if len(chosen) == 1 else None,
+        "selected_modules": chosen,
         "modules": modules,
         "dex_entries": selected,
         "jvm_class_count": len(classes),
@@ -151,13 +213,22 @@ def capabilities(archive, entries, kind, module, budget, *, preparation=False):
         "dex_analysis": bool(selected),
         "jvm_decompilation": False,
         "split_reconstruction": False,
-        "coverage": "selected_aab_module_direct_dex"
+        "coverage": (
+            "selected_aab_module_direct_dex"
+            if len(chosen) == 1
+            else "selected_aab_modules_direct_dex"
+        )
         if kind == "aab"
         else "selected_direct_dex_only",
     }
     rows = (
         [
-            {"kind": "dex", "path": name, "size_bytes": active[name][1].file_size}
+            {
+                "kind": "dex",
+                "path": name,
+                "size_bytes": active[name][1].file_size,
+                **({"module": name.partition("/")[0]} if kind == "aab" else {}),
+            }
             for name in selected
         ]
         + [
@@ -212,7 +283,7 @@ def inspect(archive, entries, kind, query):
             from .artifact_summary import summarize
 
             result["summary"] = summarize(
-                archive, entries, kind, metadata["selected_module"], budget - used
+                archive, entries, kind, metadata["selected_modules"], budget - used
             )
         if query.get("compare_to"):
             from pathlib import Path

@@ -10,7 +10,8 @@ asc_signing_inventory separates signature container presence and certificate met
 cryptographic verification. For JAR/AAR/AAB/APKS/XAPK, asc_inspect_artifact reports capabilities;
 include_summary=true adds its compact manifest header, entry count and native ABI inventory.
 asc_open_artifact_session snapshots selected direct DEX with container/member provenance.
-Pure JVM classes and nested split APKs are inventory-only. AAB sessions select one module.
+Pure JVM classes and nested split APKs are inventory-only. AAB module defaults to base;
+select an exact name, an explicit list, or * for all modules.
 Reuse existing DEX session query/close tools for artifact sessions.
 asc_diff_dex_sessions compares sorted class/member identities between two hash-bound sessions;
 unchanged declarations do not establish unchanged behavior. asc_secret_candidates returns
@@ -93,7 +94,8 @@ Open APK/DEX/JAR/AAR/AAB/APKS/XAPK with load_artifact and reuse its analysis_id 
 apk_get_summary (compact manifest, DEX and ABI inventory), apk_get_manifest,
 apk_list_entries, apk_get_resource_content and apk_get_signing_info. Metadata uses an
 immutable snapshot; DEX preparation starts only on the first code query. Signing output
-is certificate/container inventory, not cryptographic verification. AAB selects one module;
+is certificate/container inventory, not cryptographic verification. AAB module defaults to base;
+select an exact name, a list, or * for all. Multi-module manifests require one selected module;
 JVM classes and nested split APKs are inventory-only.
 For code, call asc_query_dex_session with session_id=analysis_id. Start with search_classes
 using the manifest's class name, then list_methods or get_class_outline. Carry returned
@@ -125,7 +127,8 @@ apk_ tools and close_artifact. Metadata reads an immutable snapshot; the first c
 query lazily prepares DEX. apk_get_summary reports identity, DEX and ABI inventory;
 apk_get_manifest reads components/XML. apk_list_entries and apk_get_resource_content
 read archive data. apk_get_signing_info inventories containers/certificates, not
-cryptographic validity. AAB selects one module; JVM classes/nested APKs are inventory-only.
+cryptographic validity. AAB module defaults to base; select a name, list, or * for all.
+Multi-module manifests require one selected module. JVM classes/nested APKs are inventory-only.
 apk_list_classes accepts a literal query and dotted/Dalvik prefix. Use apk_list_methods
 or apk_get_class_outline, then carry full method_descriptor into apk_disassemble_method,
 apk_get_method_source, apk_get_method_calls, apk_find_method_references or apk_get_call_graph.
@@ -189,14 +192,16 @@ def register_workflows(mcp, service, *, instructions=INSTRUCTIONS, focused=False
         )
 
     @mcp.resource(
-        "droidasc://analysis/{analysis_id}/manifest{?offset,limit}",
+        "droidasc://analysis/{analysis_id}/manifest{?offset,limit,module}",
         mime_type="application/json",
     )
-    def analysis_manifest(analysis_id: str, offset: int = 0, limit: int = 200) -> str:
+    def analysis_manifest(
+        analysis_id: str, offset: int = 0, limit: int = 200, module: str | None = None
+    ) -> str:
         """Paged manifest XML from the immutable artifact snapshot."""
         return json.dumps(
             service.query_artifact(
-                analysis_id, operation="manifest_xml", offset=offset, limit=limit
+                analysis_id, operation="manifest_xml", offset=offset, limit=limit, module=module
             )
         )
 

@@ -39,12 +39,12 @@ class DroidAscService:
         return self.sessions.open(self.settings.validate_dex_paths(dex_paths))
 
     def load_artifact(self, path, *, max_uncompressed_bytes=128 * 1024**2, module=None):
-        from .containers import select, validate_budget
+        from .containers import module_selection, validate_budget
 
         path = self.settings.validate_entry_input(path)
         budget = validate_budget(max_uncompressed_bytes, self.settings)
-        select({}, path.suffix.lower()[1:], module)
-        return self.sessions.load_artifact(path, budget=budget, module=module)
+        selection = module_selection(path.suffix.lower()[1:], module)
+        return self.sessions.load_artifact(path, budget=budget, module=selection)
 
     def close_artifact(self, analysis_id):
         result = self.sessions.close(analysis_id)
@@ -175,6 +175,7 @@ class DroidAscService:
                     "zip",
                     "aar_classes_jar",
                     "aab_selected_module",
+                    "aab_explicit_module_union",
                     "apks",
                     "xapk",
                 ],

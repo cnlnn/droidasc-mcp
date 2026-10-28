@@ -202,7 +202,9 @@ class DroidAscRunner:
         request["prepare"] = True
         return self._run_dex_request(request, root)
 
-    def prepare_artifact(self, path: Path, root: Path, budget: int, module: str | None) -> dict:
+    def prepare_artifact(
+        self, path: Path, root: Path, budget: int, module: str | list[str] | None
+    ) -> dict:
         request = self._dex_request([], {"operation": "info", "offset": 0, "limit": 1})
         request.update(
             artifact_path=str(path), max_uncompressed_bytes=budget, module=module, prepare=True

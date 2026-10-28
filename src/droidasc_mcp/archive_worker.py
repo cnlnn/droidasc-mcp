@@ -45,7 +45,19 @@ def safe_name(name):
     return name
 
 
-def entry_kind(name):
+def entry_kind(name, artifact_kind=None):
+    if artifact_kind == "aab":
+        from .containers import aab_module
+
+        if aab_module(name) is not None:
+            relative = name.partition("/")[2]
+            if relative == "manifest/AndroidManifest.xml":
+                return "manifest"
+            if relative == "resources.pb":
+                return "resource"
+            if relative.startswith("dex/") and relative.lower().endswith(".dex"):
+                return "dex"
+            return entry_kind(relative)
     if name == "AndroidManifest.xml":
         return "manifest"
     if name.startswith("assets/"):
@@ -59,17 +71,24 @@ def entry_kind(name):
     return "metadata" if name.startswith("META-INF/") else "other"
 
 
-def entry_row(info):
-    kind = entry_kind(info.filename)
-    return {
+def entry_row(info, artifact_kind=None):
+    kind = entry_kind(info.filename, artifact_kind)
+    row = {
         "path": info.filename,
         "kind": kind,
         "size_bytes": info.file_size,
         "compressed_size_bytes": info.compress_size,
         "crc32": f"{info.CRC:08x}",
         "encrypted": bool(info.flag_bits & 1),
-        "abi": info.filename.split("/")[1] if kind == "native" else None,
+        "abi": info.filename.split("/")[-2] if kind == "native" else None,
     }
+    if artifact_kind == "aab":
+        from .containers import aab_module
+
+        module = aab_module(info.filename)
+        if module is not None:
+            row["module"] = module
+    return row
 
 
 def page(rows, offset, limit):
@@ -300,6 +319,7 @@ def _page_bounds(query, max_page_size):
 
 def _query(archive, entries, query, max_page_size):
     operation = query["operation"]
+    artifact_kind = query.get("artifact_kind")
     if operation not in {
         "list_entries",
         "read_entry",
@@ -326,10 +346,10 @@ def _query(archive, entries, query, max_page_size):
         if prefix is not None and not isinstance(prefix, str):
             raise ArchiveError("invalid_query", "prefix must be a literal string")
         rows = [
-            entry_row(info)
+            entry_row(info, artifact_kind)
             for name, info in sorted(entries.items())
             if not info.is_dir()
-            and (kind is None or entry_kind(name) == kind)
+            and (kind is None or entry_kind(name, artifact_kind) == kind)
             and (prefix is None or name.startswith(prefix))
         ]
         return {"status": "ok", **page(rows, offset, limit)}
@@ -338,6 +358,18 @@ def _query(archive, entries, query, max_page_size):
         if operation in {"manifest_summary", "manifest_xml"}
         else query.get("entry_path")
     )
+    module = None
+    if (
+        artifact_kind != "aab"
+        and operation in {"manifest_summary", "manifest_xml"}
+        and query.get("module") is not None
+    ):
+        raise ArchiveError("invalid_query", "module only selects an AAB manifest")
+    if artifact_kind == "aab" and operation in {"manifest_summary", "manifest_xml"}:
+        from .containers import manifest_module
+
+        module = manifest_module(entries, query.get("module_selection"), query.get("module"))
+        name = module + "/manifest/AndroidManifest.xml"
     if not isinstance(name, str):
         raise ArchiveError("invalid_query", "entry_path is required")
     safe_name(name)
@@ -345,14 +377,24 @@ def _query(archive, entries, query, max_page_size):
         return {"status": "not_applicable", "code": "entry_not_found", "entry_path": name}
     info = entries[name]
     if operation == "read_entry":
-        return _content(archive, info, query)
+        result = _content(archive, info, query)
+        result.update(entry_row(info, artifact_kind))
+        return result
     if operation in {"manifest_summary", "manifest_xml"}:
         if info.file_size > MAX_XML_BYTES:
             raise ArchiveError("xml_limit", "Manifest exceeds the input byte budget")
         data, complete = _read(archive, info, MAX_XML_BYTES)
         if not complete:
             raise ArchiveError("invalid_xml", "Manifest entry is incomplete")
-        root, xml_format, warnings = xml_document(data)
+        try:
+            root, xml_format, warnings = xml_document(data)
+        except ArchiveError as exc:
+            if module is not None and exc.code == "invalid_xml":
+                raise ArchiveError(
+                    exc.code, str(exc) + "; AAB protobuf XML is not decoded"
+                ) from exc
+            raise
+        provenance = {"module": module} if module is not None else {}
         if operation == "manifest_xml":
             from lxml import etree
 
@@ -361,7 +403,8 @@ def _query(archive, entries, query, max_page_size):
             result["xml"] = "\n".join(result.pop("items"))
             return {
                 "status": "ok",
-                "entry": entry_row(info),
+                "entry": entry_row(info, artifact_kind),
+                **provenance,
                 "xml_format": xml_format,
                 "decoding_warnings": warnings,
                 **result,
@@ -370,7 +413,8 @@ def _query(archive, entries, query, max_page_size):
 
         return {
             "status": "ok",
-            "entry": entry_row(info),
+            "entry": entry_row(info, artifact_kind),
+            **provenance,
             "xml_format": xml_format,
             "decoding_warnings": warnings,
             **summarize(root, offset, limit),
@@ -387,6 +431,7 @@ def analyze(request):
             max_apk_bytes=request["max_input_bytes"],
         )
         apk = settings.validate_entry_input(request["apk_path"])
+        request["query"]["artifact_kind"] = apk.suffix.lower()[1:]
         artifact = (
             request["query"].get("operation") == "artifact_inventory"
             or apk.suffix.lower() != ".apk"

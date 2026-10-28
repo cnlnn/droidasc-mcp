@@ -62,6 +62,15 @@ Manifest and class resources also accept the handle at
 `droidasc://analysis/{analysis_id}/class?class_name=...&offset=0&limit=100`.
 URI query values must be percent-encoded. Existing resource URIs remain valid.
 
+For AAB inputs, `module` defaults to `base`. Select one exact name,
+an explicit list such as `["base", "feature"]`, or `"*"` for every module on
+`load_artifact`, `asc_inspect_artifact` or `asc_open_artifact_session`. Union queries
+retain original module/DEX provenance and reject duplicate class definitions.
+Multi-module summaries return `manifests`, not a merged manifest. For a manifest
+read, pass one selected `module` to `apk_get_manifest` or the handle resource URI.
+Resources use their exact module-prefixed entry path. AAB protobuf XML decoding and
+nested split reconstruction remain unsupported; raw entry bytes stay readable.
+
 ## Install
 
 Version 0.2.4 adds bounded selected-reference reuse, byte-bounded reference continuations,

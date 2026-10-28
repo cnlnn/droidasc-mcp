@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "be1e082b7019ce3d44227f9a3ea47a110d7ff4db717563a7ceed997d0b92b898",
+  "contracts_sha256": "3c4efb79d7eabc20eb17ad4e9c0de47d8375a2e59830691df952384469e5f02b",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "138f884a0521679035ea799630422f5184f437b1d632d6fd9142de2df1a891e2",
+  "schemas_sha256": "492206b3b64e6dbfd9adf89e5a267511bb5323df82ba39b9cbfbf7a5bea59d6e",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -75,6 +75,10 @@
                 "string",
                 "null"
               ]
+            },
+            "module": {
+              "title": "Module",
+              "type": "string"
             }
           },
           "required": [
@@ -98,6 +102,10 @@
             },
             "container_entry": {
               "title": "Container Entry",
+              "type": "string"
+            },
+            "module": {
+              "title": "Module",
               "type": "string"
             },
             "size_bytes": {
@@ -218,6 +226,17 @@
           "title": "Limitations",
           "type": "array"
         },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
+        },
         "format_validation": {
           "const": "not_performed",
           "title": "Format Validation",
@@ -315,6 +334,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -430,6 +453,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "analysis_id": {
           "title": "Analysis Id",
@@ -526,7 +560,8 @@
             "native_scope": {
               "enum": [
                 "archive",
-                "selected_module"
+                "selected_module",
+                "selected_modules"
               ],
               "title": "Native Scope",
               "type": "string"
@@ -552,6 +587,13 @@
             },
             "manifest": {
               "$ref": "#/$defs/ManifestHeader"
+            },
+            "manifests": {
+              "items": {
+                "$ref": "#/$defs/ManifestHeader"
+              },
+              "title": "Manifests",
+              "type": "array"
             }
           },
           "required": [
@@ -560,8 +602,7 @@
             "native_library_count",
             "native_abis",
             "native_abi_count",
-            "native_abis_truncated",
-            "manifest"
+            "native_abis_truncated"
           ],
           "title": "ArtifactSummary",
           "type": "object"
@@ -599,6 +640,10 @@
                 "string",
                 "null"
               ]
+            },
+            "module": {
+              "title": "Module",
+              "type": "string"
             }
           },
           "required": [
@@ -694,6 +739,10 @@
               "const": false,
               "title": "Resource Values Resolved",
               "type": "boolean"
+            },
+            "module": {
+              "title": "Module",
+              "type": "string"
             }
           },
           "required": [
@@ -716,6 +765,10 @@
             },
             "container_entry": {
               "title": "Container Entry",
+              "type": "string"
+            },
+            "module": {
+              "title": "Module",
               "type": "string"
             },
             "size_bytes": {
@@ -833,6 +886,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "artifact_kind": {
           "enum": [
@@ -999,6 +1063,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -1116,6 +1184,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -1437,6 +1516,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -1554,6 +1637,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -1717,6 +1811,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -1834,6 +1932,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -1890,6 +1999,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -2007,6 +2120,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -2120,6 +2244,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -2237,6 +2365,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -2393,6 +2532,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -2510,6 +2653,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -2901,6 +3055,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -3018,6 +3176,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "input_kind": {
           "title": "Input Kind",
@@ -3554,6 +3723,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -3711,6 +3884,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "type_relation": {
           "title": "Type Relation",
@@ -4037,6 +4221,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -4195,6 +4383,17 @@
           "title": "Limitations",
           "type": "array"
         },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
+        },
         "input_kind": {
           "title": "Input Kind",
           "type": "string"
@@ -4344,6 +4543,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -4459,6 +4662,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "old_session_id": {
           "title": "Old Session Id",
@@ -4715,6 +4929,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -4832,6 +5050,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "items": {
           "items": {
@@ -5009,6 +5238,10 @@
                 "string",
                 "null"
               ]
+            },
+            "module": {
+              "title": "Module",
+              "type": "string"
             }
           },
           "required": [
@@ -5103,6 +5336,10 @@
             },
             "container_entry": {
               "title": "Container Entry",
+              "type": "string"
+            },
+            "module": {
+              "title": "Module",
               "type": "string"
             },
             "size_bytes": {
@@ -5222,6 +5459,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "items": {
           "items": {
@@ -5437,6 +5685,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -5549,6 +5801,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "server": {
           "title": "Server",
@@ -5676,6 +5939,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -5792,6 +6059,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "values_included": {
           "title": "Values Included",
@@ -6044,6 +6322,10 @@
               "title": "Container Entry",
               "type": "string"
             },
+            "module": {
+              "title": "Module",
+              "type": "string"
+            },
             "size_bytes": {
               "title": "Size Bytes",
               "type": "integer"
@@ -6160,6 +6442,17 @@
           },
           "title": "Limitations",
           "type": "array"
+        },
+        "selected_modules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selected Modules",
+          "type": "array"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
         },
         "schemes": {
           "items": {

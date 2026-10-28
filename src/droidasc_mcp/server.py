@@ -42,6 +42,10 @@ READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldH
 SESSION_STATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 
 AnalysisId = Annotated[str, Field(min_length=1, description="Handle returned by load_artifact")]
+ModuleSelection = Annotated[
+    str | list[str] | None,
+    Field(description="AAB exact module, 1-100 distinct names, or * for all; omitted selects base"),
+]
 
 
 class ToolProfileServer(MCPServer):
@@ -190,10 +194,7 @@ def build_server(
         artifact_path: Annotated[
             str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP path within allowed roots")
         ],
-        module: Annotated[
-            str | None,
-            Field(description="Exact AAB module; omitted selects base, other formats omit"),
-        ] = None,
+        module: ModuleSelection = None,
         max_uncompressed_bytes: Annotated[
             int,
             Field(
@@ -229,7 +230,8 @@ def build_server(
 
         JVM classes and nested APK splits are inventory-only. First-level JAR class names
         are included. compare_to compares JVM identities; DEX declarations use session diff.
-        AAB selects one module's direct DEX; nested APKs are not reconstructed.
+        AAB selects base, an exact module, an explicit list or * for all modules.
+        Nested APKs are not reconstructed.
         include_summary describes the input artifact, including when compare_to is set.
         Manifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.
         """
@@ -251,9 +253,7 @@ def build_server(
             str, Field(description="APK/JAR/AAR/AAB/APKS/XAPK/ZIP input within allowed roots")
         ],
         ctx: Context = None,
-        module: Annotated[
-            str | None, Field(description="Exact AAB module; omitted selects base")
-        ] = None,
+        module: ModuleSelection = None,
         max_uncompressed_bytes: Annotated[
             int,
             Field(
@@ -265,7 +265,7 @@ def build_server(
     ) -> DexResult:
         """Snapshot selected direct DEX into an immutable reusable session with container hashes.
 
-        Direct DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module
+        Direct DEX at arbitrary archive paths, AAR classes.jar DEX and selected AAB modules
         are supported. Pure JVM
         classes and nested split APKs stay inventory-only. Duplicate classes are rejected.
         Query and close the resulting ID with the existing DEX session tools.
@@ -873,7 +873,7 @@ def build_server(
         max_uncompressed_bytes: Annotated[
             int, Field(ge=1, le=2147483648, description="Total DEX preparation byte budget")
         ] = 134217728,
-        module: Annotated[str | None, Field(description="AAB module; default base")] = None,
+        module: ModuleSelection = None,
     ) -> ArtifactHandleResult:
         """Open an immutable artifact handle; DEX preparation starts on the first code query."""
         return service.load_artifact(
@@ -912,6 +912,10 @@ def build_server(
         limit: Annotated[
             int, Field(ge=1, le=1000, description="Components or lines per page")
         ] = 100,
+        module: Annotated[
+            str | None,
+            Field(description="One selected AAB module; required for a multi-module handle"),
+        ] = None,
     ) -> ManifestResult:
         """Read component metadata or XML; follow next_offset for remaining rows or lines."""
         return service.query_artifact(
@@ -919,6 +923,7 @@ def build_server(
             operation="manifest_xml" if include_xml else "manifest_summary",
             offset=offset,
             limit=limit,
+            module=module,
         )
 
     @registry.tool(annotations=READ_ONLY)

@@ -14,6 +14,7 @@ class Source(Object, total=False):
     path: str
     dex_entry: str
     container_entry: str
+    module: str
     size_bytes: int
     sha256: str
     dex_version: str
@@ -41,6 +42,8 @@ class Result(Object, total=False):
     next_offset: int | None
     coverage: str
     limitations: list[str]
+    selected_modules: list[str]
+    module: str
 
 
 class Capabilities(Object, total=False):
@@ -105,6 +108,7 @@ class Entry(Object, total=False):
     crc32: str
     encrypted: bool
     abi: str | None
+    module: str
 
 
 class ArchiveResult(Result, total=False):
@@ -242,16 +246,18 @@ class ManifestHeader(Object, total=False):
     target_sdk: str | None
     application_name: str | None
     resource_values_resolved: Literal[False]
+    module: str
 
 
 class ArtifactSummary(Object, total=False):
     entry_count: Required[int]
-    native_scope: Required[Literal["archive", "selected_module"]]
+    native_scope: Required[Literal["archive", "selected_module", "selected_modules"]]
     native_library_count: Required[int]
     native_abis: Required[list[str]]
     native_abi_count: Required[int]
     native_abis_truncated: Required[bool]
-    manifest: Required[ManifestHeader]
+    manifest: ManifestHeader
+    manifests: list[ManifestHeader]
 
 
 class ArtifactResult(Result, total=False):

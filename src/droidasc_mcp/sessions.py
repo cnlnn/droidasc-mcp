@@ -50,7 +50,7 @@ class Entry:
     analysis: AnalysisSession | None = None
     preparation_lock: threading.Lock = field(default_factory=threading.Lock)
     preparation_budget: int = 0
-    module: str | None = None
+    module: str | list[str] | None = None
     prepared: bool = True
 
     @property
@@ -166,7 +166,7 @@ class DexSessions:
                     next(self.order),
                     analysis=analysis,
                     preparation_budget=budget,
-                    module=module,
+                    module=copy.deepcopy(module),
                     prepared=False,
                 )
                 committed = True
@@ -241,6 +241,7 @@ class DexSessions:
                 return error("session_not_found", "Artifact handle is unknown, expired, or closed")
             entry.users += 1
         try:
+            query = {**query, "module_selection": copy.deepcopy(entry.module)}
             inventory = query.get("operation") == "artifact_inventory"
             if inventory:
                 query = {

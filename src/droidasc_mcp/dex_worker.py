@@ -208,6 +208,8 @@ def prepare_bundle(settings, request, root, common, directory=None):
         nonlocal count, remaining
         if artifact is not None:
             record.update(path=str(artifact), container_entry=origin)
+            if artifact.suffix.lower() == ".aab":
+                record["module"] = origin.partition("/")[0]
         common["sources"].append(record)
         if directory is not None:
             directory.accept(archive, record)

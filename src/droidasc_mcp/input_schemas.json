@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "220e670498b4bbe722773ac5d261ad57412f8cb1b71a02cd592d093f7ca0ddc2",
+  "source_sha256": "38adb47615e2a33e04db87ccdcb970d0ef0fc0011f4ec09aa460afadc0d7f7a8",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "ae2902ac94c29b0e7b9ce730e23f892b475ae154a85a44fe280a406775a10cda",
+  "records_sha256": "4c0741724ba238297858777e108e3ded009e1381de6151e3497470944c87cdce",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -35,7 +35,7 @@
       "is_async": false
     },
     "asc_inspect_artifact": {
-      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects one module's direct DEX; nested APKs are not reconstructed.\ninclude_summary describes the input artifact, including when compare_to is set.\nManifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.",
+      "description": "Inspect container capabilities before selecting a DEX analysis workflow.\n\nJVM classes and nested APK splits are inventory-only. First-level JAR class names\nare included. compare_to compares JVM identities; DEX declarations use session diff.\nAAB selects base, an exact module, an explicit list or * for all modules.\nNested APKs are not reconstructed.\ninclude_summary describes the input artifact, including when compare_to is set.\nManifest diagnostics are separate from inventory status; AAB protobuf XML is not decoded.",
       "parameters": {
         "properties": {
           "artifact_path": {
@@ -49,11 +49,17 @@
                 "type": "string"
               },
               {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": null,
-            "description": "Exact AAB module; omitted selects base, other formats omit",
+            "description": "AAB exact module, 1-100 distinct names, or * for all; omitted selects base",
             "title": "Module"
           },
           "max_uncompressed_bytes": {
@@ -135,7 +141,7 @@
       "is_async": false
     },
     "asc_open_artifact_session": {
-      "description": "Snapshot selected direct DEX into an immutable reusable session with container hashes.\n\nDirect DEX at arbitrary archive paths, AAR classes.jar DEX and one AAB module\nare supported. Pure JVM\nclasses and nested split APKs stay inventory-only. Duplicate classes are rejected.\nQuery and close the resulting ID with the existing DEX session tools.",
+      "description": "Snapshot selected direct DEX into an immutable reusable session with container hashes.\n\nDirect DEX at arbitrary archive paths, AAR classes.jar DEX and selected AAB modules\nare supported. Pure JVM\nclasses and nested split APKs stay inventory-only. Duplicate classes are rejected.\nQuery and close the resulting ID with the existing DEX session tools.",
       "parameters": {
         "properties": {
           "artifact_path": {
@@ -149,11 +155,17 @@
                 "type": "string"
               },
               {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": null,
-            "description": "Exact AAB module; omitted selects base",
+            "description": "AAB exact module, 1-100 distinct names, or * for all; omitted selects base",
             "title": "Module"
           },
           "max_uncompressed_bytes": {
@@ -1411,11 +1423,17 @@
                 "type": "string"
               },
               {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": null,
-            "description": "AAB module; default base",
+            "description": "AAB exact module, 1-100 distinct names, or * for all; omitted selects base",
             "title": "Module"
           }
         },
@@ -1513,6 +1531,19 @@
             "minimum": 1,
             "title": "Limit",
             "type": "integer"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "One selected AAB module; required for a multi-module handle",
+            "title": "Module"
           }
         },
         "required": [
