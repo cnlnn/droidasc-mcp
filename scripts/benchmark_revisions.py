@@ -30,9 +30,8 @@ async def collection_digests(operations, trial, repeats, page_size, reference_fo
     assert operations[0]["label"] == "open" and operations[0]["status"] == "ok"
     assert operations[-1]["label"] == "close" and operations[-1]["status"] == "ok"
     opened = operations[0]["result"]
-    commands = benchmark.queries(
-        "ours", opened["session_id"], trial["scenario"], benchmark.GRAPH_ROOT, 3
-    )
+    key = opened["analysis_id"] if trial.get("artifact_handle") else opened["session_id"]
+    commands = benchmark.queries("ours", key, trial["scenario"], benchmark.GRAPH_ROOT, 3)
     wanted = {
         f"query:{repeat}:{index}": command
         for repeat in range(repeats)
@@ -43,6 +42,7 @@ async def collection_digests(operations, trial, repeats, page_size, reference_fo
     assert {c["label"] for c in collections} == set(wanted)
     consumed = {"open", "close"}
     digests = {}
+    prepared_identity = None
     for collection in collections:
         label = collection["label"]
         tool, params = wanted[label]
@@ -52,6 +52,7 @@ async def collection_digests(operations, trial, repeats, page_size, reference_fo
         attempts = iter(op for op in operations if op["label"].startswith(label + ":page:"))
 
         async def call(expected_label, expected_tool, arguments, *, _attempts=attempts, **kwargs):
+            nonlocal prepared_identity
             attempt = next(_attempts, None)
             assert attempt is not None
             assert attempt["label"] == expected_label and attempt["tool"] == expected_tool
@@ -61,10 +62,20 @@ async def collection_digests(operations, trial, repeats, page_size, reference_fo
             result = attempt["result"]
             limited = result.get("status") == "error" and result.get("code") == "response_limit"
             assert attempt["status"] == ("response_limit" if limited else "ok")
-            assert result["session_id"] == opened["session_id"]
+            assert result["session_id"] == key
             if not limited:
-                for key in ("input_id", "artifact_sha256", "sources"):
-                    assert result[key] == opened[key], f"Page provenance differs: {key}"
+                identity = {
+                    name: result[name] for name in ("input_id", "artifact_sha256", "sources")
+                }
+                if trial.get("artifact_handle"):
+                    assert identity["artifact_sha256"] == opened["sha256"]
+                    if prepared_identity is None:
+                        prepared_identity = identity
+                    assert identity == prepared_identity, (
+                        "Prepared provenance differs between pages"
+                    )
+                else:
+                    assert identity == {name: opened[name] for name in identity}
             return result
 
         result, pages, recoveries = await benchmark.collect_reference_pages(
@@ -144,6 +155,7 @@ async def main(args):
         "repeats": args.repeats,
         "rounds": args.rounds,
         "scenarios": args.scenarios,
+        "artifact_handles": getattr(args, "artifact_handles", False),
         "trials": [],
         "comparisons": [],
     }
@@ -204,6 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--repeats", type=int, choices=range(1, 4), default=2)
     parser.add_argument("--page-size", type=int, choices=range(1, 1001), default=1000)
     parser.add_argument("--workers", type=int, choices=(2, 4), default=2)
+    parser.add_argument("--artifact-handles", action="store_true")
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--trial-timeout", type=int, default=600)
     parser.add_argument("--memory-mib", type=int, default=4096)

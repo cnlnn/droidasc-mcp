@@ -78,6 +78,26 @@ async def test_full_replay_ignores_only_session_and_page_execution_metadata(revi
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("damage", [None, "artifact", "prepared_identity", "source"])
+async def test_lazy_handle_replay_binds_snapshot_and_all_prepared_pages(revisions, damage):
+    operations, trial = receipt(revisions, [1, 2])
+    expected = await revisions.collection_digests(operations, trial, 1, 3)
+    trial["artifact_handle"] = True
+    operations[0]["result"] = {"analysis_id": "session", "sha256": "apk"}
+    if damage == "artifact":
+        operations[1]["result"]["artifact_sha256"] = "other"
+    elif damage == "prepared_identity":
+        operations[2]["result"]["input_id"] = "other"
+    elif damage == "source":
+        operations[2]["result"]["sources"] = [{"dex_entry": "other.dex"}]
+    if damage is None:
+        assert expected == await revisions.collection_digests(operations, trial, 1, 3)
+    else:
+        with pytest.raises(AssertionError):
+            await revisions.collection_digests(operations, trial, 1, 3)
+
+
+@pytest.mark.anyio
 async def test_full_replay_preserves_byte_limit_retry_and_changed_page_size(revisions):
     operations, trial = receipt(revisions, [1, 1, 1])
     failed = copy.deepcopy(operations[1])

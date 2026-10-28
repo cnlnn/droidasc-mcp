@@ -236,8 +236,13 @@ def prepare_bundle(settings, request, root, common, directory=None):
 
             artifact = settings.validate_artifact(request["artifact_path"])
             budget = validate_budget(request["max_uncompressed_bytes"], settings)
+            identity = (
+                {"expected_sha256": request["expected_sha256"]}
+                if request.get("expected_sha256") is not None
+                else {}
+            )
             inputs, metadata = stack.enter_context(
-                selected_dex(settings, artifact, budget, request.get("module"))
+                selected_dex(settings, artifact, budget, request.get("module"), **identity)
             )
             inputs = stack.enter_context(prefetched_entries(inputs))
             common.update(metadata, input_kind="container", has_manifest=False)

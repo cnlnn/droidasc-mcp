@@ -20,6 +20,134 @@ def zip_bytes(entries):
     return stream.getvalue()
 
 
+@pytest.mark.parametrize("known_hash", [False, True])
+def test_private_preparation_reuses_hash_but_checks_complete_input_on_exit(
+    settings, tmp_path, monkeypatch, known_hash
+):
+    from droidasc_mcp import containers
+
+    path = tmp_path / "private.apk"
+    path.write_bytes(zip_bytes([("classes.dex", b"original")]))
+    expected = hashlib.sha256(path.read_bytes()).hexdigest()
+    hashes = []
+    original = containers._digest
+
+    def count(stream):
+        hashes.append(stream.name)
+        return original(stream)
+
+    monkeypatch.setattr(containers, "_digest", count)
+    options = {"expected_sha256": expected} if known_hash else {}
+    with containers.selected_dex(settings, path, 1024**2, None, **options) as (inputs, metadata):
+        assert len(hashes) == (0 if known_hash else 1)
+        reader, info, _ = next(inputs)
+        with reader.open(info) as stream:
+            assert stream.read() == b"original"
+        assert metadata["artifact_sha256"] == expected
+    assert len(hashes) == (1 if known_hash else 2)
+
+
+@pytest.mark.parametrize("mutation", ["before", "during", "invalid_before"])
+def test_private_preparation_hash_rejects_mutation_even_when_reading_fails(
+    settings, tmp_path, mutation
+):
+    from droidasc_mcp.archive_errors import ArchiveError
+    from droidasc_mcp.containers import selected_dex
+
+    path = tmp_path / "private.apk"
+    original = zip_bytes([("classes.dex", b"original")])
+    path.write_bytes(original)
+    expected = hashlib.sha256(original).hexdigest()
+    if mutation != "during":
+        path.write_bytes(
+            b"invalid"
+            if mutation == "invalid_before"
+            else zip_bytes([("classes.dex", b"replaced")])
+        )
+    with (
+        pytest.raises(ArchiveError, match="changed") as error,
+        selected_dex(settings, path, 1024**2, None, expected_sha256=expected) as selected,
+    ):
+        list(selected[0])
+        if mutation == "during":
+            with path.open("ab") as stream:
+                stream.write(b"changed")
+    assert error.value.code == "input_changed"
+
+
+def test_private_preparation_uses_handle_identity_without_rehashing_first(
+    settings, tmp_path, monkeypatch
+):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import containers, dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    path = tmp_path / "private.apk"
+    path.write_bytes(zip_bytes([("classes.dex", empty_dex())]))
+    expected = hashlib.sha256(path.read_bytes()).hexdigest()
+    hashes = []
+    original = containers._digest
+
+    def count(stream):
+        hashes.append(stream.name)
+        return original(stream)
+
+    monkeypatch.setattr(containers, "_digest", count)
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 1})
+    request.update(
+        artifact_path=str(path),
+        max_uncompressed_bytes=1024**2,
+        prepare=True,
+        expected_sha256=expected,
+        original_path=str(tmp_path / "original.apk"),
+    )
+    root = tmp_path / "prepared"
+    root.mkdir()
+    result = dex_worker.analyze(request, root)
+    assert result["status"] == "ok", result
+    assert result["artifact_sha256"] == expected
+    assert len(hashes) == 1
+
+
+@pytest.mark.parametrize("failure", ["wrong_hash", "late_hash_failure"])
+def test_private_preparation_does_not_publish_before_final_hash(
+    settings, tmp_path, monkeypatch, failure
+):
+    from test_dex import empty_dex
+
+    from droidasc_mcp import containers, dex_worker
+    from droidasc_mcp.runner import DroidAscRunner
+
+    path = tmp_path / "private.apk"
+    path.write_bytes(zip_bytes([("classes.dex", empty_dex())]))
+    expected = hashlib.sha256(path.read_bytes()).hexdigest()
+    root = tmp_path / "prepared"
+    root.mkdir()
+    original = containers._digest
+
+    def check(stream):
+        assert not (root / "owners.sqlite").exists()
+        assert not (root / "prepared.json").exists()
+        actual = original(stream)
+        return "0" * 64 if failure == "late_hash_failure" else actual
+
+    monkeypatch.setattr(containers, "_digest", check)
+    request = DroidAscRunner(settings)._dex_request([], {"offset": 0, "limit": 1})
+    request.update(
+        artifact_path=str(path),
+        max_uncompressed_bytes=1024**2,
+        prepare=True,
+        expected_sha256="0" * 64 if failure == "wrong_hash" else expected,
+        original_path=str(tmp_path / "original.apk"),
+    )
+    result = dex_worker.analyze(request, root)
+    assert result["code"] == "input_changed", result
+    assert not (root / "owners.sqlite").exists()
+    assert not (root / "prepared.json").exists()
+    assert not any(thread.name.startswith("droidasc-owners") for thread in threading.enumerate())
+
+
 @pytest.mark.parametrize("kind", ["apk", "aar"])
 def test_preparation_releases_validated_resource_inventory_before_dex_reads(
     settings, tmp_path, monkeypatch, kind

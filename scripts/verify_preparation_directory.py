@@ -107,20 +107,40 @@ def main(args):
         "runtime_sha256": runtime_identity(),
         "verifier_sha256": digest(Path(__file__)),
         "scope": "all_standard_direct_apk_dex_classes_owners_and_snapshot_bytes",
+        "artifact_handle": args.artifact_handle,
         "oracle": "pure_python_original_dex_cursor_accelerator_false",
         "notes": "Accuracy diagnostic only; whole-oracle memory is not product RSS or MCP latency.",
     }
     try:
         settings = Settings(allowed_roots=(args.apk.parent,), java_executable="java-must-not-run")
-        with tempfile.TemporaryDirectory(prefix="ownership-oracle-") as temporary:
-            root = Path(temporary)
-            prepared = DroidAscRunner(settings).prepare_artifact(
-                args.apk, root, args.expanded_mib * 1024**2, None
-            )
-            assert prepared["status"] == "ok", prepared
-            report.update(
-                input_id=prepared["input_id"], **verify_ownership(args.apk, root, prepared)
-            )
+        if args.artifact_handle:
+            from droidasc_mcp.service import DroidAscService
+
+            with closing(DroidAscService(settings)) as service:
+                loaded = service.load_artifact(
+                    str(args.apk), max_uncompressed_bytes=args.expanded_mib * 1024**2
+                )
+                assert loaded["status"] == "ok", loaded
+                key = loaded["analysis_id"]
+                result = service.query_dex_session(key, operation="info", offset=0, limit=1)
+                assert result["status"] == "ok", result
+                entry = service.sessions.entries[key]
+                prepared, root = entry.info, entry.root
+                report.update(
+                    input_id=prepared["input_id"], **verify_ownership(args.apk, root, prepared)
+                )
+                assert service.close_artifact(key)["closed"]
+                assert not root.exists()
+        else:
+            with tempfile.TemporaryDirectory(prefix="ownership-oracle-") as temporary:
+                root = Path(temporary)
+                prepared = DroidAscRunner(settings).prepare_artifact(
+                    args.apk, root, args.expanded_mib * 1024**2, None
+                )
+                assert prepared["status"] == "ok", prepared
+                report.update(
+                    input_id=prepared["input_id"], **verify_ownership(args.apk, root, prepared)
+                )
         report["input_unchanged"] = digest(args.apk) == report["apk_sha256"]
         report["runtime_unchanged"] = runtime_identity() == report["runtime_sha256"]
         assert report["input_unchanged"] and report["runtime_unchanged"]
@@ -137,5 +157,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("apk", type=Path)
     parser.add_argument("--expanded-mib", type=int, choices=range(1, 2049), default=512)
+    parser.add_argument("--artifact-handle", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     main(parser.parse_args())

@@ -20,34 +20,45 @@ def validate_budget(value, settings):
 
 
 @contextmanager
-def stable_archive(path, maximum, *, preparation=False):
+def stable_archive(path, maximum, *, preparation=False, expected_sha256=None):
     with path.open("rb") as handle:
         before = os.fstat(handle.fileno())
         if not stat.S_ISREG(before.st_mode):
             raise ArchiveError("input_changed", "Container is no longer a regular file")
         if before.st_size > maximum:
             raise ArchiveError("input_limit", "Container exceeds the input byte budget")
-        digest = _digest(handle)
-        from .preparation_zip import PreparationZipFile
+        # Private artifact handles already bind the complete snapshot hash. Reuse
+        # it as the expected identity, then verify every byte before publication.
+        digest = _digest(handle) if expected_sha256 is None else expected_sha256
+        complete = False
+        try:
+            from .preparation_zip import PreparationZipFile
 
-        archive_type = PreparationZipFile if preparation else zipfile.ZipFile
-        with archive_type(handle) as archive:
-            entries = archive.inventory if preparation else _entries(archive)
-            yield archive, entries, digest
-        with path.open("rb") as current:
-            if (
-                _identity(before) != _identity(os.fstat(handle.fileno()))
-                or _identity(before) != _identity(os.fstat(current.fileno()))
-                or digest != _digest(handle)
-            ):
-                raise ArchiveError("input_changed", "Container changed during analysis; retry")
-            # Reopen after hashing: Windows path-stat timestamps can differ from fstat.
-            with path.open("rb") as final:
-                if any(
-                    _identity(before) != _identity(os.fstat(stream.fileno()))
-                    for stream in (handle, current, final)
-                ):
-                    raise ArchiveError("input_changed", "Container changed during analysis; retry")
+            archive_type = PreparationZipFile if preparation else zipfile.ZipFile
+            with archive_type(handle) as archive:
+                entries = archive.inventory if preparation else _entries(archive)
+                yield archive, entries, digest
+            complete = True
+        finally:
+            if complete or expected_sha256 is not None:
+                with path.open("rb") as current:
+                    if (
+                        _identity(before) != _identity(os.fstat(handle.fileno()))
+                        or _identity(before) != _identity(os.fstat(current.fileno()))
+                        or digest != _digest(handle)
+                    ):
+                        raise ArchiveError(
+                            "input_changed", "Container changed during analysis; retry"
+                        )
+                    # Reopen after hashing: Windows path-stat timestamps can differ from fstat.
+                    with path.open("rb") as final:
+                        if any(
+                            _identity(before) != _identity(os.fstat(stream.fileno()))
+                            for stream in (handle, current, final)
+                        ):
+                            raise ArchiveError(
+                                "input_changed", "Container changed during analysis; retry"
+                            )
 
 
 def select(entries, kind, module):
@@ -249,9 +260,11 @@ def inspect(archive, entries, kind, query):
 
 
 @contextmanager
-def selected_dex(settings, path, budget, module):
+def selected_dex(settings, path, budget, module, *, expected_sha256=None):
     kind = path.suffix.lower()[1:]
-    with stable_archive(path, settings.max_apk_bytes, preparation=True) as (
+    with stable_archive(
+        path, settings.max_apk_bytes, preparation=True, expected_sha256=expected_sha256
+    ) as (
         archive,
         entries,
         digest,

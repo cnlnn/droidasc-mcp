@@ -335,6 +335,42 @@ Cross-thread cProfile cumulative times are not additive phase budgets. Profile e
 alone is not performance acceptance; retain original hashes, mutation checks, first-use
 costs, quotas and cleanup while evaluating any bounded reuse candidate.
 
+G3 first bounded-reuse candidate: reuse the immutable artifact handle's expected SHA-256
+when preparing its private ZIP snapshot, rather than computing that same starting hash
+again. The final complete-file hash and reopened-handle identity checks remain mandatory
+before owners/prepared metadata can be published, including exceptional ZIP/DEX paths.
+Original path-based sessions still hash before and after; raw DEX validation, checksums,
+signatures, original snapshot acquisition and every output/cache/disk bound are unchanged.
+Fresh Douyin low-overhead attribution is 4.29 seconds preparation, with 0.63 seconds of
+two whole-archive hashes, 2.82 seconds in overlapping snapshot-copy calls, 0.43 seconds
+checked class traversal and 1.07 seconds owner insertion. Overlapping phase wall sums are
+not additive; this candidate removes one repeated archive pass, not the DEX-copy cost.
+
+New regressions first fail five cells (`private-hash-red.xml`); the initial broad run
+has 14 unconfigured-JADX skips and is not accepted. The configured follow-up exposes two
+benchmark mock failures after adding strict survivor checks; the fake transport is
+corrected to model clean exit, and a new leaked-child cell verifies failure plus owned
+cleanup. `private-hash-green-configured-retry1.xml` passes all 208 focused cells, zero skips.
+The initial five-round Douyin pilot passes all ten complete-field trials with exact
+baseline/candidate equality; it used hidden handle calls in legacy advertisement, so
+SDK schema validation warnings remain in that pilot. The final matrix explicitly uses
+`artifact_preview` to advertise both handle operations and the legacy DEX bridge.
+It measures load separately from lazy first complete collection and repeat collection,
+with five alternating pairs per APK and two/four CPUs; no accepted speed claim yet.
+The first independent ownership/snapshot verifier now has an explicit `--artifact-handle`
+path so the optimized preparation, not only legacy preparation, is checked against every
+original DEX byte and pure-Python class identity. Full source/CI/package gates are pending.
+
+Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
+
+```sh
+uv run python scripts/benchmark_revisions.py input.apk \
+  --baseline-runtime before --candidate-runtime src --artifact-handles \
+  --scenarios full_field --workers 4 --rounds 5 --expanded-mib 512 --output result.json
+uv run python scripts/verify_preparation_directory.py input.apk \
+  --artifact-handle --expanded-mib 512 --output ownership.json
+```
+
 G1 verification receipts are under `artifacts/competitor-gap-b3-20261029/`:
 
 - `g1-profile-red.xml` preserves the initially missing profile regression.

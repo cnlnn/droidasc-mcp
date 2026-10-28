@@ -519,6 +519,9 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 # The measured core must not accidentally use a configured Java backend.
                 env.pop("DROIDASC_MCP_JADX_HOME", None)
                 env["DROIDASC_MCP_JAVA"] = "java-must-not-run"
+                env.pop("DROIDASC_MCP_DEXLIB_HOME", None)
+                if getattr(args, "artifact_handles", False):
+                    env["DROIDASC_MCP_TOOL_PROFILE"] = "artifact_preview"
             endpoint = StdioServerParameters(
                 command=sys.executable,
                 args=[
@@ -602,11 +605,15 @@ async def trial(args, implementation, scenario, round_number, report, save):
                         operation["peak_descendant_rss_bytes"] = max(peak, current_rss())
 
                 ours = implementation == "ours"
+                artifact_handle = ours and getattr(args, "artifact_handles", False)
+                metric["artifact_handle"] = artifact_handle
                 opened = await call(
                     "open",
-                    "asc_open_artifact_session" if ours else "load_artifact",
+                    "asc_open_artifact_session"
+                    if ours and not artifact_handle
+                    else "load_artifact",
                     {
-                        "artifact_path": str(args.apk),
+                        "path" if artifact_handle else "artifact_path": str(args.apk),
                         "max_uncompressed_bytes": args.expanded_mib * 1024**2,
                     }
                     if ours
@@ -615,7 +622,7 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 metric["ready_from_process_start_seconds"] = round(
                     response_times["open"] - started, 4
                 )
-                key = opened["session_id" if ours else "analysis_id"]
+                key = opened["session_id" if ours and not artifact_handle else "analysis_id"]
                 commands = queries(implementation, key, scenario, args.graph_root, args.graph_depth)
                 if ours and getattr(args, "reference_format", "flat") == "grouped":
                     assert scenario.startswith("full_")
@@ -670,8 +677,8 @@ async def trial(args, implementation, scenario, round_number, report, save):
                     show_operations()
                 await call(
                     "close",
-                    "asc_close_dex_session" if ours else "close_artifact",
-                    {"session_id" if ours else "analysis_id": key},
+                    "asc_close_dex_session" if ours and not artifact_handle else "close_artifact",
+                    {"session_id" if ours and not artifact_handle else "analysis_id": key},
                 )
                 # Finish in-flight samples before judging them or deleting their root.
                 running = False
@@ -686,9 +693,15 @@ async def trial(args, implementation, scenario, round_number, report, save):
     finally:
         running = False
         await task
+        metric["surviving_children_before_cleanup"] = [child.pid for child in children()]
         for child in reversed(children()):
             with suppress(psutil.Error):
                 child.kill()
+        metric["temporary_root_removed"] = temporary_root is None or not temporary_root.exists()
+        if metric["status"] == "passed" and (
+            metric["surviving_children_before_cleanup"] or not metric["temporary_root_removed"]
+        ):
+            metric.update(status="failed", error="Owned process or temporary root survived cleanup")
         show_operations()
         # Serialize potentially multi-megabyte receipts only after all measured
         # responses. Report I/O must not delay concurrent callbacks or first results.

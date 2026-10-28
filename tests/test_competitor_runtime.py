@@ -641,12 +641,28 @@ async def test_full_receipt_only_saved_after_measured_responses(
 @pytest.mark.anyio
 @pytest.mark.parametrize(
     "condition",
-    ["valid", "escaped", "empty", "denied", "unsupported", "exited", "client_memory", "deadline"],
+    [
+        "valid",
+        "escaped",
+        "empty",
+        "denied",
+        "unsupported",
+        "exited",
+        "client_memory",
+        "deadline",
+        "leaked",
+    ],
 )
 async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
     benchmark, tmp_path, monkeypatch, condition
 ):
-    state = {"inventory_calls": 0, "affinity_calls": 0, "killed": False, "closed": False}
+    state = {
+        "inventory_calls": 0,
+        "affinity_calls": 0,
+        "killed": False,
+        "closed": False,
+        "transport_exited": False,
+    }
 
     class Child:
         pid = 12345
@@ -668,6 +684,7 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
                 "empty": [],
                 "client_memory": [1],
                 "deadline": [1],
+                "leaked": [1],
             }[condition]
 
         def kill(self):
@@ -677,7 +694,7 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
 
     def inventory(**kwargs):
         state["inventory_calls"] += 1
-        return [] if state["inventory_calls"] == 1 else [child]
+        return [] if state["inventory_calls"] == 1 or state["transport_exited"] else [child]
 
     monkeypatch.setattr(
         benchmark.psutil,
@@ -696,7 +713,7 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
             return self
 
         async def __aexit__(self, *args):
-            pass
+            state["transport_exited"] = condition != "leaked"
 
         async def call_tool(self, name, params, **kwargs):
             if name == "asc_open_artifact_session":
@@ -728,12 +745,17 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
     await benchmark.trial(args, "ours", "field", 0, report, lambda: persisted.append(True))
     metric = report["trials"][0]
     assert persisted == [True] and state["affinity_calls"] > 0
-    assert state["killed"], "Even successful trials must clean only their owned descendants"
     if condition in {"valid", "exited"}:
         assert metric["status"] == "passed" and state["closed"], metric
+        assert not state["killed"] and not metric["surviving_children_before_cleanup"]
         assert "safety_stop" not in metric
         assert bool(metric["cpu_affinity_samples"]) == (condition == "valid")
+    elif condition == "leaked":
+        assert metric["status"] == "failed" and state["closed"] and state["killed"]
+        assert metric["surviving_children_before_cleanup"] == [child.pid]
+        assert metric["error"] == "Owned process or temporary root survived cleanup"
     else:
+        assert state["killed"], "Failed trials must stop only their owned descendants"
         assert metric["status"] == "failed" and not state["closed"], metric
         assert metric["safety_stop"] == (
             "descendant_cpu_affinity"
