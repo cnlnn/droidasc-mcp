@@ -5,7 +5,7 @@
 Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
 assessment complete. On 2026-10-29 the maintainer requested small, independently
 accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
-G3/B4 is accepted with measured residuals; G4/B5 is active;
+G3/B4 and G4/B5 are accepted with explicit residuals; G5/B6.1 is active;
 the previously paused goal-controller status remains separate from this scoped work.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
@@ -87,8 +87,8 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | B2 | Compact reference output and resumable full-result collection | B1 accepted | accepted at aca6b27; opt-in large-member benefit, not universal speedup |
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | accepted at e79f670; one private archive hash reused, copy/storage residuals |
-| B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | G4 active; checked module union and metadata routing |
-| B6 | Native DEX 041 logical views and query coverage | B5 accepted | deferred |
+| B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | accepted at 557f43e; explicit module union and metadata routing |
+| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 active; native original-byte receiving views and source compatibility candidate |
 
 Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
@@ -102,8 +102,8 @@ because a batch or patch release passed.
 | G1 (B3.1) | One immutable artifact handle for metadata and lazy code queries | Metadata does not prepare DEX; first code query prepares once; real stdio/HTTP, original hash, lifecycle/quotas and legacy compatibility; frozen real-model inventory/navigation/resource tasks | locally accepted; 1807 source tests, four successful model workflows and clean sdist/wheel checks |
 | G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | accepted at 631fcbc; 12/12 model tasks, 25/25 CI jobs; aggregate schema/latency residuals |
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
-| G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | active; exact-name/list/all policy and existing cross-DEX fixture reuse |
-| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | pending |
+| G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
+| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | active; original physical backing plus zero-payload logical aliases, checked C/Python addressing |
 | G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | pending |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
@@ -262,11 +262,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G3/B4 accepted with measured residuals; G4/B5 module integration active |
-| Next action | Extend checked module selection with explicit lists/all, preserve base default and ambiguity rejection, route per-module metadata, then validate cross-module references and lifecycle |
+| Current task | G4/B5 accepted; G5/B6.1 native physical-view integration active |
+| Next action | Complete original-byte 041/native-query, malformed/alias/quota and real-transport evidence; preserve source handoff and verify combined platform/package gates in G6 |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
-| Planning checks | G3 final local source 1831 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12 |
-| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
+| Planning checks | Frozen G4 final source 1856 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12; later G5 candidate is not covered by G4's receipts |
+| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 native view, source handoff and combined acceptance |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -455,6 +455,41 @@ Two earlier workflow-helper failures remain: a synchronous file used as an async
 then an incomplete expected graph that omitted the second fixture's five sites connected
 through shared external operands. Neither was a product failure or a passing acceptance.
 Final Linux/Windows source/package gates and matched default-APK preservation remain open.
+
+G4 is accepted at `557f43ec9aaaf21302fa05967afaf4829eeac9a4`. CI
+`40754281258` passes all 25 jobs: eight source cells and eight canonical-sdist/exact-wheel
+cells on Linux/Windows Python 3.10-3.13, each with 1856 tests and zero skips, plus signing,
+native Rust and stability gates. Four platform/ABI sdist/wheel pairs match the accepted
+runtime source bytes. `g4-acceptance.json` freezes the commit, all raw receipts, original
+module fixture/Smali evidence and earlier failures under the G4 evidence directory.
+
+The matched default-APK preservation matrix alternates five pairs for Taobao/WeChat/Douyin
+at four CPUs: 30 fresh real-MCP trials and 60 complete original-byte checked collections,
+with exact complete result/diagnostic equality against accepted G3. First complete medians
+before/after are 1.0914/1.0953, 1.7296/1.7075 and 4.0783/3.9974 seconds. Process-to-first
+medians are 2.1487/2.0640, 3.0646/3.0654 and 5.8330/5.9994 seconds; the last is slower by
+0.1664 seconds (2.9%). Repeated medians differ by at most 9 ms. Sampled temporary storage
+is unchanged within 1.4 KiB; no storage or competitor speedup is claimed. Protobuf XML,
+dynamic runtime resolution and B6 remain explicit residuals. No publication is approved.
+
+G5 starts under `artifacts/competitor-gap-b6-20261029/`. Port the pinned upstream's
+logical-header traversal/addressing into the existing checked receiver. Read selected
+headers in place and retain one unchanged physical container; zero-payload private ZIP
+aliases identify later logical headers. All logical headers/checksums are validated before
+publication, full backing CRC is checked on reads, logical identity includes header offset,
+and existing ownership/caches/byte budgets remain the owners. Native C and Python readers
+address the original pools and instructions, including forward-shared strings/ID tables;
+the older backward-sharing fixture remains a compatibility case, not the specification.
+Reference: https://source.android.com/docs/core/runtime/dex-format#container-format.
+
+The initial 25 receiving-side contracts fail against G4, then pass after the header port;
+43 native/preparation cases pass with invalid Java and no JADX/dexlib2. The first native
+integration regression preserves four second-logical-file source failures (126 pass).
+ASC's class-prefix shortcut misses that later logical class. A bounded selected-header
+source view reuses the upstream handoff without importing private ASC APIs; its temporary
+ZIP consumes an explicit reservation in the existing session owner. The corrected source,
+native and directory selection passes 173 cases. Further malformed/alias/quota/transport,
+full-source and G6 platform/package acceptance are still required for this later candidate.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
