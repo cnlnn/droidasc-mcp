@@ -25,7 +25,10 @@ def test_isolated_command_contains_only_task_and_one_mcp(harness, tmp_path):
         "command": "/python",
         "args": ["-m", "server"],
         "cwd": "/repo",
-        "env": {"DROIDASC_MCP_ALLOWED_ROOTS": "/inputs"},
+        "env": {
+            "DROIDASC_MCP_ALLOWED_ROOTS": "/inputs",
+            "DROIDASC_MCP_TOOL_PROFILE": "artifact_preview",
+        },
     }
     args = harness.command(spec, endpoint, tmp_path, "Inspect /inputs/example.apk")
     assert args[-1] == "Inspect /inputs/example.apk"
@@ -36,6 +39,7 @@ def test_isolated_command_contains_only_task_and_one_mcp(harness, tmp_path):
     for feature in ("shell_tool", "memories", "plugins", "multi_agent"):
         assert args[args.index(feature) - 1] == "--disable"
     assert sum(a.startswith("mcp_servers.") and ".command=" in a for a in args) == 1
+    assert 'mcp_servers.analysis.env.DROIDASC_MCP_TOOL_PROFILE="artifact_preview"' in args
 
 
 def test_completed_turn_is_not_task_success_and_errors_count_as_retries(harness, tmp_path):

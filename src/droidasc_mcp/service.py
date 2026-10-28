@@ -38,6 +38,25 @@ class DroidAscService:
     def open_dex_session(self, dex_paths):
         return self.sessions.open(self.settings.validate_dex_paths(dex_paths))
 
+    def load_artifact(self, path, *, max_uncompressed_bytes=128 * 1024**2, module=None):
+        from .containers import select, validate_budget
+
+        path = self.settings.validate_entry_input(path)
+        budget = validate_budget(max_uncompressed_bytes, self.settings)
+        select({}, path.suffix.lower()[1:], module)
+        return self.sessions.load_artifact(path, budget=budget, module=module)
+
+    def close_artifact(self, analysis_id):
+        result = self.sessions.close(analysis_id)
+        return {
+            "analysis_id": analysis_id,
+            "closed": result["status"] == "ok",
+            "cleanup_pending": result.get("cleanup_pending", False),
+        }
+
+    def query_artifact(self, analysis_id, **query):
+        return self.sessions.query_artifact(analysis_id, query)
+
     def inspect_artifact(self, artifact_path, **query):
         from .containers import validate_budget
 

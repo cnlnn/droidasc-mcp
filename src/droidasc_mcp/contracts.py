@@ -269,6 +269,26 @@ class ArtifactResult(Result, total=False):
     summary: ArtifactSummary
 
 
+class ArtifactHandleResult(Result, total=False):
+    status: Required[Literal["ok", "error"]]
+    analysis_id: str
+    name: str
+    artifact_type: Literal["apk", "dex", "jar", "aar", "aab", "apks", "xapk", "zip"]
+    capabilities: list[str]
+    size_bytes: int
+    sha256: str
+    entry_count: int
+    dex_count: int
+    stored_bytes: int
+    idle_ttl_seconds: int
+
+
+class CloseArtifactResult(Object):
+    analysis_id: Required[str]
+    closed: Required[bool]
+    cleanup_pending: Required[bool]
+
+
 class DexRow(Object, total=False):
     target_index: int
     value: str

@@ -127,7 +127,7 @@ class DroidAscRunner:
             raise DroidAscError("APK metadata exceeds response budget")
         return json.loads(data)
 
-    def query_archive(self, apk: Path, query: dict) -> dict:
+    def query_archive(self, apk: Path, query: dict, *, analysis=None) -> dict:
         if query.get("operation") in {
             "list_entries",
             "manifest_summary",
@@ -144,6 +144,12 @@ class DroidAscRunner:
             "max_page_size": self.settings.max_page_size,
             "query": query,
         }
+        if analysis is not None:
+            request.update(
+                allowed_roots=[str(apk.parent)],
+                expected_sha256=analysis.sha256,
+                original_path=str(analysis.path),
+            )
         with tempfile.TemporaryDirectory(prefix="droidasc-apk-") as root:
             request_path = Path(root) / "request.json"
             request_path.write_text(json.dumps(request), encoding="utf-8")
@@ -152,6 +158,37 @@ class DroidAscRunner:
         if len(data) > 256 * 1024:
             raise DroidAscError("APK response exceeds response budget")
         return json.loads(data)
+
+    def snapshot_artifact(self, path: Path, root: Path, input_bytes: int) -> dict:
+        request = {
+            "path": str(path),
+            "root": str(root),
+            "allowed_roots": [str(path) for path in self.settings.allowed_roots],
+            "max_input_bytes": self.settings.max_apk_bytes,
+            "reserved_input_bytes": input_bytes,
+            "max_output_bytes": self.settings.max_output_bytes,
+        }
+        request_path = root / "snapshot-request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        with self._acquire(self._slots):
+            data = self._execute([str(request_path)], module_name="droidasc_mcp.analysis_session")
+        if len(data) > 256 * 1024:
+            raise DroidAscError("Artifact metadata exceeds response budget")
+        return json.loads(data)
+
+    def prepare_analysis(self, path, root, budget, module, analysis):
+        request = self._dex_request([], {"operation": "info", "offset": 0, "limit": 1})
+        request.update(
+            allowed_roots=[str(path.parent)],
+            prepare=True,
+            expected_sha256=analysis.sha256,
+            original_path=str(analysis.path),
+        )
+        if analysis.artifact_type == "dex":
+            request["paths"] = [str(path)]
+        else:
+            request.update(artifact_path=str(path), max_uncompressed_bytes=budget, module=module)
+        return self._run_dex_request(request, root)
 
     def analyze_dex(self, paths: list[Path], query: dict) -> dict:
         request = self._dex_request(paths, query)

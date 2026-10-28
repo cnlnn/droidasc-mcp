@@ -16,7 +16,9 @@ from .config import Settings
 from .contracts import (
     ApkInfoResult,
     ArchiveResult,
+    ArtifactHandleResult,
     ArtifactResult,
+    CloseArtifactResult,
     DexResult,
     DiffResult,
     LegacyResult,
@@ -28,10 +30,24 @@ from .contracts import (
 from .runner import PREPARATION_PROGRESS, DroidAscRunner
 from .service import DroidAscService
 from .tool_registry import ToolRegistry
-from .workflows import INSTRUCTIONS, register_workflows
+from .workflows import ARTIFACT_INSTRUCTIONS, INSTRUCTIONS, register_workflows
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 SESSION_STATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
+
+AnalysisId = Annotated[str, Field(min_length=1, description="Handle returned by load_artifact")]
+
+
+class ToolProfileServer(MCPServer):
+    """Advertise one surface while retaining registered compatibility calls."""
+
+    def __init__(self, *args, advertised_tools, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.advertised_tools = frozenset(advertised_tools)
+
+    async def list_tools(self):
+        return [tool for tool in await super().list_tools() if tool.name in self.advertised_tools]
+
 
 ApkPath = Annotated[str, Field(description="APK file path within configured allowed roots")]
 DexPaths = Annotated[
@@ -843,10 +859,128 @@ def build_server(
             max_edges=max_edges,
         )
 
-    mcp = MCPServer(
-        "droidasc-mcp", lifespan=lifespan, instructions=INSTRUCTIONS, tools=registry.tools
+    legacy_tool_names = {tool.name for tool in registry.tools}
+
+    @registry.tool(annotations=SESSION_STATE)
+    def load_artifact(
+        path: Annotated[str, Field(description="APK, DEX, JAR or Android archive path")],
+        max_uncompressed_bytes: Annotated[
+            int, Field(ge=1, le=2147483648, description="Total DEX preparation byte budget")
+        ] = 134217728,
+        module: Annotated[str | None, Field(description="AAB module; default base")] = None,
+    ) -> ArtifactHandleResult:
+        """Open an immutable artifact handle; DEX preparation starts on the first code query."""
+        return service.load_artifact(
+            path, max_uncompressed_bytes=max_uncompressed_bytes, module=module
+        )
+
+    @registry.tool(annotations=SESSION_STATE)
+    def close_artifact(analysis_id: AnalysisId) -> CloseArtifactResult:
+        """Release a handle after its queries finish; active queries retain their files."""
+        return service.close_artifact(analysis_id)
+
+    @registry.tool(annotations=READ_ONLY)
+    def apk_get_summary(
+        analysis_id: AnalysisId,
+        offset: Annotated[int, Field(ge=0, description="Zero-based inventory row offset")] = 0,
+        limit: Annotated[int, Field(ge=1, le=1000, description="Inventory rows per page")] = 100,
+    ) -> ArchiveResult:
+        """Inspect original identity, DEX/JVM inventory, Android metadata and native ABIs."""
+        return service.query_artifact(
+            analysis_id,
+            operation="artifact_inventory",
+            include_summary=True,
+            offset=offset,
+            limit=limit,
+        )
+
+    @registry.tool(annotations=READ_ONLY)
+    def apk_get_manifest(
+        analysis_id: AnalysisId,
+        include_xml: Annotated[
+            bool, Field(description="Return XML lines instead of structured component rows")
+        ] = False,
+        offset: Annotated[
+            int, Field(ge=0, description="Zero-based component or XML line offset")
+        ] = 0,
+        limit: Annotated[
+            int, Field(ge=1, le=1000, description="Components or lines per page")
+        ] = 100,
+    ) -> ManifestResult:
+        """Read component metadata or XML; follow next_offset for remaining rows or lines."""
+        return service.query_artifact(
+            analysis_id,
+            operation="manifest_xml" if include_xml else "manifest_summary",
+            offset=offset,
+            limit=limit,
+        )
+
+    @registry.tool(annotations=READ_ONLY)
+    def apk_list_entries(
+        analysis_id: AnalysisId,
+        kind: Annotated[
+            Literal["manifest", "resource", "asset", "native", "dex", "metadata", "other"] | None,
+            Field(description="Entry category; omit to include every category"),
+        ] = None,
+        prefix: Annotated[str | None, Field(description="Literal entry path prefix")] = None,
+        offset: Annotated[int, Field(ge=0, description="Zero-based entry offset")] = 0,
+        limit: Annotated[int, Field(ge=1, le=1000, description="Entries per page")] = 100,
+    ) -> ArchiveResult:
+        """List original archive entries with sizes and native ABIs, ordered by path."""
+        return service.query_artifact(
+            analysis_id,
+            operation="list_entries",
+            kind=kind,
+            prefix=prefix,
+            offset=offset,
+            limit=limit,
+        )
+
+    @registry.tool(annotations=READ_ONLY)
+    def apk_get_resource_content(
+        analysis_id: AnalysisId,
+        path: Annotated[str, Field(description="Exact entry path from apk_list_entries")],
+        max_bytes: Annotated[
+            int, Field(ge=1, le=131072, description="Maximum content bytes per page")
+        ] = 131072,
+        byte_offset: Annotated[
+            int, Field(ge=0, description="Byte offset; decoded XML uses UTF-8 bytes")
+        ] = 0,
+        decode_xml: Annotated[
+            bool, Field(description="Decode binary XML; false returns original bytes")
+        ] = True,
+    ) -> ArchiveResult:
+        """Read text/XML or base64; follow next_byte_offset. decode_xml=false preserves bytes."""
+        return service.query_artifact(
+            analysis_id,
+            operation="read_entry",
+            entry_path=path,
+            max_bytes=max_bytes,
+            byte_offset=byte_offset,
+            decode_xml=decode_xml,
+        )
+
+    @registry.tool(annotations=READ_ONLY)
+    def apk_get_signing_info(analysis_id: AnalysisId) -> SigningResult:
+        """Inventory signing containers/certificate fingerprints, not signature verification."""
+        return service.query_artifact(analysis_id, operation="signing_inventory")
+
+    preview = settings.tool_profile == "artifact_preview"
+    advertised_tools = (
+        ({tool.name for tool in registry.tools} - legacy_tool_names)
+        | {"asc_ping", "asc_query_dex_session", "asc_diff_dex_sessions", "asc_secret_candidates"}
+        if preview
+        else legacy_tool_names
     )
-    register_workflows(mcp, service)
+    instructions = ARTIFACT_INSTRUCTIONS if preview else INSTRUCTIONS
+    mcp = ToolProfileServer(
+        "droidasc-mcp",
+        lifespan=lifespan,
+        instructions=instructions,
+        tools=registry.tools,
+        advertised_tools=advertised_tools,
+    )
+    register_workflows(mcp, service, instructions=instructions)
     return mcp
 
 

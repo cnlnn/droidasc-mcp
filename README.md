@@ -34,6 +34,23 @@ structured data instead of unbounded terminal output.
 | `asc_query_dex_session` | Query that session with the original hashes and DEX provenance |
 | `asc_close_dex_session` | Close the session and release its private files |
 
+### Artifact workflow preview
+
+The development-only opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact_preview` advertises
+`load_artifact`, `close_artifact`, `apk_get_summary`, `apk_get_manifest`,
+`apk_list_entries`, `apk_get_resource_content` and `apk_get_signing_info`, plus the
+status, DEX query, revision diff and secret-candidate bridges. Open an artifact once
+and use its `analysis_id` for metadata. Code queries use the same value as
+`asc_query_dex_session.session_id`; DEX preparation starts on the first code query.
+Close with `close_artifact`. Metadata and code share the immutable original hash,
+storage quota and lifetime. The default `legacy` profile and all old callable tools
+remain unchanged. This preview is not the final focused DEX tool surface.
+
+Manifest and class resources also accept the handle at
+`droidasc://analysis/{analysis_id}/manifest?offset=0&limit=100` and
+`droidasc://analysis/{analysis_id}/class?class_name=...&offset=0&limit=100`.
+URI query values must be percent-encoded. Existing resource URIs remain valid.
+
 ## Install
 
 Version 0.2.4 adds bounded selected-reference reuse, byte-bounded reference continuations,
@@ -502,6 +519,7 @@ Both engines share scope/concurrency/process-tree budgets. See [backend details]
 | Environment variable | Default | Meaning |
 | --- | --- | --- |
 | `DROIDASC_MCP_ALLOWED_ROOTS` | current directory | Allowed roots, separated by `os.pathsep` (`:` on Unix, `;` on Windows) |
+| `DROIDASC_MCP_TOOL_PROFILE` | `legacy` | `legacy` or opt-in `artifact_preview` tool advertisement; old calls stay valid |
 | `DROIDASC_MCP_TIMEOUT_SECONDS` | `180` | Per-operation timeout |
 | `DROIDASC_MCP_MAX_APK_BYTES` | `2147483648` | Maximum APK size or combined DEX input size |
 | `DROIDASC_MCP_MAX_OUTPUT_BYTES` | `67108864` | Captured stdout limit and aggregate decoded snapshot budget |

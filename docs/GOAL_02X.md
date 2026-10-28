@@ -2,7 +2,11 @@
 
 ## Current implementation plan, 2026-10-27
 
-Status: goal execution active; B1/B2 accepted with measured residuals; B3 real-model baseline complete, upstream port next. This section is the
+Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
+assessment complete. On 2026-10-29 the maintainer requested small, independently
+accepted goals, highest benefit first. G1 local acceptance is complete; G2 is next;
+the previously paused goal-controller status remains separate from this scoped work.
+This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
 this section. The cross-platform/package requirements and invariants below still apply.
@@ -80,7 +84,7 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | P0 | Source-backed plan and compatibility decisions | Current audit | complete |
 | B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | accepted at b64f85c; cold type/startup residuals retained for B4 |
 | B2 | Compact reference output and resumable full-result collection | B1 accepted | accepted at aca6b27; opt-in large-member benefit, not universal speedup |
-| B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | in progress: 24 real-model baseline trials reviewed; upstream artifact port next |
+| B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | G1 locally accepted; G2 and full B3 gates remain open |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
 | B6 | Native DEX 041 logical views and query coverage | B5 accepted | deferred |
@@ -89,6 +93,26 @@ Execution order changes need an evidence-backed entry here, not a silent expansi
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
 failure and residual gap, then record the revised order. Never call the overall gap closed
 because a batch or patch release passed.
+
+### Small goals, highest benefit first, 2026-10-29
+
+| Goal | Independently usable result | Acceptance boundary | State |
+| --- | --- | --- | --- |
+| G1 (B3.1) | One immutable artifact handle for metadata and lazy code queries | Metadata does not prepare DEX; first code query prepares once; real stdio/HTTP, original hash, lifecycle/quotas and legacy compatibility; frozen real-model inventory/navigation/resource tasks | locally accepted; 1807 source tests, four successful model workflows and clean sdist/wheel checks |
+| G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | pending |
+| G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | pending |
+| G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | pending |
+| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | pending |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | pending |
+
+G1 has the broadest immediate reach across common tasks and reuses the upstream
+session/handle workflow already ported. Ship no changed default yet: opt-in
+`DROIDASC_MCP_TOOL_PROFILE=artifact_preview` advertises seven handle tools and the
+existing status/DEX-query/diff/secret bridges. It is deliberately not the final
+`artifact` surface. All old tools remain callable and `legacy` still advertises the
+same 18 names. G2 replaces the giant DEX selector in the final advertised profile;
+it is not required to use or separately evaluate G1. Small-goal local acceptance
+does not waive the batch's cross-platform/package gates or approve publication.
 
 Execution adjustment following the maintainer's reuse-first correction: freeze the B1
 cache-read candidate and its evidence, then implement the upstream grouping adaptation
@@ -222,13 +246,61 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1/B2 accepted; B3 24-trial real-model baseline reviewed against independent original-byte oracles, with immutable B2 runtime preserved |
-| Next action | Implement the direct upstream AnalysisSession/SessionRegistry/load_artifact port in the existing lifetime owner; expose focused handle tools and preserve callable legacy adapters |
-| Product changes | Native/Python operand scanner, explicit type match contract, existing bounded selected-set spool for string/type, query-aware routing/cache locks and byte-bounded paging; old broad relation behavior retained |
-| Planning checks | Follow-up full-source, Ruff, formatting, schema and diff checks pass; pinned competitor inventory remains 25 tools, two resources, three prompts and 87 parameters; inventory is not behavior acceptance |
-| Open dependencies | B3 real-model baseline/candidate comparison and implementation; B4 cold preparation costs, B5 AAB modules and B6 native DEX 041 remain open |
+| Current task | G1 local acceptance complete; freeze this checkpoint separately from G2 |
+| Next action | G2 focused DEX contracts/surface, with every existing operation retained and full three-round candidate/Windows/package gates before B3 acceptance; do not repeat the frozen baseline |
+| Product changes | Upstream-derived artifact snapshot/lazy DEX ownership; opt-in artifact_preview exposes handle tools plus existing DEX/status/diff/secret bridges; legacy default remains the same 18 tools; handle resources and profile-consistent prompts added |
+| Planning checks | Linux/Python 3.13 source: 1807 passed, zero skips; clean canonical sdist and exact installed wheel each pass all 1807 tests; focused transport/profile check: 83 passed; Ruff and both schema caches pass. All four real-model workflows pass in five total attempts, retaining one provider timeout |
+| Open dependencies | B3 focused surface, candidate comparison and cross-platform/package gates; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
+
+G1 verification receipts are under `artifacts/competitor-gap-b3-20261029/`:
+
+- `g1-profile-red.xml` preserves the initially missing profile regression.
+  `g1-profile-first-green.xml` and `g1-focused.xml` preserve test-development failures
+  (legacy close returns session_not_found, and legacy APK resources use apk_sha256).
+  Those legacy wire semantics were retained; the assertions were corrected.
+- `g1-focused-green.xml`: 83 passing profile/config/lifetime/registry/stdio/HTTP checks.
+  `g1-source-full.xml`: all 1807 source tests pass in 242.02 seconds, zero skips, using
+  the configured public/complex fixtures, JDK 17, JADX, dexlib2 and Rust backend.
+- Both schema caches and Ruff check/format pass. Input contract size in the preview
+  is 3328 o200k_base tokens versus the frozen legacy baseline's 6762; instructions
+  are 479 versus 1347. These are canonical contract counts, not provider-billed tokens
+  or proof of higher model success/faster execution.
+- Real-model smoke uses the frozen four task prompts and same gpt-6.1-sol/medium
+  provider settings, with only an explicit tool-profile selector added to the harness.
+  F-Droid inventory passes (one handle, four product calls, zero errors); launcher
+  navigation passes (one handle, eight calls, zero errors, exact 40 opcode/offset pairs).
+  The navigation response's 40 operands and disabled launcher were independently
+  checked against the existing original-byte oracle. `review_g1.py` and the initial
+  review JSON files bind raw responses, receipts and oracle hashes.
+- Douyin's first trial timed out before any product call; preserve its raw events,
+  stderr and receipt. The navigation trial subsequently reported workspace-routing
+  discovery retries but recovered. Model time includes these provider delays and
+  source-suite overlap, so G1 smoke timings are not controlled performance ratios.
+- The current local wheel/sdist are development acceptance artifacts still labelled
+  0.2.4; they are not a publication or a replacement for the published package.
+- Final G1 smoke: four successful workflows in five attempts, with the first Douyin
+  provider timeout retained. Successful attempts use 21 product calls and zero product
+  errors. Douyin retry passes with four calls; resource reading passes with five,
+  including decoded and original-byte XML reads. Every successful run explicitly
+  closes its one handle and verifies owned-process cleanup. `g1-model-review.json`
+  preserves all five attempts, not only successful timings.
+- `g1-package.log` verifies canonical sdist/wheel source/data equality, a clean sdist
+  suite (1807 passed, 294.76 seconds), exact installed wheel byte identity and its
+  full suite (1807 passed, 267.44 seconds). Runtime/tests in those packages match this
+  checkpoint; final ledger and Chinese preview documentation were updated after the
+  package snapshot. `g1-local-acceptance.json`, generated by `freeze_g1.py`, binds
+  current runtime/tests, package bytes and original model/oracle evidence.
+- This accepts G1's opt-in local workflow only. New Windows/Python matrix, the final
+  focused DEX profile, three-round candidate comparison and controlled performance
+  measurements remain open. The legacy default, version and release state are unchanged.
+
+Reproduce an individual G1 model cell with a fresh output directory:
+
+```sh
+uv run --offline --no-sync --with ./artifacts/aimard-asc-mcp --with tiktoken python scripts/benchmark_model_workflows.py --task fdroid_inventory --implementation ours --tool-profile artifact_preview --round 0 --output artifacts/g1-new-trial
+```
 
 Initial test setup selected the host's JDK 8 and failed fixture assembly, preserved as
 `artifacts/competitor-gap-b1-20261027/baseline/string-red.xml`. Rerun with the existing

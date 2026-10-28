@@ -49,6 +49,11 @@ class Settings(PathPolicy):
     xref_cache_dir: Path | None = None
     max_xref_cache_bytes: int = 1024**3
     xref_cache_ttl_seconds: int = 7 * 86400
+    tool_profile: str = "legacy"
+
+    def __post_init__(self):
+        if self.tool_profile not in ("legacy", "artifact_preview"):
+            raise ConfigurationError("DROIDASC_MCP_TOOL_PROFILE must be legacy or artifact_preview")
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -65,6 +70,7 @@ class Settings(PathPolicy):
             raise ConfigurationError(f"Allowed root is not a directory: {', '.join(missing)}")
         return cls(
             allowed_roots=roots,
+            tool_profile=os.getenv("DROIDASC_MCP_TOOL_PROFILE", "legacy"),
             timeout_seconds=_positive_int("DROIDASC_MCP_TIMEOUT_SECONDS", 180),
             max_apk_bytes=_positive_int("DROIDASC_MCP_MAX_APK_BYTES", 2 * 1024**3),
             max_output_bytes=_positive_int("DROIDASC_MCP_MAX_OUTPUT_BYTES", 64 * 1024**2),

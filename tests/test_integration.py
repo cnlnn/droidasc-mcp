@@ -36,6 +36,50 @@ from droidasc_mcp.server import build_server
 
 
 @pytest.mark.anyio
+async def test_artifact_preview_handle_over_http(tmp_path, monkeypatch):
+    from test_dex import empty_dex
+
+    path = tmp_path / "artifact with spaces.apk"
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("AndroidManifest.xml", '<manifest package="fixture.preview"/>')
+        archive.writestr("classes.dex", empty_dex())
+        archive.writestr("assets/value.txt", "original")
+    expected = hashlib.sha256(path.read_bytes()).hexdigest()
+    monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "artifact_preview")
+    with running_http_endpoint(tmp_path) as endpoint:
+        async with Client(endpoint) as client:
+            assert "load_artifact" in {t.name for t in (await client.list_tools()).tools}
+            opened = (
+                await client.call_tool("load_artifact", {"path": str(path)})
+            ).structured_content
+            key = opened["analysis_id"]
+            path.unlink()
+            summary = (
+                await client.call_tool("apk_get_summary", {"analysis_id": key})
+            ).structured_content
+            assert summary["artifact_sha256"] == expected
+            assert summary["summary"]["manifest"]["package_name"] == "fixture.preview"
+            for uri in (
+                f"droidasc://analysis/{key}/manifest?limit=1",
+                f"droidasc://session/{key}/class?class_name=Lmissing%3B&limit=1",
+                f"droidasc://analysis/{key}/class?class_name=Lmissing%3B&limit=1",
+            ):
+                result = json.loads((await client.read_resource(uri)).contents[0].text)
+                assert result["artifact_sha256"] == expected, result
+            result = (
+                await client.call_tool(
+                    "asc_query_dex_session", {"session_id": key, "operation": "info"}
+                )
+            ).structured_content
+            assert result["status"] == "ok" and result["artifact_sha256"] == expected
+            closed = await client.call_tool("close_artifact", {"analysis_id": key})
+            assert closed.structured_content["closed"]
+            assert (await client.call_tool("asc_ping", {})).structured_content["dex_sessions"][
+                "open_count"
+            ] == 0
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["stdio", "http"])
 async def test_grouped_reference_cursor_over_real_transports(
     transport, tmp_path, string_reference_dex_files, request, monkeypatch
@@ -326,7 +370,12 @@ async def test_competitor_parity_views_and_resource_templates(
             assert not response.is_error, response
             assert response.structured_content["status"] == "ok", response
         templates = (await client.list_resource_templates()).resource_templates
-        assert len(templates) == 2
+        assert {t.uri_template for t in templates} == {
+            "droidasc://artifact/manifest{?apk_path,offset,limit}",
+            "droidasc://session/{session_id}/class{?class_name,offset,limit}",
+            "droidasc://analysis/{analysis_id}/manifest{?offset,limit}",
+            "droidasc://analysis/{analysis_id}/class{?class_name,offset,limit}",
+        }
         manifest_uri = "droidasc://artifact/manifest?" + urlencode(
             {"apk_path": str(artifact), "limit": 1}, quote_via=quote
         )

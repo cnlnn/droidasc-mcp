@@ -80,7 +80,7 @@ def test_packaged_input_cache_avoids_eager_sdk_model_construction(monkeypatch):
     build_server()
     # The package's schema cache is deliberately version-bound. On dependency
     # upgrades the SDK must eagerly rebuild, rather than trusting a stale model.
-    assert len(calls) == (0 if compatible else 18)
+    assert len(calls) == (0 if compatible else 25)
 
 
 def test_packaged_input_schemas_match_original_sdk_tools_and_lazy_validation():
@@ -150,7 +150,7 @@ def test_invalid_input_cache_safely_uses_current_sdk_models(tmp_path, fault):
         )
     registry = ToolRegistry(input_schema_path=path)
     build_server(registry=registry)
-    assert len(registry.tools) == 18
+    assert len(registry.tools) == 25
     for tool in registry.tools:
         assert not isinstance(tool.fn_metadata, DeferredInputMetadata)
         assert tool.parameters == Tool.from_function(tool.fn, structured_output=False).parameters

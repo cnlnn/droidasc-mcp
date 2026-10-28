@@ -19,7 +19,9 @@ OUTPUT_TYPES = {
     for name in (
         "ApkInfoResult",
         "ArchiveResult",
+        "ArtifactHandleResult",
         "ArtifactResult",
+        "CloseArtifactResult",
         "DexResult",
         "DiffResult",
         "LegacyResult",

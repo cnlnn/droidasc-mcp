@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "440838805e6c4778d18713735a3a3dc43ec0c79ab01048a09dbbcdbe6cf3177f",
+  "contracts_sha256": "902add7b2e468d6d5871915a30f0b297f7ffcbf4aa9491d8f9dba581486fa7aa",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "41b6cb375b7a6d75de612387c5cb76671254285d22d5e1aa5cc75789fed501b0",
+  "schemas_sha256": "63f87f77e337178ebb5b6b0451a5f8312cb64eb73c7c127b586e2267e1da5d14",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -296,6 +296,199 @@
         "status"
       ],
       "title": "ArchiveResult",
+      "type": "object"
+    },
+    "ArtifactHandleResult": {
+      "$defs": {
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "error"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "analysis_id": {
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "artifact_type": {
+          "enum": [
+            "apk",
+            "dex",
+            "jar",
+            "aar",
+            "aab",
+            "apks",
+            "xapk",
+            "zip"
+          ],
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "size_bytes": {
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "entry_count": {
+          "title": "Entry Count",
+          "type": "integer"
+        },
+        "dex_count": {
+          "title": "Dex Count",
+          "type": "integer"
+        },
+        "stored_bytes": {
+          "title": "Stored Bytes",
+          "type": "integer"
+        },
+        "idle_ttl_seconds": {
+          "title": "Idle Ttl Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ArtifactHandleResult",
       "type": "object"
     },
     "ArtifactResult": {
@@ -717,6 +910,30 @@
         "status"
       ],
       "title": "ArtifactResult",
+      "type": "object"
+    },
+    "CloseArtifactResult": {
+      "additionalProperties": true,
+      "properties": {
+        "analysis_id": {
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "closed": {
+          "title": "Closed",
+          "type": "boolean"
+        },
+        "cleanup_pending": {
+          "title": "Cleanup Pending",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "analysis_id",
+        "closed",
+        "cleanup_pending"
+      ],
+      "title": "CloseArtifactResult",
       "type": "object"
     },
     "DexResult": {

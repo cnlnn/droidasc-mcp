@@ -403,6 +403,13 @@ def analyze(request):
             if not stat.S_ISREG(before.st_mode) or before.st_size > request["max_input_bytes"]:
                 raise ArchiveError("input_changed", "APK size or file type changed before analysis")
             source_hash = _digest(handle)
+            if (
+                request.get("expected_sha256") is not None
+                and source_hash != request["expected_sha256"]
+            ):
+                raise ArchiveError(
+                    "input_changed", "Artifact snapshot no longer matches its handle"
+                )
             if apk.suffix.lower() == ".dex":
                 from .raw_dex_entry import query_entry
 
@@ -428,7 +435,7 @@ def analyze(request):
                     ):
                         raise ArchiveError("input_changed", "APK changed during analysis; retry")
         return {
-            ("artifact_path" if artifact else "apk_path"): str(apk),
+            ("artifact_path" if artifact else "apk_path"): request.get("original_path", str(apk)),
             ("artifact_sha256" if artifact else "apk_sha256"): source_hash,
             ("artifact_size_bytes" if artifact else "apk_size_bytes"): before.st_size,
             **result,

@@ -50,6 +50,20 @@ Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断�
 `trace_exact_method` 提示可直接接收 `class_name` 与 `method_name`，用可选的
 `target_descriptor` 指定重载原型，也保留完整 `method_descriptor` 入口。
 
+### 统一句柄预览
+
+开发分支可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact_preview`。用 `load_artifact(path)`
+打开文件后，同一 `analysis_id` 可调用 `apk_get_summary`、`apk_get_manifest`、
+`apk_list_entries`、`apk_get_resource_content` 和 `apk_get_signing_info`。
+查询代码时将该值传给 `asc_query_dex_session.session_id`，首次代码查询才准备 DEX；
+最后调用 `close_artifact`。元数据与代码共用不可变快照、原始哈希、容量配额和生命周期。
+
+预览还保留状态、版本对比与候选密钥工具。默认仍为 `legacy`，全部旧工具和资源 URI
+继续可调用。此预览尚非最终的精简 DEX 工具接口，也不代表已通过完整发版验收。
+句柄资源入口为 `droidasc://analysis/{analysis_id}/manifest` 和
+`droidasc://analysis/{analysis_id}/class`，支持 `offset`、`limit` 和类入口的
+`class_name` 查询参数；参数值须作 URI 编码。
+
 ## 安装
 
 需要 Python 3.10 或更高版本。CI 覆盖 Linux 和原生

@@ -144,6 +144,8 @@ async def capture_surface(endpoint, output):
 
 
 def main(args):
+    if args.implementation == "competitor" and args.tool_profile != "legacy":
+        raise ValueError("Tool profiles apply only to the local implementation")
     assert not args.output.exists(), "Preserve previous trial output directories"
     args.output.mkdir(parents=True)
     repo = Path(__file__).resolve().parents[1]
@@ -158,6 +160,7 @@ def main(args):
         "DROIDASC_MCP_MAX_PARALLEL": "4",
         "DROIDASC_MCP_MAX_DEX_SESSION_BYTES": str(8192 * 1024**2),
         "DROIDASC_MCP_TIMEOUT_SECONDS": "180",
+        "DROIDASC_MCP_TOOL_PROFILE": args.tool_profile,
     }
     endpoint = {
         "command": sys.executable,
@@ -183,6 +186,7 @@ def main(args):
     report = {
         "status": "running",
         "implementation": args.implementation,
+        "tool_profile": args.tool_profile,
         "task": args.task,
         "round": args.round,
         "artifact_sha256": digest(artifact),
@@ -296,5 +300,6 @@ if __name__ == "__main__":
     parser.add_argument("--task", required=True)
     parser.add_argument("--round", type=int, default=0)
     parser.add_argument("--implementation", choices=("ours", "competitor"), required=True)
+    parser.add_argument("--tool-profile", choices=("legacy", "artifact_preview"), default="legacy")
     parser.add_argument("--output", type=Path, required=True)
     raise SystemExit(main(parser.parse_args()))

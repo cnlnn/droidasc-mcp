@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "a20ff4f24d329cec2bbdb0fa3b355b71cd1de182101e8ca4cc1c758e4f564f9a",
+  "source_sha256": "5a0e9277c60ec4721b09c3c63964ad0d22922ac0316c4fe43f3d61e5bf682c27",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "ade2cdcea3988734ea94f9d00691e28868aaf58abb0e994136c2d870d7f9c201",
+  "records_sha256": "f78af2988af6a1c10aedd66e34b65606543d4bbf27d06d8dde938bb1a9afefb0",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -1383,6 +1383,279 @@
           "session_id"
         ],
         "title": "asc_query_dex_sessionArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "load_artifact": {
+      "description": "Open an immutable artifact handle; DEX preparation starts on the first code query.",
+      "parameters": {
+        "properties": {
+          "path": {
+            "description": "APK, DEX, JAR or Android archive path",
+            "title": "Path",
+            "type": "string"
+          },
+          "max_uncompressed_bytes": {
+            "default": 134217728,
+            "description": "Total DEX preparation byte budget",
+            "maximum": 2147483648,
+            "minimum": 1,
+            "title": "Max Uncompressed Bytes",
+            "type": "integer"
+          },
+          "module": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "AAB module; default base",
+            "title": "Module"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "load_artifactArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "close_artifact": {
+      "description": "Release a handle after its queries finish; active queries retain their files.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "close_artifactArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_summary": {
+      "description": "Inspect original identity, DEX/JVM inventory, Android metadata and native ABIs.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based inventory row offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Inventory rows per page",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_summaryArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_manifest": {
+      "description": "Read component metadata or XML; follow next_offset for remaining rows or lines.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "include_xml": {
+            "default": false,
+            "description": "Return XML lines instead of structured component rows",
+            "title": "Include Xml",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based component or XML line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Components or lines per page",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_manifestArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_list_entries": {
+      "description": "List original archive entries with sizes and native ABIs, ordered by path.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manifest",
+                  "resource",
+                  "asset",
+                  "native",
+                  "dex",
+                  "metadata",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Entry category; omit to include every category",
+            "title": "Kind"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal entry path prefix",
+            "title": "Prefix"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based entry offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Entries per page",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_list_entriesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_resource_content": {
+      "description": "Read text/XML or base64; follow next_byte_offset. decode_xml=false preserves bytes.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "path": {
+            "description": "Exact entry path from apk_list_entries",
+            "title": "Path",
+            "type": "string"
+          },
+          "max_bytes": {
+            "default": 131072,
+            "description": "Maximum content bytes per page",
+            "maximum": 131072,
+            "minimum": 1,
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "byte_offset": {
+            "default": 0,
+            "description": "Byte offset; decoded XML uses UTF-8 bytes",
+            "minimum": 0,
+            "title": "Byte Offset",
+            "type": "integer"
+          },
+          "decode_xml": {
+            "default": true,
+            "description": "Decode binary XML; false returns original bytes",
+            "title": "Decode Xml",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "path"
+        ],
+        "title": "apk_get_resource_contentArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_signing_info": {
+      "description": "Inventory signing containers/certificate fingerprints, not signature verification.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_signing_infoArguments",
         "type": "object"
       },
       "context_kwarg": null,

@@ -11,3 +11,20 @@ Modifications retain droidasc-mcp's canonical caller/DEX identities and original
 evidence fields, and group contiguous caller runs for ordered bounded pages.
 Targets use first-appearance table indices and shared offset units live in group headers.
 The Apache License, Version 2.0 is reproduced in LICENSE.
+
+The AnalysisSession record and artifact inventory/capability flow in
+src/droidasc_mcp/analysis_session.py are adapted from asc_mcp/sessions.py,
+AnalysisSession and SessionRegistry.open, at the same upstream revision.
+Handle formatting in AnalysisSession.handle and service.close_artifact is adapted
+from asc_mcp/server.py, load_artifact and close_artifact.
+The corresponding server tools, apk_get_summary, apk_get_manifest,
+apk_list_entries, apk_get_resource_content and apk_get_signing_info retain
+the upstream handle-oriented call pattern and matching argument names.
+Adapted interfaces use existing bounded offset/byte continuations and the
+128 KiB read cap, rather than upstream cursor and whole-document responses.
+
+Modifications use supervised immutable snapshots and existing archive validation;
+the registry lifecycle is integrated into DexSessions rather than a separate
+registry. Snapshot and lazy DEX reservations, pinning, expiry, cancellation and
+cleanup share the existing session owner. Content hashes bind archive reads and
+lazy preparation to the loaded artifact, retaining original-path provenance.

@@ -314,6 +314,23 @@ def analyze(request: dict, root: Path) -> dict:
 
         with PreparationDirectory(root, settings.max_output_bytes) as directory:
             logical_count = prepare_bundle(settings, request, root, common, directory)
+        if request.get("expected_sha256") is not None:
+            # Bind the prepared bytes (including raw 041 provenance) to the artifact handle.
+            hashes = {
+                source.get("container_sha256", source["sha256"]) for source in common["sources"]
+            }
+            actual = common.get("artifact_sha256")
+            if (actual is not None and actual != request["expected_sha256"]) or (
+                actual is None and hashes != {request["expected_sha256"]}
+            ):
+                raise DexInputError(
+                    "input_changed", "Artifact snapshot no longer matches its handle"
+                )
+            common.update(
+                artifact_path=request["original_path"], artifact_sha256=request["expected_sha256"]
+            )
+            for source in common["sources"]:
+                source["path"] = request["original_path"]
         bundle = root / "analysis.apk"
         count, duplicates, directory_bytes = directory.result
         if duplicates:
