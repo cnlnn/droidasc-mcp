@@ -3,7 +3,21 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
-## v0.2.5 release candidate, 2026-10-29
+## Post-release compact handle inventory, 2026-10-29
+
+The development branch reuses PreparationZipFile for the upstream-derived artifact
+handle inventory, avoiding retained ZipInfo objects for ordinary resources. Aggregate
+expanded bytes and largest DEX size preserve the existing budgets. Original input
+copy/hash/identity checks, lazy code preparation and ordinary resource readers remain.
+Eight new adopted regressions pass. The isolated prototype passes 1975 local tests,
+30 serial alternating real-MCP trials and 60 complete collections independently
+checked against original bytes. Production adoption only removes an unused import
+and formats the same function bodies. Fresh final-commit cross-platform/package
+gates remain pending; this is not part of the published v0.2.5 runtime.
+Evidence: artifacts/competitor-gap-g7-20261029. Its initial Taobao pilot overlapped
+owned tests and is excluded from latency acceptance; clean-matched is separate.
+
+## v0.2.5 published, 2026-10-29
 
 The maintainer approved publication after scoped B1-B6/G1-G6 acceptance. This
 candidate changes version metadata and release documentation, retaining the accepted
@@ -13,14 +27,19 @@ artifacts/competitor-gap-b6-resume-20261029/g6-acceptance.json: 25 successful CI
 independently checked complete large-APK collections. Its explicit current-host
 temperature override is recorded separately from cool-host performance claims.
 
-Fresh versioned release evidence belongs to artifacts/release-025-20261029.
-Publication requires successful Linux/Windows Python 3.10-3.13 source checks and
-both the canonical Ubuntu Python 3.11 sdist and exact native wheel in every
-distribution cell, plus signing, Rust and stability checks. Release assets must be
-the four unmodified CI wheels and that canonical sdist, with SHA256SUMS. Main, tag,
-latest release, asset metadata and downloaded bytes must agree. Earlier receipts
-are not renamed as 0.2.5 packages. Publication and the next catch-up goal have
-separate receipts; this candidate does not assert universal competitor parity.
+Fresh versioned evidence is in artifacts/release-025-20261029. Commit
+`87b3630769480b85349ae44c4021c8641b0c155b` passes
+[CI 40784077867](https://github.com/cnlnn/droidasc-mcp/actions/runs/40784077867),
+all 25 jobs. Linux/Windows Python 3.10-3.13 source, canonical-sdist and exact-wheel
+suites each pass 1967 tests with zero skips; signing, Rust and stability checks pass.
+All twelve downloaded artifact ZIPs match server digests. The five distributions
+contain the same 69 accepted runtime source files. The four wheels and canonical
+Ubuntu Python 3.11 sdist are published unchanged, alongside SHA256SUMS.
+acceptance.json and published-readback.json bind the CI originals, versions and
+downloaded hashes to the [release](https://github.com/cnlnn/droidasc-mcp/releases/tag/v0.2.5).
+Main and annotated tag matched that commit at publication; Latest, six server
+asset digests and downloaded bytes agree. Older releases and tags are unchanged.
+Subsequent development changes have separate receipts and are not release contents.
 
 ## v0.2.4 release candidate, 2026-10-27
 

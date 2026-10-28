@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .archive_errors import ArchiveError
-from .archive_worker import MAX_ENTRIES, _digest, _entries, _identity
+from .archive_worker import MAX_ENTRIES, _digest, _identity
 
 
 @dataclass(frozen=True)
@@ -56,20 +56,19 @@ def inspect_snapshot(path, source, before, digest, max_dex_bytes):
         capabilities.append("dex")
         entry_count = 1
     else:
-        with zipfile.ZipFile(path) as archive:
-            entries = _entries(archive)
-            infos = tuple(entries.values())
-            if len(infos) > MAX_ENTRIES:
+        from .preparation_zip import PreparationZipFile
+
+        with PreparationZipFile(path) as archive:
+            entries = archive.inventory
+            infos = archive.infolist()
+            if len(entries) > MAX_ENTRIES:
                 raise ArchiveError("entry_limit", "Artifact exceeds the configured entry limit")
-            if sum(info.file_size for info in infos) > 4 * 1024**3:
+            if archive.uncompressed_size > 4 * 1024**3:
                 raise ArchiveError(
                     "container_limit", "Artifact exceeds the uncompressed-size limit"
                 )
-            for info in infos:
-                if info.filename.lower().endswith(".dex") and info.file_size > max_dex_bytes:
-                    raise ArchiveError(
-                        "input_limit", "Artifact contains a DEX above the size limit"
-                    )
+            if archive.largest_dex_size > max_dex_bytes:
+                raise ArchiveError("input_limit", "Artifact contains a DEX above the size limit")
             names = set(entries)
             dex_files = tuple(
                 info.filename
@@ -80,7 +79,7 @@ def inspect_snapshot(path, source, before, digest, max_dex_bytes):
                 from .containers import capabilities as container_capabilities
 
                 _, _, nested, _, selected, _ = container_capabilities(
-                    archive, entries, artifact_type, None, max_dex_bytes
+                    archive, entries, artifact_type, None, max_dex_bytes, preparation=True
                 )
                 try:
                     dex_files = tuple(selected)
@@ -98,7 +97,7 @@ def inspect_snapshot(path, source, before, digest, max_dex_bytes):
             if artifact_type == "apk":
                 capabilities.append("signing")
             capabilities.append("archive")
-            entry_count = len(infos)
+            entry_count = len(entries)
     return AnalysisSession(
         analysis_id=secrets.token_urlsafe(18),
         path=source,

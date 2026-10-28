@@ -1,4 +1,4 @@
-"""Streaming central-directory inventory for DEX preparation, not resource browsing.
+"""Streaming code-entry inventory for preparation and artifact handles.
 
 Member decompression, local-header matching and CRC checking stay in stdlib zipfile.
 Only code/container ZipInfos are retained; every other name still participates in
@@ -53,6 +53,8 @@ class PreparationZipFile(zipfile.ZipFile):
     def __init__(self, handle):
         self.inventory = {}
         self._member_bounds = {}
+        self.uncompressed_size = 0
+        self.largest_dex_size = 0
         super().__init__(handle, "r")
 
     def open(self, name, mode="r", pwd=None, *, force_zip64=False):
@@ -175,6 +177,9 @@ class PreparationZipFile(zipfile.ZipFile):
                 raise zipfile.BadZipFile("Local header is outside member bounds")
             local_offsets.append(header_offset)
             self.inventory[filename] = info if keep else None
+            self.uncompressed_size += info.file_size if info is not None else row[11]
+            if filename.lower().endswith(".dex"):
+                self.largest_dex_size = max(self.largest_dex_size, info.file_size)
             if keep:
                 self.filelist.append(info)
                 self.NameToInfo[filename] = info

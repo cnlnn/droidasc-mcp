@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Reuse the compact code-entry directory when opening artifact handles, retaining
+  all-entry expansion limits, discovery metadata and ordinary resource readers.
+
 ## 0.2.5
 
 - Add explicit type-operand references with exact or literal-substring matching, and

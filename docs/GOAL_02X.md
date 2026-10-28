@@ -9,9 +9,9 @@ large-APK preservation gates. The maintainer explicitly waived the temperature s
 guard for the final matched measurements; hardware protections were unchanged.
 This is completion of the scoped implementation plan, not universal competitor parity,
 cool-host performance proof. The maintainer subsequently approved publishing
-v0.2.5 and continuing catch-up on 2026-10-29. The versioned release candidate
-retains the accepted runtime; publication still requires fresh versioned CI
-packages and remote/download readback under artifacts/release-025-20261029.
+v0.2.5 and continuing catch-up on 2026-10-29. Publication is complete at
+`87b3630`, with fresh versioned CI packages and remote/download readback under
+artifacts/release-025-20261029. G7 now continues separately on the development branch.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -24,8 +24,8 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 
 | Goal | Deliverable | State |
 | --- | --- | --- |
-| R025 | Fresh versioned source/canonical-sdist/native-wheel gates, exact CI assets, main/tag/latest/download hash readback | candidate preparation; publication approved, gates pending |
-| G7 | Reduce the largest remaining real-workflow cost using the pinned comparator's reusable logic | read-only preparation/storage assessment while R025 is frozen; implementation follows publication |
+| R025 | Fresh versioned source/canonical-sdist/native-wheel gates, exact CI assets, main/tag/latest/download hash readback | published and verified at 87b3630; CI 40784077867, 25/25 jobs and six downloaded assets; older releases unchanged |
+| G7 | Reduce artifact-open preparation cost by reusing the compact directory in the upstream-derived handle workflow | implemented after publication; eight adopted regressions pass; isolated 1975-test/30-trial/60-collection proof passes; final-commit package gates pending |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -33,6 +33,27 @@ readers before choosing an adaptation. Retain original-input immutability, quota
 selected-query correctness and cleanup. A smaller schema or a new timing gate alone
 does not close a product gap. Keep the published candidate immutable while evaluating
 the next increment; retain rejected prototypes and their measurements separately.
+
+G7 source decision: the rejected original-compressed-payload prototypes remain rejected;
+their storage gains came with slower first use. Upstream `_parse_cd_dex_entries` and
+SessionRegistry.open need names/code metadata, not retained resource ZipInfos. Reuse
+our existing checked PreparationZipFile in inspect_snapshot instead of adding another
+parser or copying the upstream unchecked range reader. Aggregate expanded size and
+largest DEX size retain all-entry budgets, including omitted resources and ZIP64.
+Resource reads still use normal ZipFile; source copying, original hashes, immutable
+handles, lazy DEX and default profiles are unchanged. No new comparator code is copied.
+
+Evidence: artifacts/competitor-gap-g7-20261029. The isolated prototype passes 1975
+local source tests, 30 clean alternating stdio trials and 60 independent original-byte
+full-collection replays (332/110/489 field sites). The separate initial 18-trial pilot
+is retained; its Taobao timing overlapped owned tests and is not latency acceptance.
+Clean prototype load medians before/after are 0.2653/0.2432 seconds Taobao,
+0.5730/0.5380 WeChat and 0.9629/0.8305 Douyin. Process-to-first-complete medians are
+2.0334/2.0101, 2.9637/2.9446 and 5.7201/5.5281 seconds. Retained bytes are effectively
+unchanged, and these are current-host prototype comparisons, not competitor, normal-
+temperature, final-commit performance or overall memory claims. Production adoption
+only removes an unused import and reformats the same runtime function bodies. Freeze
+and validate the final development commit before accepting G7; do not republish v0.2.5.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
@@ -281,13 +302,13 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1-B6 and G1-G6 scoped acceptance complete |
-| Next action | No implementation gate remains in this plan; release selection/publication requires a separate maintainer decision |
+| Current task | B1-B6/G1-G6 and R025 publication complete; G7 development acceptance in progress |
+| Next action | Freeze G7, run fresh final-commit source/canonical-package gates, then reassess the remaining full-concurrent workflow gap before the next reuse slice |
 | Product changes | Backward-compatible operand/cache/grouped-reference improvements; opt-in 34-tool artifact workflow; measured private archive-hash reuse; explicit multi/all-module AAB union; original-byte native 041 logical views and source/legacy handoff; defaults unchanged |
 | Planning checks | G6 at ead1a91 passes 25/25 CI jobs, 1967 tests per Linux/Windows/source/canonical-sdist/exact-wheel suite with zero skips; all four platform/ABI package pairs match 69 runtime source files; G2 model matrix remains separate 12/12 |
 | Retained residuals | B3 aggregate schema/observed model-latency costs; B4 copy/storage costs; B5 protobuf XML decoding limitation; no real-device large-041 or normal-temperature performance claim; unresolved dynamic/reflection edges |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
-| Release state | No new release/version selected; development completion and publication approval remain distinct |
+| Release state | v0.2.5 published at 87b3630; subsequent G7 changes remain unreleased and do not move main or the release tag |
 
 G2 contract-size investigation: initially reusing `DexResult` on every wrapper
 inflated the full canonical tool surface to 77131 o200k_base tokens. Eight focused
