@@ -146,7 +146,7 @@ class DroidAscRunner:
         }
         if analysis is not None:
             request.update(
-                allowed_roots=[str(apk.parent)],
+                allowed_roots=[str(apk.parent.resolve())],
                 expected_sha256=analysis.sha256,
                 original_path=str(analysis.path),
             )
@@ -179,7 +179,7 @@ class DroidAscRunner:
     def prepare_analysis(self, path, root, budget, module, analysis):
         request = self._dex_request([], {"operation": "info", "offset": 0, "limit": 1})
         request.update(
-            allowed_roots=[str(path.parent)],
+            allowed_roots=[str(path.parent.resolve())],
             prepare=True,
             expected_sha256=analysis.sha256,
             original_path=str(analysis.path),

@@ -11,6 +11,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 import pytest
@@ -18,6 +19,7 @@ from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 from test_dex import empty_dex
 
+from droidasc_mcp.runner import DroidAscRunner
 from droidasc_mcp.server import build_server
 from droidasc_mcp.service import DroidAscService
 
@@ -37,6 +39,30 @@ def artifact(tmp_path, suffix=".apk", *, dex=True):
             archive.writestr("classes.dex", empty_dex())
         archive.writestr("AndroidManifest.xml", '<manifest package="test.sample"/>')
     return path
+
+
+@pytest.mark.parametrize("raw_dex", [False, True])
+def test_private_snapshot_roots_use_resolved_paths(settings, tmp_path, raw_dex):
+    path = tmp_path / "original.dex" if raw_dex else artifact(tmp_path)
+    if raw_dex:
+        path.write_bytes(empty_dex())
+    (tmp_path / "alias").mkdir()
+    aliased = tmp_path / "alias" / ".." / path.name
+    assert str(aliased.parent) != str(aliased.parent.resolve())
+    analysis = SimpleNamespace(
+        path=path,
+        sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+        artifact_type="dex" if raw_dex else "apk",
+    )
+    runner = DroidAscRunner(settings)
+    if not raw_dex:
+        result = runner.query_archive(aliased, {"operation": "list_entries"}, analysis=analysis)
+        assert result["status"] == "ok" and result["apk_sha256"] == analysis.sha256
+    prepared = tmp_path / "prepared"
+    prepared.mkdir()
+    result = runner.prepare_analysis(aliased, prepared, 1024**2, None, analysis)
+    assert result["status"] == "ok", result
+    assert result["artifact_sha256"] == analysis.sha256
 
 
 def test_load_reuses_one_owner_and_dex_is_lazy(service, tmp_path):
@@ -320,10 +346,11 @@ def test_shutdown_during_snapshot_never_publishes_handle(service, tmp_path, monk
 def test_load_preserves_stricter_zip_path_validation(service, tmp_path, name):
     path = tmp_path / "unsafe.zip"
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr(name, b"invalid")
-    # ZipFile itself truncates NULs when writing; construct the bytes explicitly.
-    if "\x00" in name:
-        path.write_bytes(path.read_bytes().replace(b"nul", b"n\x00l"))
+        info = zipfile.ZipInfo("raw-entry")
+        # Retain the malformed on-wire name across Windows ZipInfo normalization.
+        info.filename = info.orig_filename = name
+        archive.writestr(info, b"invalid")
+    assert path.read_bytes().count(name.encode()) == 2
     assert (
         service.load_artifact(str(path), max_uncompressed_bytes=1024**2)["code"] == "unsafe_entry"
     )

@@ -283,6 +283,29 @@ isolation; frozen task text, model/provider settings and the original baseline s
 unchanged. Model trials run serially after correctness work, with every failed
 attempt retained. Development-branch CI builds do not publish a version/tag/release.
 
+G2 first frozen candidate `5b5d220f09ee3e4935c394e81c82475ad8746175`:
+1814 source tests pass; clean sdist and installed wheel each pass all 1814 tests,
+with canonical-source and installed-byte identity verified. The frozen model matrix
+passes all 12 cells (three rounds per unchanged task), with zero product errors.
+Median product calls drop from 6/6/7/5 to 4/4/6/4 for F-Droid inventory, Douyin
+inventory, manifest-to-code and resources respectively. Observed model times are
+slower, not a speedup claim. Raw responses/oracles/receipts and the offline judge
+are bound in `model-review.json`; every trial uses explicit native-only isolation.
+
+CI `40734273495` fails the eight Windows source/distribution cells (the Linux
+cells pass). Windows short-form temp roots are copied into private worker requests
+without canonicalization, while input validation resolves the same paths to long
+form; this incorrectly rejects the private snapshot. Resolve the private parent
+at the two request construction sites, retaining the single-directory allowlist
+and original content-hash checks. The same defect is reproduced on Linux using
+an equivalent noncanonical parent (`private-root-red.xml`). A separate new ZIP
+fixture was normalized by the Windows writer; assign both on-wire names directly
+and assert their bytes, following the existing archive tests. The first green
+attempt retains an assertion error about the direct archive runner's legacy
+`apk_sha256` field; no wire-field rename is part of this fix.
+G2 is not accepted until the corrected candidate's gates pass. Preserve the first
+candidate and model matrix separately rather than relabeling their runtime hashes.
+
 G1 verification receipts are under `artifacts/competitor-gap-b3-20261029/`:
 
 - `g1-profile-red.xml` preserves the initially missing profile regression.
