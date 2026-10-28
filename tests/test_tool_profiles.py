@@ -14,6 +14,8 @@ def test_profile_defaults_and_validation(settings, monkeypatch):
     monkeypatch.setenv("DROIDASC_MCP_ALLOWED_ROOTS", str(settings.allowed_roots[0]))
     monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "artifact_preview")
     assert Settings.from_env().tool_profile == "artifact_preview"
+    monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "artifact")
+    assert Settings.from_env().tool_profile == "artifact"
     monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "unknown")
     with pytest.raises(ConfigurationError, match="TOOL_PROFILE"):
         Settings.from_env()

@@ -50,7 +50,14 @@ Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断�
 `trace_exact_method` 提示可直接接收 `class_name` 与 `method_name`，用可选的
 `target_descriptor` 指定重载原型，也保留完整 `method_descriptor` 入口。
 
-### 统一句柄预览
+### 统一句柄接口
+
+开发分支另可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact`，使用职责明确的 DEX 工具：
+`apk_list_classes`、`apk_list_methods`、类结构、方法源码与反汇编、调用、引用、搜索和有界图。
+全部接收 `load_artifact` 返回的 `analysis_id`。方法可用完整 `method_descriptor`，
+或精确 `class_name`、`method_name` 加重载原型 `descriptor`；模糊或部分成员查询单独使用
+`apk_search_references`。显式类型操作数与宽类型关系仍分别保留，旧巨型查询工具继续可调用，
+但不在此模式重复展示。默认仍为 `legacy`，此开发接口的完整验收另行记录。
 
 开发分支可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact_preview`。用 `load_artifact(path)`
 打开文件后，同一 `analysis_id` 可调用 `apk_get_summary`、`apk_get_manifest`、

@@ -28,3 +28,13 @@ the registry lifecycle is integrated into DexSessions rather than a separate
 registry. Snapshot and lazy DEX reservations, pinning, expiry, cancellation and
 cleanup share the existing session owner. Content hashes bind archive reads and
 lazy preparation to the loaded artifact, retaining original-path provenance.
+
+The handle-oriented DEX wrappers in src/droidasc_mcp/focused_tools.py adapt
+asc_mcp/server.py's apk_list_classes, class/source/structure tools, searches,
+disassembly and call graph at the same revision. Query dispatch uses the existing
+native session implementation rather than upstream worker/locator internals.
+Modifications retain bounded offset pages, exact full identities, grouped cursors,
+explicit overload errors and graph budgets. Partial/fuzzy member matching uses
+apk_search_references; exact method/field tools retain precise selectors. Literal
+string queries are passed unchanged to the native backend rather than regex-escaped.
+Additional focused adapters retain every legacy DEX operation and broad type scope.

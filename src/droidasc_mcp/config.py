@@ -52,8 +52,10 @@ class Settings(PathPolicy):
     tool_profile: str = "legacy"
 
     def __post_init__(self):
-        if self.tool_profile not in ("legacy", "artifact_preview"):
-            raise ConfigurationError("DROIDASC_MCP_TOOL_PROFILE must be legacy or artifact_preview")
+        if self.tool_profile not in ("legacy", "artifact_preview", "artifact"):
+            raise ConfigurationError(
+                "DROIDASC_MCP_TOOL_PROFILE must be legacy, artifact_preview or artifact"
+            )
 
     @classmethod
     def from_env(cls) -> Settings:

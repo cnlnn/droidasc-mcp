@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "source_sha256": "5a0e9277c60ec4721b09c3c63964ad0d22922ac0316c4fe43f3d61e5bf682c27",
+  "source_sha256": "220e670498b4bbe722773ac5d261ad57412f8cb1b71a02cd592d093f7ca0ddc2",
   "pydantic_version": "2.13.5",
   "mcp_version": "2.2.0",
-  "records_sha256": "f78af2988af6a1c10aedd66e34b65606543d4bbf27d06d8dde938bb1a9afefb0",
+  "records_sha256": "ae2902ac94c29b0e7b9ce730e23f892b475ae154a85a44fe280a406775a10cda",
   "tools": {
     "asc_ping": {
       "description": "Report server, engine, path-scope, and pagination configuration.",
@@ -1656,6 +1656,1588 @@
           "analysis_id"
         ],
         "title": "apk_get_signing_infoArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_dex_info": {
+      "description": "Read prepared DEX identity, source hashes and coverage for this handle.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_dex_infoArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_list_classes": {
+      "description": "List exact class identities; query searches names without building an index.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal dotted or Dalvik class prefix",
+            "title": "Prefix"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal class-name substring",
+            "title": "Query"
+          },
+          "case_sensitive": {
+            "default": false,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_list_classesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_class_source": {
+      "description": "Read paged ASC decompiled class text with original DEX provenance.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_get_class_sourceArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_references": {
+      "description": "Search legacy CLI name/regex evidence; exact instruction tools are separate.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "value": {
+            "description": "Legacy CLI name/regex selector",
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          },
+          "kind": {
+            "default": "string",
+            "description": "Legacy CLI reference category",
+            "enum": [
+              "string",
+              "type",
+              "method",
+              "field",
+              "extends",
+              "impl"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "fuzzy_class": {
+            "default": false,
+            "description": "Match literal owner substrings",
+            "title": "Fuzzy Class",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "value"
+        ],
+        "title": "apk_find_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_dex_manifest": {
+      "description": "Read the prepared DEX bundle manifest view; bare DEX reports not_applicable.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_dex_manifestArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_list_methods": {
+      "description": "List declared full method identities for exact selection, preserving overloads.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_list_methodsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_method_source": {
+      "description": "Read exact-method source; ambiguous names need a prototype. Java is opt-in.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact declared name with class_name, instead of method_descriptor",
+            "title": "Method Name"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact (args)return prototype for an overloaded method_name",
+            "title": "Descriptor"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full Lpkg/C;->name(args)return identity; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "source_format": {
+            "default": "auto",
+            "description": "auto/smali uses ASC without Java; java selects optional JADX",
+            "enum": [
+              "auto",
+              "smali",
+              "java"
+            ],
+            "title": "Source Format",
+            "type": "string"
+          },
+          "debug_info": {
+            "default": false,
+            "description": "Include debug locals/lines for explicit smali",
+            "title": "Debug Info",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_method_sourceArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_method_references": {
+      "description": "Find exact invoke sites; full identities also address external targets.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact declared name with class_name, instead of method_descriptor",
+            "title": "Method Name"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact (args)return prototype for an overloaded method_name",
+            "title": "Descriptor"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full Lpkg/C;->name(args)return identity; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_find_method_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_method_calls": {
+      "description": "Read one exact caller's declared invoke operands, not runtime dispatch.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact declared name with class_name, instead of method_descriptor",
+            "title": "Method Name"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact (args)return prototype for an overloaded method_name",
+            "title": "Descriptor"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full Lpkg/C;->name(args)return identity; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_method_callsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_call_graph": {
+      "description": "Trace bounded static calls; inspect truncation_reasons and unresolved_sites.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact declared name with class_name, instead of method_descriptor",
+            "title": "Method Name"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact (args)return prototype for an overloaded method_name",
+            "title": "Descriptor"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full Lpkg/C;->name(args)return identity; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "direction": {
+            "default": "both",
+            "description": "Traversal direction",
+            "enum": [
+              "incoming",
+              "outgoing",
+              "both"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "depth": {
+            "default": 2,
+            "description": "Maximum call-graph hops",
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "max_nodes": {
+            "default": 200,
+            "description": "Node budget including root",
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Max Nodes",
+            "type": "integer"
+          },
+          "max_edges": {
+            "default": 500,
+            "description": "Individual call-site budget",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Max Edges",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_get_call_graphArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_field_references": {
+      "description": "Find exact instruction field accesses; inheritance/reflection remains unresolved.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "field_descriptor": {
+            "description": "Full Lpkg/C;->name:type identity",
+            "title": "Field Descriptor",
+            "type": "string"
+          },
+          "field_access": {
+            "default": "all",
+            "description": "Field access filter",
+            "enum": [
+              "all",
+              "read",
+              "write"
+            ],
+            "title": "Field Access",
+            "type": "string"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "field_descriptor"
+        ],
+        "title": "apk_find_field_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_string_references": {
+      "description": "Find literal const-string/jumbo use sites; pass discovered values unchanged.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "value": {
+            "description": "Nonempty literal substring",
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          },
+          "case_sensitive": {
+            "default": true,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "value"
+        ],
+        "title": "apk_find_string_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_search_references": {
+      "description": "Find partial/fuzzy member targets in one pass; supply value or class_name.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Instruction member category",
+            "enum": [
+              "method",
+              "field"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Literal member identity/name substring",
+            "title": "Value"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner or fuzzy literal owner substring",
+            "title": "Class Name"
+          },
+          "fuzzy_class": {
+            "default": false,
+            "description": "Use literal owner substring matching",
+            "title": "Fuzzy Class",
+            "type": "boolean"
+          },
+          "member_match": {
+            "default": "descriptor",
+            "description": "Match identity, name, exact name or method prototype",
+            "enum": [
+              "descriptor",
+              "name",
+              "exact_name",
+              "prototype"
+            ],
+            "title": "Member Match",
+            "type": "string"
+          },
+          "target_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact method prototype or field type",
+            "title": "Target Descriptor"
+          },
+          "case_sensitive": {
+            "default": true,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "field_access": {
+            "default": "all",
+            "description": "Field access filter",
+            "enum": [
+              "all",
+              "read",
+              "write"
+            ],
+            "title": "Field Access",
+            "type": "string"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "kind"
+        ],
+        "title": "apk_search_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_type_references": {
+      "description": "Find exact static type relations; non-operand scopes build/reuse a bounded index.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "type_descriptor": {
+            "description": "Exact DEX type; arrays retain dimensions",
+            "minLength": 1,
+            "title": "Type Descriptor",
+            "type": "string"
+          },
+          "type_relation": {
+            "default": "all",
+            "description": "instruction includes member/catch types; operand selects type operands",
+            "enum": [
+              "all",
+              "instruction",
+              "declaration",
+              "annotation",
+              "operand"
+            ],
+            "title": "Type Relation",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "type_descriptor"
+        ],
+        "title": "apk_find_type_referencesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_find_type_instructions": {
+      "description": "Find explicit instruction type operands without building a full index.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "type_name": {
+            "description": "Dotted/Dalvik literal type operand selector",
+            "minLength": 1,
+            "title": "Type Name",
+            "type": "string"
+          },
+          "type_match": {
+            "default": "substring",
+            "description": "Case-sensitive literal matching",
+            "enum": [
+              "substring",
+              "exact"
+            ],
+            "title": "Type Match",
+            "type": "string"
+          },
+          "reference_format": {
+            "default": "flat",
+            "description": "Flat use sites or bounded caller groups",
+            "enum": [
+              "flat",
+              "grouped"
+            ],
+            "title": "Reference Format",
+            "type": "string"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Grouped next_cursor for identical selectors; offset stays zero",
+            "title": "Cursor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "type_name"
+        ],
+        "title": "apk_find_type_instructionsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_build_xref_index": {
+      "description": "Build an optional bounded full static index for this handle's lifetime.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_build_xref_indexArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_search_members": {
+      "description": "Discover literal declaration names or identities without preprocessing instructions.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Declared member category",
+            "enum": [
+              "method",
+              "field"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "query": {
+            "description": "Nonempty literal substring",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "member_match": {
+            "default": "name",
+            "description": "Match names or full identities",
+            "enum": [
+              "name",
+              "descriptor"
+            ],
+            "title": "Member Match",
+            "type": "string"
+          },
+          "case_sensitive": {
+            "default": false,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "kind",
+          "query"
+        ],
+        "title": "apk_search_membersArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_search_strings": {
+      "description": "Discover DEX string-pool values, not instruction use sites.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "query": {
+            "description": "Nonempty literal substring",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "case_sensitive": {
+            "default": false,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "query"
+        ],
+        "title": "apk_search_stringsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_class_outline": {
+      "description": "Page interfaces, typed fields and full declared method signatures.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_get_class_outlineArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_class_hierarchy": {
+      "description": "Page type hierarchy; external definitions and cycles are explicit.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_get_class_hierarchyArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_string_constants": {
+      "description": "Read this class's literal const-string/jumbo instruction sites.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_get_string_constantsArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_search_method_bodies": {
+      "description": "Search decoded instruction/operand text including literals; this is not source search.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "query": {
+            "description": "Nonempty literal substring",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "case_sensitive": {
+            "default": false,
+            "description": "Literal matching case; false ignores case",
+            "title": "Case Sensitive",
+            "type": "boolean"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "query"
+        ],
+        "title": "apk_search_method_bodiesArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_disassemble_method": {
+      "description": "Page one exact method's structured instructions with 16-bit code-unit offsets.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact owner class, or omit for all owners",
+            "title": "Class Name"
+          },
+          "method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact declared name with class_name, instead of method_descriptor",
+            "title": "Method Name"
+          },
+          "descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Exact (args)return prototype for an overloaded method_name",
+            "title": "Descriptor"
+          },
+          "method_descriptor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Full Lpkg/C;->name(args)return identity; preserves overloads",
+            "title": "Method Descriptor"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id"
+        ],
+        "title": "apk_disassemble_methodArguments",
+        "type": "object"
+      },
+      "context_kwarg": null,
+      "is_async": false
+    },
+    "apk_get_class_source_metadata": {
+      "description": "Page decompiler token links with Unicode code-point spans, not instruction xrefs.",
+      "parameters": {
+        "properties": {
+          "analysis_id": {
+            "description": "Handle returned by load_artifact",
+            "minLength": 1,
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "class_name": {
+            "description": "Exact Dalvik descriptor or dotted class name",
+            "title": "Class Name",
+            "type": "string"
+          },
+          "offset": {
+            "default": 0,
+            "description": "Zero-based result row or source-line offset",
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "limit": {
+            "default": 200,
+            "description": "Maximum rows or source lines; server-capped",
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "class_name"
+        ],
+        "title": "apk_get_class_source_metadataArguments",
         "type": "object"
       },
       "context_kwarg": null,

@@ -34,7 +34,18 @@ structured data instead of unbounded terminal output.
 | `asc_query_dex_session` | Query that session with the original hashes and DEX provenance |
 | `asc_close_dex_session` | Close the session and release its private files |
 
-### Artifact workflow preview
+### Artifact workflow profiles
+
+The development-only opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact` adds focused
+handle-oriented DEX tools: `apk_list_classes`, `apk_list_methods`, class outlines,
+exact method source/disassembly/calls, references, literal searches, hierarchy and
+bounded graphs. All use `analysis_id` from `load_artifact`. Each tool advertises only
+its relevant selectors. Exact methods accept a full `method_descriptor`, or an exact
+`class_name`/`method_name` with `descriptor` for an overloaded prototype.
+`apk_search_references` handles partial/fuzzy member targets separately.
+`apk_find_type_instructions` selects explicit type operands; `apk_find_type_references`
+retains the broader static relation scopes. The generic DEX selector remains callable
+but is not advertised in this profile. The default stays `legacy` during acceptance.
 
 The development-only opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact_preview` advertises
 `load_artifact`, `close_artifact`, `apk_get_summary`, `apk_get_manifest`,
@@ -519,7 +530,7 @@ Both engines share scope/concurrency/process-tree budgets. See [backend details]
 | Environment variable | Default | Meaning |
 | --- | --- | --- |
 | `DROIDASC_MCP_ALLOWED_ROOTS` | current directory | Allowed roots, separated by `os.pathsep` (`:` on Unix, `;` on Windows) |
-| `DROIDASC_MCP_TOOL_PROFILE` | `legacy` | `legacy` or opt-in `artifact_preview` tool advertisement; old calls stay valid |
+| `DROIDASC_MCP_TOOL_PROFILE` | `legacy` | `legacy`, opt-in `artifact_preview` (generic code bridge) or `artifact` (focused DEX tools); old calls stay valid |
 | `DROIDASC_MCP_TIMEOUT_SECONDS` | `180` | Per-operation timeout |
 | `DROIDASC_MCP_MAX_APK_BYTES` | `2147483648` | Maximum APK size or combined DEX input size |
 | `DROIDASC_MCP_MAX_OUTPUT_BYTES` | `67108864` | Captured stdout limit and aggregate decoded snapshot budget |

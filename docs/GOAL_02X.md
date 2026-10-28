@@ -99,7 +99,7 @@ because a batch or patch release passed.
 | Goal | Independently usable result | Acceptance boundary | State |
 | --- | --- | --- | --- |
 | G1 (B3.1) | One immutable artifact handle for metadata and lazy code queries | Metadata does not prepare DEX; first code query prepares once; real stdio/HTTP, original hash, lifecycle/quotas and legacy compatibility; frozen real-model inventory/navigation/resource tasks | locally accepted; 1807 source tests, four successful model workflows and clean sdist/wheel checks |
-| G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | pending |
+| G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | in progress; focused contracts under implementation |
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | pending |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | pending |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | pending |
@@ -244,15 +244,44 @@ retained disk and tmpfs separately; startup includes preprocessing and initializ
 
 ### Execution ledger and next action
 
+G2 implementation started on 2026-10-29 after the maintainer resumed the goal.
+Adapt the pinned upstream `asc_mcp/server.py` handle-oriented DEX wrappers in a
+dedicated `focused_tools.py`; preserve existing session ownership, native query
+execution and cached-schema registration. Standard upstream names and discovery
+arguments are retained where semantics agree. Exact method/field references keep
+our full identities and overload errors; fuzzy/partial selectors move to the
+focused `apk_search_references` adapter. String literals are passed unchanged,
+not escaped for the upstream regex locator. Every legacy operation, including
+bundle info/manifest, legacy regex and broad type/index scopes, gets a focused route.
+The final opt-in `artifact` advertisement hides the giant selector without removing
+its registration; `legacy` and `artifact_preview` advertisements stay unchanged.
+No default/profile switch or release is accepted by this implementation entry.
+Fresh evidence: `artifacts/competitor-gap-b3-g2-20261029/`; the two new contract tests
+first fail because the profile is absent (`contracts-red.xml`).
+
 | Item | Current record |
 | --- | --- |
-| Current task | G1 local acceptance complete; freeze this checkpoint separately from G2 |
-| Next action | G2 focused DEX contracts/surface, with every existing operation retained and full three-round candidate/Windows/package gates before B3 acceptance; do not repeat the frozen baseline |
-| Product changes | Upstream-derived artifact snapshot/lazy DEX ownership; opt-in artifact_preview exposes handle tools plus existing DEX/status/diff/secret bridges; legacy default remains the same 18 tools; handle resources and profile-consistent prompts added |
-| Planning checks | Linux/Python 3.13 source: 1807 passed, zero skips; clean canonical sdist and exact installed wheel each pass all 1807 tests; focused transport/profile check: 83 passed; Ruff and both schema caches pass. All four real-model workflows pass in five total attempts, retaining one provider timeout |
+| Current task | G2 focused implementation ready for candidate freeze; full gates running |
+| Next action | Full three-round candidate model comparison and fresh Linux/Windows/package gates before B3 acceptance; do not repeat the frozen baseline |
+| Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
+| Planning checks | Initial G2 source variant: 1813 passed, zero skips, 301.85 seconds. Narrowed-output variant: 37 focused/registry/transport/handle checks pass, zero skips; final full source/package/CI/model gates remain pending |
 | Open dependencies | B3 focused surface, candidate comparison and cross-platform/package gates; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
+
+G2 contract-size investigation: initially reusing `DexResult` on every wrapper
+inflated the full canonical tool surface to 77131 o200k_base tokens. Eight focused
+output types reduce it to 47018 without dropping extra diagnostics or changing the
+legacy result type. The final surface has 34 advertised tools and at most 13 input
+parameters per tool, versus legacy's 18 and 28. Input-contract tokens are 7414 versus
+6762; full-surface tokens remain above legacy's 32795. Thus this is narrower
+per-operation selection, not an aggregate schema-size improvement. Keep that
+residual visible in the real-model call/error/time comparison and leave the default
+unchanged. These counts are canonical surface measurements, not billed model usage.
+The G2 model harness changes only profile selection and explicit native-only backend
+isolation; frozen task text, model/provider settings and the original baseline stay
+unchanged. Model trials run serially after correctness work, with every failed
+attempt retained. Development-branch CI builds do not publish a version/tag/release.
 
 G1 verification receipts are under `artifacts/competitor-gap-b3-20261029/`:
 

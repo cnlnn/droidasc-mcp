@@ -332,7 +332,7 @@ def test_load_preserves_stricter_zip_path_validation(service, tmp_path, name):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("transport", ["memory", "stdio"])
-@pytest.mark.parametrize("profile", ["legacy", "artifact_preview"])
+@pytest.mark.parametrize("profile", ["legacy", "artifact_preview", "artifact"])
 async def test_handle_calls_work_over_mcp_with_legacy_compatibility(
     settings, tmp_path, transport, profile
 ):
@@ -352,8 +352,8 @@ async def test_handle_calls_work_over_mcp_with_legacy_compatibility(
     )
     async with Client(endpoint) as client:
         names = {tool.name for tool in (await client.list_tools()).tools}
-        assert len(names) == (18 if profile == "legacy" else 11)
-        assert ("load_artifact" in names) == (profile == "artifact_preview")
+        assert len(names) == {"legacy": 18, "artifact_preview": 11, "artifact": 34}[profile]
+        assert ("load_artifact" in names) == (profile != "legacy")
         loaded = await client.call_tool(
             "load_artifact", {"path": str(path), "max_uncompressed_bytes": 1024**2}
         )

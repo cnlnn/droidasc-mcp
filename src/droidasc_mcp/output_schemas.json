@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "contracts_sha256": "902add7b2e468d6d5871915a30f0b297f7ffcbf4aa9491d8f9dba581486fa7aa",
+  "contracts_sha256": "be1e082b7019ce3d44227f9a3ea47a110d7ff4db717563a7ceed997d0b92b898",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "63f87f77e337178ebb5b6b0451a5f8312cb64eb73c7c127b586e2267e1da5d14",
+  "schemas_sha256": "138f884a0521679035ea799630422f5184f437b1d632d6fd9142de2df1a891e2",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -936,6 +936,2257 @@
       "title": "CloseArtifactResult",
       "type": "object"
     },
+    "DexClassPage": {
+      "$defs": {
+        "ClassRow": {
+          "additionalProperties": true,
+          "properties": {
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            }
+          },
+          "title": "ClassRow",
+          "type": "object"
+        },
+        "QueryCache": {
+          "additionalProperties": true,
+          "properties": {
+            "hit": {
+              "title": "Hit",
+              "type": "boolean"
+            },
+            "stored": {
+              "title": "Stored",
+              "type": "boolean"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hit",
+            "scope"
+          ],
+          "title": "QueryCache",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ClassRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "query_cache": {
+          "$ref": "#/$defs/QueryCache"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexClassPage",
+      "type": "object"
+    },
+    "DexGraphResult": {
+      "$defs": {
+        "DexRow": {
+          "additionalProperties": true,
+          "properties": {
+            "target_index": {
+              "title": "Target Index",
+              "type": "integer"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "instruction": {
+              "title": "Instruction",
+              "type": "string"
+            },
+            "dispatch_kind": {
+              "title": "Dispatch Kind",
+              "type": "string"
+            },
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "callee": {
+              "title": "Callee",
+              "type": "string"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "type_descriptor": {
+              "title": "Type Descriptor",
+              "type": "string"
+            },
+            "field_descriptor": {
+              "title": "Field Descriptor",
+              "type": "string"
+            },
+            "instruction_offset": {
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "offset_unit": {
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "opcode": {
+              "title": "Opcode",
+              "type": "string"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            },
+            "detail": {
+              "title": "Detail",
+              "type": "string"
+            },
+            "access": {
+              "enum": [
+                "read",
+                "write"
+              ],
+              "title": "Access",
+              "type": "string"
+            },
+            "storage": {
+              "enum": [
+                "static",
+                "instance"
+              ],
+              "title": "Storage",
+              "type": "string"
+            },
+            "target_resolution": {
+              "title": "Target Resolution",
+              "type": "string"
+            },
+            "target_dex_entry": {
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "parameter_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Parameter Types",
+              "type": "array"
+            },
+            "return_type": {
+              "title": "Return Type",
+              "type": "string"
+            },
+            "access_flags": {
+              "title": "Access Flags",
+              "type": "integer"
+            },
+            "has_code": {
+              "title": "Has Code",
+              "type": "boolean"
+            },
+            "string_index": {
+              "title": "String Index",
+              "type": "integer"
+            },
+            "string": {
+              "title": "String",
+              "type": "string"
+            },
+            "raw": {
+              "title": "Raw",
+              "type": "string"
+            },
+            "method": {
+              "title": "Method",
+              "type": "string"
+            },
+            "matched": {
+              "title": "Matched",
+              "type": "string"
+            },
+            "dex": {
+              "title": "Dex",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            },
+            "call_site_prototype": {
+              "title": "Call Site Prototype",
+              "type": "string"
+            }
+          },
+          "title": "DexRow",
+          "type": "object"
+        },
+        "GraphNode": {
+          "additionalProperties": true,
+          "properties": {
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "depth": {
+              "title": "Depth",
+              "type": "integer"
+            },
+            "definition_resolution": {
+              "title": "Definition Resolution",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "without_code": {
+              "title": "Without Code",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "expansion_status": {
+              "title": "Expansion Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "method_descriptor",
+            "depth",
+            "definition_resolution",
+            "dex_entry",
+            "without_code",
+            "expansion_status"
+          ],
+          "title": "GraphNode",
+          "type": "object"
+        },
+        "Index": {
+          "additionalProperties": true,
+          "properties": {
+            "schema": {
+              "title": "Schema",
+              "type": "string"
+            },
+            "input_id": {
+              "title": "Input Id",
+              "type": "string"
+            },
+            "backend_id": {
+              "title": "Backend Id",
+              "type": "string"
+            },
+            "reused": {
+              "title": "Reused",
+              "type": "boolean"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            },
+            "persistence": {
+              "title": "Persistence",
+              "type": "string"
+            },
+            "durable_cache": {
+              "title": "Durable Cache",
+              "type": "string"
+            },
+            "format": {
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "input_id",
+            "backend_id",
+            "reused",
+            "stored_bytes"
+          ],
+          "title": "Index",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "method_descriptor": {
+          "title": "Method Descriptor",
+          "type": "string"
+        },
+        "candidate_count": {
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/GraphNode"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "node_count": {
+          "title": "Node Count",
+          "type": "integer"
+        },
+        "edge_count": {
+          "title": "Edge Count",
+          "type": "integer"
+        },
+        "depth": {
+          "title": "Depth",
+          "type": "integer"
+        },
+        "max_nodes": {
+          "title": "Max Nodes",
+          "type": "integer"
+        },
+        "max_edges": {
+          "title": "Max Edges",
+          "type": "integer"
+        },
+        "direction": {
+          "enum": [
+            "incoming",
+            "outgoing",
+            "both"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "truncation_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Truncation Reasons",
+          "type": "array"
+        },
+        "traversal_complete_within_depth": {
+          "title": "Traversal Complete Within Depth",
+          "type": "boolean"
+        },
+        "edge_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Edge Counts",
+          "type": "object"
+        },
+        "index": {
+          "$ref": "#/$defs/Index"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexGraphResult",
+      "type": "object"
+    },
+    "DexIndexResult": {
+      "$defs": {
+        "Index": {
+          "additionalProperties": true,
+          "properties": {
+            "schema": {
+              "title": "Schema",
+              "type": "string"
+            },
+            "input_id": {
+              "title": "Input Id",
+              "type": "string"
+            },
+            "backend_id": {
+              "title": "Backend Id",
+              "type": "string"
+            },
+            "reused": {
+              "title": "Reused",
+              "type": "boolean"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            },
+            "persistence": {
+              "title": "Persistence",
+              "type": "string"
+            },
+            "durable_cache": {
+              "title": "Durable Cache",
+              "type": "string"
+            },
+            "format": {
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "input_id",
+            "backend_id",
+            "reused",
+            "stored_bytes"
+          ],
+          "title": "Index",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "index": {
+          "$ref": "#/$defs/Index"
+        },
+        "stored_bytes": {
+          "title": "Stored Bytes",
+          "type": "integer"
+        },
+        "reserved_index_bytes": {
+          "title": "Reserved Index Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexIndexResult",
+      "type": "object"
+    },
+    "DexInfoResult": {
+      "$defs": {
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexInfoResult",
+      "type": "object"
+    },
+    "DexInstructionPage": {
+      "$defs": {
+        "InstructionRow": {
+          "additionalProperties": true,
+          "properties": {
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "instruction_offset": {
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "offset_unit": {
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "opcode": {
+              "title": "Opcode",
+              "type": "string"
+            },
+            "instruction": {
+              "title": "Instruction",
+              "type": "string"
+            }
+          },
+          "title": "InstructionRow",
+          "type": "object"
+        },
+        "QueryCache": {
+          "additionalProperties": true,
+          "properties": {
+            "hit": {
+              "title": "Hit",
+              "type": "boolean"
+            },
+            "stored": {
+              "title": "Stored",
+              "type": "boolean"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hit",
+            "scope"
+          ],
+          "title": "QueryCache",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/InstructionRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "method_descriptor": {
+          "title": "Method Descriptor",
+          "type": "string"
+        },
+        "method_name": {
+          "title": "Method Name",
+          "type": "string"
+        },
+        "candidate_count": {
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "dex_entry": {
+          "title": "Dex Entry",
+          "type": "string"
+        },
+        "query_cache": {
+          "$ref": "#/$defs/QueryCache"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexInstructionPage",
+      "type": "object"
+    },
+    "DexMemberPage": {
+      "$defs": {
+        "MemberRow": {
+          "additionalProperties": true,
+          "properties": {
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "parameter_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Parameter Types",
+              "type": "array"
+            },
+            "return_type": {
+              "title": "Return Type",
+              "type": "string"
+            },
+            "access_flags": {
+              "title": "Access Flags",
+              "type": "integer"
+            },
+            "has_code": {
+              "title": "Has Code",
+              "type": "boolean"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            }
+          },
+          "title": "MemberRow",
+          "type": "object"
+        },
+        "QueryCache": {
+          "additionalProperties": true,
+          "properties": {
+            "hit": {
+              "title": "Hit",
+              "type": "boolean"
+            },
+            "stored": {
+              "title": "Stored",
+              "type": "boolean"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hit",
+            "scope"
+          ],
+          "title": "QueryCache",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/MemberRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "dex_entry": {
+          "title": "Dex Entry",
+          "type": "string"
+        },
+        "superclass": {
+          "title": "Superclass",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "access_flags": {
+          "title": "Access Flags",
+          "type": "integer"
+        },
+        "field_count": {
+          "title": "Field Count",
+          "type": "integer"
+        },
+        "method_count": {
+          "title": "Method Count",
+          "type": "integer"
+        },
+        "hierarchy_cycle_detected": {
+          "title": "Hierarchy Cycle Detected",
+          "type": "boolean"
+        },
+        "query_cache": {
+          "$ref": "#/$defs/QueryCache"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexMemberPage",
+      "type": "object"
+    },
+    "DexReferencePage": {
+      "$defs": {
+        "DexRow": {
+          "additionalProperties": true,
+          "properties": {
+            "target_index": {
+              "title": "Target Index",
+              "type": "integer"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            },
+            "instruction": {
+              "title": "Instruction",
+              "type": "string"
+            },
+            "dispatch_kind": {
+              "title": "Dispatch Kind",
+              "type": "string"
+            },
+            "class_name": {
+              "title": "Class Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "method_descriptor": {
+              "title": "Method Descriptor",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "callee": {
+              "title": "Callee",
+              "type": "string"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "type_descriptor": {
+              "title": "Type Descriptor",
+              "type": "string"
+            },
+            "field_descriptor": {
+              "title": "Field Descriptor",
+              "type": "string"
+            },
+            "instruction_offset": {
+              "title": "Instruction Offset",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "offset_unit": {
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "opcode": {
+              "title": "Opcode",
+              "type": "string"
+            },
+            "relation": {
+              "title": "Relation",
+              "type": "string"
+            },
+            "detail": {
+              "title": "Detail",
+              "type": "string"
+            },
+            "access": {
+              "enum": [
+                "read",
+                "write"
+              ],
+              "title": "Access",
+              "type": "string"
+            },
+            "storage": {
+              "enum": [
+                "static",
+                "instance"
+              ],
+              "title": "Storage",
+              "type": "string"
+            },
+            "target_resolution": {
+              "title": "Target Resolution",
+              "type": "string"
+            },
+            "target_dex_entry": {
+              "title": "Target Dex Entry",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "parameter_types": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Parameter Types",
+              "type": "array"
+            },
+            "return_type": {
+              "title": "Return Type",
+              "type": "string"
+            },
+            "access_flags": {
+              "title": "Access Flags",
+              "type": "integer"
+            },
+            "has_code": {
+              "title": "Has Code",
+              "type": "boolean"
+            },
+            "string_index": {
+              "title": "String Index",
+              "type": "integer"
+            },
+            "string": {
+              "title": "String",
+              "type": "string"
+            },
+            "raw": {
+              "title": "Raw",
+              "type": "string"
+            },
+            "method": {
+              "title": "Method",
+              "type": "string"
+            },
+            "matched": {
+              "title": "Matched",
+              "type": "string"
+            },
+            "dex": {
+              "title": "Dex",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "reason": {
+              "title": "Reason",
+              "type": "string"
+            },
+            "call_site_prototype": {
+              "title": "Call Site Prototype",
+              "type": "string"
+            }
+          },
+          "title": "DexRow",
+          "type": "object"
+        },
+        "Index": {
+          "additionalProperties": true,
+          "properties": {
+            "schema": {
+              "title": "Schema",
+              "type": "string"
+            },
+            "input_id": {
+              "title": "Input Id",
+              "type": "string"
+            },
+            "backend_id": {
+              "title": "Backend Id",
+              "type": "string"
+            },
+            "reused": {
+              "title": "Reused",
+              "type": "boolean"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            },
+            "persistence": {
+              "title": "Persistence",
+              "type": "string"
+            },
+            "durable_cache": {
+              "title": "Durable Cache",
+              "type": "string"
+            },
+            "format": {
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "input_id",
+            "backend_id",
+            "reused",
+            "stored_bytes"
+          ],
+          "title": "Index",
+          "type": "object"
+        },
+        "QueryCache": {
+          "additionalProperties": true,
+          "properties": {
+            "hit": {
+              "title": "Hit",
+              "type": "boolean"
+            },
+            "stored": {
+              "title": "Stored",
+              "type": "boolean"
+            },
+            "scope": {
+              "title": "Scope",
+              "type": "string"
+            },
+            "budget_bytes": {
+              "title": "Budget Bytes",
+              "type": "integer"
+            },
+            "stored_bytes": {
+              "title": "Stored Bytes",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hit",
+            "scope"
+          ],
+          "title": "QueryCache",
+          "type": "object"
+        },
+        "ReferenceGroup": {
+          "additionalProperties": true,
+          "properties": {
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "caller": {
+              "title": "Caller",
+              "type": "string"
+            },
+            "target_field": {
+              "enum": [
+                "callee",
+                "field_descriptor",
+                "value",
+                "type_descriptor"
+              ],
+              "title": "Target Field",
+              "type": "string"
+            },
+            "offset_unit": {
+              "title": "Offset Unit",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "matches": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Matches",
+              "type": "array"
+            },
+            "evidence": {
+              "items": {
+                "$ref": "#/$defs/DexRow"
+              },
+              "title": "Evidence",
+              "type": "array"
+            }
+          },
+          "required": [
+            "dex_entry",
+            "caller",
+            "target_field",
+            "matches",
+            "evidence"
+          ],
+          "title": "ReferenceGroup",
+          "type": "object"
+        },
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "method_descriptor": {
+          "title": "Method Descriptor",
+          "type": "string"
+        },
+        "candidate_count": {
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "field_descriptor": {
+          "title": "Field Descriptor",
+          "type": "string"
+        },
+        "type_descriptor": {
+          "title": "Type Descriptor",
+          "type": "string"
+        },
+        "type_relation": {
+          "title": "Type Relation",
+          "type": "string"
+        },
+        "type_match": {
+          "enum": [
+            "exact",
+            "substring"
+          ],
+          "title": "Type Match",
+          "type": "string"
+        },
+        "dex_entry": {
+          "title": "Dex Entry",
+          "type": "string"
+        },
+        "scanned_methods": {
+          "title": "Scanned Methods",
+          "type": "integer"
+        },
+        "scanned_instructions": {
+          "title": "Scanned Instructions",
+          "type": "integer"
+        },
+        "methods_without_code": {
+          "title": "Methods Without Code",
+          "type": "integer"
+        },
+        "scan_errors": {
+          "title": "Scan Errors",
+          "type": "integer"
+        },
+        "unresolved_matches": {
+          "title": "Unresolved Matches",
+          "type": "integer"
+        },
+        "dynamic_sites": {
+          "title": "Dynamic Sites",
+          "type": "integer"
+        },
+        "unresolved_sites": {
+          "items": {
+            "$ref": "#/$defs/DexRow"
+          },
+          "title": "Unresolved Sites",
+          "type": "array"
+        },
+        "unresolved_sites_truncated": {
+          "title": "Unresolved Sites Truncated",
+          "type": "boolean"
+        },
+        "instruction_scan_complete": {
+          "title": "Instruction Scan Complete",
+          "type": "boolean"
+        },
+        "runtime_target_resolution": {
+          "title": "Runtime Target Resolution",
+          "type": "string"
+        },
+        "reference_semantics": {
+          "title": "Reference Semantics",
+          "type": "string"
+        },
+        "query_cache": {
+          "$ref": "#/$defs/QueryCache"
+        },
+        "index": {
+          "$ref": "#/$defs/Index"
+        },
+        "page_limited_by": {
+          "enum": [
+            "response_bytes",
+            "caller_groups"
+          ],
+          "title": "Page Limited By",
+          "type": "string"
+        },
+        "reference_format": {
+          "const": "grouped",
+          "title": "Reference Format",
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/ReferenceGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "returned_sites": {
+          "title": "Returned Sites",
+          "type": "integer"
+        },
+        "limit_unit": {
+          "const": "caller_groups",
+          "title": "Limit Unit",
+          "type": "string"
+        },
+        "total_unit": {
+          "const": "reference_sites",
+          "title": "Total Unit",
+          "type": "string"
+        },
+        "next_cursor": {
+          "title": "Next Cursor",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "response_byte_limit": {
+          "title": "Response Byte Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexReferencePage",
+      "type": "object"
+    },
     "DexResult": {
       "$defs": {
         "DexRow": {
@@ -1767,6 +4018,264 @@
         "status"
       ],
       "title": "DexResult",
+      "type": "object"
+    },
+    "DexSourceResult": {
+      "$defs": {
+        "Source": {
+          "additionalProperties": true,
+          "properties": {
+            "path": {
+              "title": "Path",
+              "type": "string"
+            },
+            "dex_entry": {
+              "title": "Dex Entry",
+              "type": "string"
+            },
+            "container_entry": {
+              "title": "Container Entry",
+              "type": "string"
+            },
+            "size_bytes": {
+              "title": "Size Bytes",
+              "type": "integer"
+            },
+            "sha256": {
+              "title": "Sha256",
+              "type": "string"
+            },
+            "dex_version": {
+              "title": "Dex Version",
+              "type": "string"
+            },
+            "declared_class_count": {
+              "title": "Declared Class Count",
+              "type": "integer"
+            }
+          },
+          "title": "Source",
+          "type": "object"
+        },
+        "SourceReference": {
+          "additionalProperties": true,
+          "properties": {
+            "start": {
+              "title": "Start",
+              "type": "integer"
+            },
+            "end": {
+              "title": "End",
+              "type": "integer"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "declaring_class": {
+              "title": "Declaring Class",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "descriptor": {
+              "title": "Descriptor",
+              "type": "string"
+            },
+            "declaration": {
+              "title": "Declaration",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "start",
+            "end",
+            "kind"
+          ],
+          "title": "SourceReference",
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "enum": [
+            "ok",
+            "partial",
+            "error",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "backend_version": {
+          "title": "Backend Version",
+          "type": "string"
+        },
+        "apk_path": {
+          "title": "Apk Path",
+          "type": "string"
+        },
+        "apk_sha256": {
+          "title": "Apk Sha256",
+          "type": "string"
+        },
+        "artifact_path": {
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "artifact_sha256": {
+          "title": "Artifact Sha256",
+          "type": "string"
+        },
+        "input_id": {
+          "title": "Input Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "has_more": {
+          "title": "Has More",
+          "type": "boolean"
+        },
+        "next_offset": {
+          "title": "Next Offset",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "input_kind": {
+          "title": "Input Kind",
+          "type": "string"
+        },
+        "engine_version": {
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "runtime_completeness": {
+          "title": "Runtime Completeness",
+          "type": "string"
+        },
+        "has_manifest": {
+          "title": "Has Manifest",
+          "type": "boolean"
+        },
+        "definition_count": {
+          "title": "Definition Count",
+          "type": "integer"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "java",
+            "smali",
+            "cli-text-best-effort"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "class_name": {
+          "title": "Class Name",
+          "type": "string"
+        },
+        "method_descriptor": {
+          "title": "Method Descriptor",
+          "type": "string"
+        },
+        "method_name": {
+          "title": "Method Name",
+          "type": "string"
+        },
+        "candidate_count": {
+          "title": "Candidate Count",
+          "type": "integer"
+        },
+        "dex_entry": {
+          "title": "Dex Entry",
+          "type": "string"
+        },
+        "member_references": {
+          "items": {
+            "$ref": "#/$defs/SourceReference"
+          },
+          "title": "Member References",
+          "type": "array"
+        },
+        "source_sha256": {
+          "title": "Source Sha256",
+          "type": "string"
+        },
+        "source_start": {
+          "title": "Source Start",
+          "type": "integer"
+        },
+        "source_end": {
+          "title": "Source End",
+          "type": "integer"
+        },
+        "span_unit": {
+          "title": "Span Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "DexSourceResult",
       "type": "object"
     },
     "DiffResult": {

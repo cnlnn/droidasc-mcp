@@ -146,6 +146,8 @@ async def capture_surface(endpoint, output):
 def main(args):
     if args.implementation == "competitor" and args.tool_profile != "legacy":
         raise ValueError("Tool profiles apply only to the local implementation")
+    if args.implementation == "competitor" and args.native_only:
+        raise ValueError("Native-only isolation applies to the local implementation")
     assert not args.output.exists(), "Preserve previous trial output directories"
     args.output.mkdir(parents=True)
     repo = Path(__file__).resolve().parents[1]
@@ -162,6 +164,12 @@ def main(args):
         "DROIDASC_MCP_TIMEOUT_SECONDS": "180",
         "DROIDASC_MCP_TOOL_PROFILE": args.tool_profile,
     }
+    if args.native_only:
+        env.update(
+            DROIDASC_MCP_JAVA="java-must-not-run",
+            DROIDASC_MCP_JADX_HOME="",
+            DROIDASC_MCP_DEXLIB_HOME="",
+        )
     endpoint = {
         "command": sys.executable,
         "args": [
@@ -187,6 +195,7 @@ def main(args):
         "status": "running",
         "implementation": args.implementation,
         "tool_profile": args.tool_profile,
+        "native_only": args.native_only,
         "task": args.task,
         "round": args.round,
         "artifact_sha256": digest(artifact),
@@ -300,6 +309,9 @@ if __name__ == "__main__":
     parser.add_argument("--task", required=True)
     parser.add_argument("--round", type=int, default=0)
     parser.add_argument("--implementation", choices=("ours", "competitor"), required=True)
-    parser.add_argument("--tool-profile", choices=("legacy", "artifact_preview"), default="legacy")
+    parser.add_argument(
+        "--tool-profile", choices=("legacy", "artifact_preview", "artifact"), default="legacy"
+    )
+    parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     raise SystemExit(main(parser.parse_args()))

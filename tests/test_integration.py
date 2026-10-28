@@ -36,6 +36,150 @@ from droidasc_mcp.server import build_server
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("transport", ["stdio", "http"])
+async def test_focused_artifact_complete_surface_without_java(
+    transport, tmp_path, smali_dex_files, request, monkeypatch
+):
+    apk = tmp_path / "focused native.apk"
+    with zipfile.ZipFile(apk, "w") as archive:
+        archive.writestr("AndroidManifest.xml", '<manifest package="fixture"/>')
+        for index, path in enumerate(smali_dex_files, 1):
+            archive.writestr(
+                "classes.dex" if index == 1 else f"classes{index}.dex", path.read_bytes()
+            )
+    expected_hash = hashlib.sha256(apk.read_bytes()).hexdigest()
+    # Fixture assembly has finished; product subprocesses have no Java/JADX backend.
+    monkeypatch.setenv("ASC_TEST_ROOT", str(tmp_path))
+    monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "artifact")
+    monkeypatch.setenv("DROIDASC_MCP_JAVA", "java-must-not-run")
+    monkeypatch.delenv("DROIDASC_MCP_JADX_HOME", raising=False)
+    monkeypatch.delenv("DROIDASC_MCP_DEXLIB_HOME", raising=False)
+    endpoint = (
+        request.getfixturevalue("http_endpoint")
+        if transport == "http"
+        else StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "droidasc_mcp"],
+            env={**os.environ, "DROIDASC_MCP_ALLOWED_ROOTS": str(tmp_path)},
+        )
+    )
+    async with Client(endpoint) as client:
+
+        async def call(name, **args):
+            response = await client.call_tool(name, args)
+            assert not response.is_error, response
+            return response.structured_content
+
+        key = (await call("load_artifact", path=str(apk)))["analysis_id"]
+        apk.unlink()
+        common = {"analysis_id": key}
+        exact = {"method_descriptor": "Lfixture/Caller;->run()V"}
+        cases = [
+            ("apk_get_dex_info", {}, "info"),
+            ("apk_list_classes", {"prefix": "fixture."}, "list_classes"),
+            ("apk_list_classes", {"query": "FIXTURE.CALLER"}, "search_classes"),
+            ("apk_get_class_source", {"class_name": "fixture.Caller"}, "get_class_source"),
+            ("apk_find_references", {"value": "STRING_ARGUMENT"}, "find_refs"),
+            ("apk_get_dex_manifest", {}, "get_manifest"),
+            ("apk_list_methods", {"class_name": "fixture.Caller"}, "list_methods"),
+            ("apk_get_method_source", exact, "get_method_source"),
+            (
+                "apk_find_method_references",
+                {"method_descriptor": "Lfixture/Target;->pick(I)V"},
+                "find_method_refs",
+            ),
+            ("apk_get_method_calls", exact, "get_method_calls"),
+            ("apk_get_call_graph", {**exact, "depth": 1}, "get_call_graph"),
+            (
+                "apk_find_field_references",
+                {"field_descriptor": "Lfixture/Target;->value:I"},
+                "find_field_refs",
+            ),
+            ("apk_find_string_references", {"value": "STRING_ARGUMENT"}, "find_string_refs"),
+            (
+                "apk_search_references",
+                {"kind": "method", "value": "pick", "member_match": "exact_name"},
+                "search_refs",
+            ),
+            ("apk_find_type_instructions", {"type_name": "fixture.Target"}, "find_type_refs"),
+            ("apk_find_type_references", {"type_descriptor": "Lfixture/Target;"}, "find_type_refs"),
+            ("apk_build_xref_index", {}, "build_xref_index"),
+            ("apk_search_members", {"kind": "method", "query": "PICK"}, "search_members"),
+            ("apk_search_strings", {"query": "string_argument"}, "search_strings"),
+            ("apk_get_class_outline", {"class_name": "fixture.Caller"}, "get_class_outline"),
+            ("apk_get_class_hierarchy", {"class_name": "fixture.Caller"}, "get_class_hierarchy"),
+            ("apk_get_string_constants", {"class_name": "fixture.Caller"}, "get_string_constants"),
+            ("apk_search_method_bodies", {"query": "INVOKE-STATIC"}, "search_method_bodies"),
+            ("apk_disassemble_method", exact, "disassemble_method"),
+            (
+                "apk_get_class_source_metadata",
+                {"class_name": "fixture.Caller"},
+                "get_class_source_metadata",
+            ),
+        ]
+        results = {}
+        for name, args, operation in cases:
+            result = await call(name, **common, **args)
+            assert result["artifact_sha256"] == expected_hash, (name, result)
+            assert result["status"] == (
+                "not_applicable" if operation == "get_manifest" else "ok"
+            ), (name, result)
+            results[name] = result
+        assert len({op for _, _, op in cases}) == 24
+        assert results["apk_disassemble_method"]["total"] == 6
+        assert results["apk_get_method_calls"]["total"] == 3
+        assert results["apk_find_field_references"]["total"] == 2
+        assert results["apk_search_strings"]["items"][0]["value"] == "STRING_ARGUMENT"
+        assert results["apk_get_method_source"]["format"] == "smali"
+        for name in (
+            "apk_disassemble_method",
+            "apk_get_method_source",
+            "apk_get_method_calls",
+            "apk_find_method_references",
+            "apk_get_call_graph",
+        ):
+            ambiguous = await call(name, **common, class_name="fixture.Target", method_name="pick")
+            assert ambiguous["code"] == "ambiguous_method" and ambiguous["candidate_count"] == 2
+            selected = await call(
+                name, **common, class_name="fixture.Target", method_name="pick", descriptor="(I)V"
+            )
+            assert (
+                selected["status"] == "ok"
+                and selected["method_descriptor"] == "Lfixture/Target;->pick(I)V"
+            )
+        # Signed grouped continuations work through focused wrappers as well as the bridge.
+        flat = await call("apk_search_references", **common, kind="method", value="pick")
+        cursor, rows = None, []
+        while True:
+            page = await call(
+                "apk_search_references",
+                **common,
+                kind="method",
+                value="pick",
+                reference_format="grouped",
+                cursor=cursor,
+                limit=1,
+            )
+            for group in page["groups"]:
+                for evidence in group["evidence"]:
+                    row = {"dex_entry": group["dex_entry"], "caller": group["caller"], **evidence}
+                    row[group["target_field"]] = group["matches"][row.pop("target_index")]
+                    if "offset_unit" in group:
+                        row["offset_unit"] = group["offset_unit"]
+                    rows.append(row)
+            if not page["has_more"]:
+                break
+            cursor = page["next_cursor"]
+        assert rows == flat["items"]
+        invalid = await client.call_tool("apk_find_string_references", {**common, "value": ""})
+        assert invalid.is_error
+        literal = await call("apk_find_string_references", **common, value="STRING_.*")
+        assert literal["total"] == 0
+        assert (await call("close_artifact", **common))["closed"]
+        assert (await call("asc_ping"))["dex_sessions"]["open_count"] == 0
+
+
+@pytest.mark.anyio
 async def test_artifact_preview_handle_over_http(tmp_path, monkeypatch):
     from test_dex import empty_dex
 

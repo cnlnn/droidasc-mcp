@@ -27,10 +27,16 @@ from .contracts import (
     SecretResult,
     SigningResult,
 )
+from .focused_tools import register_focused_tools
 from .runner import PREPARATION_PROGRESS, DroidAscRunner
 from .service import DroidAscService
 from .tool_registry import ToolRegistry
-from .workflows import ARTIFACT_INSTRUCTIONS, INSTRUCTIONS, register_workflows
+from .workflows import (
+    ARTIFACT_INSTRUCTIONS,
+    FOCUSED_ARTIFACT_INSTRUCTIONS,
+    INSTRUCTIONS,
+    register_workflows,
+)
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
 SESSION_STATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
@@ -965,14 +971,20 @@ def build_server(
         """Inventory signing containers/certificate fingerprints, not signature verification."""
         return service.query_artifact(analysis_id, operation="signing_inventory")
 
-    preview = settings.tool_profile == "artifact_preview"
-    advertised_tools = (
-        ({tool.name for tool in registry.tools} - legacy_tool_names)
-        | {"asc_ping", "asc_query_dex_session", "asc_diff_dex_sessions", "asc_secret_candidates"}
-        if preview
-        else legacy_tool_names
-    )
-    instructions = ARTIFACT_INSTRUCTIONS if preview else INSTRUCTIONS
+    metadata_tools = {tool.name for tool in registry.tools} - legacy_tool_names
+    bridges = {"asc_ping", "asc_diff_dex_sessions", "asc_secret_candidates"}
+    before_focused = {tool.name for tool in registry.tools}
+    register_focused_tools(registry, service)
+    focused_tools = {tool.name for tool in registry.tools} - before_focused
+    if settings.tool_profile == "artifact":
+        advertised_tools = metadata_tools | focused_tools | bridges
+        instructions = FOCUSED_ARTIFACT_INSTRUCTIONS
+    elif settings.tool_profile == "artifact_preview":
+        advertised_tools = metadata_tools | bridges | {"asc_query_dex_session"}
+        instructions = ARTIFACT_INSTRUCTIONS
+    else:
+        advertised_tools = legacy_tool_names
+        instructions = INSTRUCTIONS
     mcp = ToolProfileServer(
         "droidasc-mcp",
         lifespan=lifespan,
@@ -980,7 +992,9 @@ def build_server(
         tools=registry.tools,
         advertised_tools=advertised_tools,
     )
-    register_workflows(mcp, service, instructions=instructions)
+    register_workflows(
+        mcp, service, instructions=instructions, focused=settings.tool_profile == "artifact"
+    )
     return mcp
 
 

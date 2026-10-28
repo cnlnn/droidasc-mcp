@@ -19,7 +19,7 @@ def source_digest():
     root = Path(__file__).parent
     sources = {
         name: hashlib.sha256((root / name).read_text(encoding="utf-8").encode()).hexdigest()
-        for name in ("server.py", "tool_registry.py", "input_schemas.py")
+        for name in ("server.py", "focused_tools.py", "tool_registry.py", "input_schemas.py")
     }
     return hashlib.sha256(json.dumps(sources, sort_keys=True).encode()).hexdigest()
 
@@ -102,9 +102,12 @@ class DeferredInputMetadata(FuncMetadata):
 
 
 def cached_tool(fn, annotations, contract, output_schema, records):
-    if fn.__module__ != "droidasc_mcp.server" or not fn.__qualname__.startswith(
-        "build_server.<locals>."
-    ):
+    owners = {
+        "droidasc_mcp.server": "build_server.<locals>.",
+        "droidasc_mcp.focused_tools": "register_focused_tools.<locals>.",
+    }
+    owner = owners.get(fn.__module__)
+    if owner is None or not fn.__qualname__.startswith(owner):
         return None
     record = records.get(fn.__name__)
     if record is None:

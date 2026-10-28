@@ -80,7 +80,7 @@ def test_packaged_input_cache_avoids_eager_sdk_model_construction(monkeypatch):
     build_server()
     # The package's schema cache is deliberately version-bound. On dependency
     # upgrades the SDK must eagerly rebuild, rather than trusting a stale model.
-    assert len(calls) == (0 if compatible else 25)
+    assert len(calls) == (0 if compatible else 49)
 
 
 def test_packaged_input_schemas_match_original_sdk_tools_and_lazy_validation():
@@ -150,7 +150,7 @@ def test_invalid_input_cache_safely_uses_current_sdk_models(tmp_path, fault):
         )
     registry = ToolRegistry(input_schema_path=path)
     build_server(registry=registry)
-    assert len(registry.tools) == 25
+    assert len(registry.tools) == 49
     for tool in registry.tools:
         assert not isinstance(tool.fn_metadata, DeferredInputMetadata)
         assert tool.parameters == Tool.from_function(tool.fn, structured_output=False).parameters
@@ -164,7 +164,7 @@ def test_input_cache_source_binding_is_newline_independent(tmp_path, monkeypatch
     expected = input_schemas.source_digest()
     expected_records = input_schemas.compiled_inputs()
     root = Path(input_schemas.__file__).parent
-    for name in ("server.py", "tool_registry.py", "input_schemas.py"):
+    for name in ("server.py", "focused_tools.py", "tool_registry.py", "input_schemas.py"):
         source = (root / name).read_text(encoding="utf-8")
         (tmp_path / name).write_bytes(source.replace("\n", "\r\n").encode())
     monkeypatch.setattr(input_schemas, "__file__", str(tmp_path / "input_schemas.py"))

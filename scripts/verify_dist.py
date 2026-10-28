@@ -123,6 +123,8 @@ def main():
             members = archive.getnames()
             required = (
                 "NOTICE",
+                "src/droidasc_mcp/focused_tools.py",
+                "tests/test_focused_tools.py",
                 "src/droidasc_mcp/reference_groups.py",
                 "src/droidasc_mcp/reference_cursor.py",
                 "src/droidasc_mcp/grouped_references.py",

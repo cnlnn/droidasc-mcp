@@ -443,6 +443,138 @@ class DexResult(Result, total=False):
     idle_ttl_seconds: int
 
 
+class DexInfoResult(Result, total=False):
+    status: Required[Literal["ok", "partial", "error", "not_applicable"]]
+    input_kind: str
+    engine_version: str
+    runtime_completeness: str
+    has_manifest: bool
+    definition_count: int
+
+
+class ClassRow(Object, total=False):
+    class_name: str
+    dex_entry: str
+
+
+class MemberRow(ClassRow, total=False):
+    kind: str
+    name: str
+    descriptor: str
+    parameter_types: list[str]
+    return_type: str
+    access_flags: int
+    has_code: bool
+    relation: str
+
+
+class InstructionRow(Object, total=False):
+    dex_entry: str
+    method_descriptor: str
+    instruction_offset: int | None
+    offset_unit: str | None
+    opcode: str
+    instruction: str
+
+
+class DexClassPage(DexInfoResult, total=False):
+    items: list[ClassRow]
+    query_cache: QueryCache
+
+
+class DexMemberPage(DexInfoResult, total=False):
+    items: list[MemberRow]
+    class_name: str
+    dex_entry: str
+    superclass: str | None
+    access_flags: int
+    field_count: int
+    method_count: int
+    hierarchy_cycle_detected: bool
+    query_cache: QueryCache
+
+
+class DexSourceResult(DexInfoResult, total=False):
+    source: str
+    format: Literal["java", "smali", "cli-text-best-effort"]
+    class_name: str
+    method_descriptor: str
+    method_name: str
+    candidate_count: int
+    dex_entry: str
+    member_references: list[SourceReference]
+    source_sha256: str
+    source_start: int
+    source_end: int
+    span_unit: str
+
+
+class DexInstructionPage(DexInfoResult, total=False):
+    items: list[InstructionRow]
+    class_name: str
+    method_descriptor: str
+    method_name: str
+    candidate_count: int
+    dex_entry: str
+    query_cache: QueryCache
+
+
+class DexReferencePage(DexInfoResult, total=False):
+    items: list[DexRow]
+    class_name: str
+    method_descriptor: str
+    candidate_count: int
+    field_descriptor: str
+    type_descriptor: str
+    type_relation: str
+    type_match: Literal["exact", "substring"]
+    dex_entry: str
+    scanned_methods: int
+    scanned_instructions: int
+    methods_without_code: int
+    scan_errors: int
+    unresolved_matches: int
+    dynamic_sites: int
+    unresolved_sites: list[DexRow]
+    unresolved_sites_truncated: bool
+    instruction_scan_complete: bool
+    runtime_target_resolution: str
+    reference_semantics: str
+    query_cache: QueryCache
+    index: Index
+    page_limited_by: Literal["response_bytes", "caller_groups"]
+    reference_format: Literal["grouped"]
+    groups: list[ReferenceGroup]
+    returned_sites: int
+    limit_unit: Literal["caller_groups"]
+    total_unit: Literal["reference_sites"]
+    next_cursor: str | None
+    response_byte_limit: int
+
+
+class DexGraphResult(DexInfoResult, total=False):
+    method_descriptor: str
+    candidate_count: int
+    nodes: list[GraphNode]
+    edges: list[DexRow]
+    node_count: int
+    edge_count: int
+    depth: int
+    max_nodes: int
+    max_edges: int
+    direction: Literal["incoming", "outgoing", "both"]
+    truncation_reasons: list[str]
+    traversal_complete_within_depth: bool
+    edge_counts: dict[str, int]
+    index: Index
+
+
+class DexIndexResult(DexInfoResult, total=False):
+    index: Index
+    stored_bytes: int
+    reserved_index_bytes: int
+
+
 class DiffRow(Object, total=False):
     kind: Required[Literal["class", "method", "field"]]
     descriptor: Required[str]
