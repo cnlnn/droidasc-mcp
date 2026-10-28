@@ -36,7 +36,7 @@ structured data instead of unbounded terminal output.
 
 ### Artifact workflow profiles
 
-The development-only opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact` adds focused
+The opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact` adds focused
 handle-oriented DEX tools: `apk_list_classes`, `apk_list_methods`, class outlines,
 exact method source/disassembly/calls, references, literal searches, hierarchy and
 bounded graphs. All use `analysis_id` from `load_artifact`. Each tool advertises only
@@ -45,9 +45,9 @@ its relevant selectors. Exact methods accept a full `method_descriptor`, or an e
 `apk_search_references` handles partial/fuzzy member targets separately.
 `apk_find_type_instructions` selects explicit type operands; `apk_find_type_references`
 retains the broader static relation scopes. The generic DEX selector remains callable
-but is not advertised in this profile. The default stays `legacy` during acceptance.
+but is not advertised in this profile. The default stays `legacy`.
 
-The development-only opt-in `DROIDASC_MCP_TOOL_PROFILE=artifact_preview` advertises
+The compatibility profile `DROIDASC_MCP_TOOL_PROFILE=artifact_preview` advertises
 `load_artifact`, `close_artifact`, `apk_get_summary`, `apk_get_manifest`,
 `apk_list_entries`, `apk_get_resource_content` and `apk_get_signing_info`, plus the
 status, DEX query, revision diff and secret-candidate bridges. Open an artifact once
@@ -74,8 +74,9 @@ nested split reconstruction remain unsupported; raw entry bytes stay readable.
 
 ## Install
 
-Version 0.2.4 adds bounded selected-reference reuse, byte-bounded reference continuations,
-compact artifact summaries and standalone DEX entry browsing. It retains checked native
+Version 0.2.5 adds selected string/type reference reuse, compact grouped pages, the opt-in
+artifact workflow, multi-module AAB analysis and original-byte native DEX 041 queries.
+Existing tools and matching defaults remain compatible. It retains checked native
 DEX references, discovery, structural views and lazy
 indexes. An optional C accelerator has an independent Python fallback; ASC remains the public
 Smali engine. The [native-query validation](docs/NATIVE_QUERY_VALIDATION.md) records accuracy,
@@ -104,23 +105,23 @@ CPython 3.11+ on x86-64 Linux:
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+ on Windows (PowerShell):
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp311-abi3-win_amd64.whl
 ```
 
 For CPython 3.10, create the environment with `python3.10` or `py -3.10` and replace
 `cp311-abi3` in the wheel URL with `cp310-cp310`. The stable-ABI wheels support CPython 3.11
 and newer; the Linux wheels require glibc 2.34 or newer. The canonical source archive is
-`droidasc_mcp-0.2.4.tar.gz`. Source installation retains the Python fallback if no compiler is
+`droidasc_mcp-0.2.5.tar.gz`. Source installation retains the Python fallback if no compiler is
 available. macOS remains unverified. If you installed a withdrawn 0.2.3-0.2.9 package,
-use `--force-reinstall --no-cache-dir` to replace it with this build. The withdrawn historical
-v0.2.4 was consolidated into v0.2.3; this release contains the subsequent workflow changes.
+use `--force-reinstall --no-cache-dir` to replace it with this build. Withdrawn historical
+builds were consolidated into v0.2.3; current assets are built and validated separately.
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 
@@ -612,7 +613,7 @@ uv run python scripts/validate_corpus.py /path/to/one.apk /path/to/another.apk
 uv run python scripts/stability_check.py /path/to/one.apk --duration 300 --workers 2
 uv build
 # Python 3.12+; use fresh dist outputs matching the current version:
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.4.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.5.tar.gz dist/*.whl
 ```
 
 ## License

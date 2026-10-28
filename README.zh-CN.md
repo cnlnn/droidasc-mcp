@@ -34,7 +34,8 @@
 容器、证书和版本审查的参数及覆盖边界见 [REVERSE_WORKFLOW.md](docs/REVERSE_WORKFLOW.md)。
 发布门禁统一覆盖跨平台、MCP 传输及干净安装包验收。
 
-0.2.4 增加有界的完整引用集复用、按字节预算连续分页、容器摘要和裸 DEX 内容读取。
+0.2.5 增加字符串/类型引用集复用、紧凑分组分页、可选的统一 artifact 工作流、
+多模块 AAB 分析和直接读取原始物理字节的原生 DEX 041 查询；旧工具及匹配默认值保持兼容。
 保留原生 DEX 引用、发现、结构视图及惰性索引；可选 C 加速器保留独立 Python
 回退，Smali 仍使用 ASC 官方 CLI。[原生查询验收](docs/NATIVE_QUERY_VALIDATION.md) 分开记录全量准确性、指定负载的
 冷查询收益及仍待优化的启动到首次结果耗时，不把局部提速写成全面领先。
@@ -52,21 +53,21 @@ Manifest 包名、版本与 SDK 声明；Manifest 诊断、ABI 总数与截断�
 
 ### 统一句柄接口
 
-开发分支另可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact`，使用职责明确的 DEX 工具：
+设置 `DROIDASC_MCP_TOOL_PROFILE=artifact`，可启用职责明确的 DEX 工具：
 `apk_list_classes`、`apk_list_methods`、类结构、方法源码与反汇编、调用、引用、搜索和有界图。
 全部接收 `load_artifact` 返回的 `analysis_id`。方法可用完整 `method_descriptor`，
 或精确 `class_name`、`method_name` 加重载原型 `descriptor`；模糊或部分成员查询单独使用
 `apk_search_references`。显式类型操作数与宽类型关系仍分别保留，旧巨型查询工具继续可调用，
-但不在此模式重复展示。默认仍为 `legacy`，此开发接口的完整验收另行记录。
+但不在此模式重复展示。默认仍为 `legacy`，旧接口语义保持不变。
 
-开发分支可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact_preview`。用 `load_artifact(path)`
+兼容模式可设置 `DROIDASC_MCP_TOOL_PROFILE=artifact_preview`。用 `load_artifact(path)`
 打开文件后，同一 `analysis_id` 可调用 `apk_get_summary`、`apk_get_manifest`、
 `apk_list_entries`、`apk_get_resource_content` 和 `apk_get_signing_info`。
 查询代码时将该值传给 `asc_query_dex_session.session_id`，首次代码查询才准备 DEX；
 最后调用 `close_artifact`。元数据与代码共用不可变快照、原始哈希、容量配额和生命周期。
 
 预览还保留状态、版本对比与候选密钥工具。默认仍为 `legacy`，全部旧工具和资源 URI
-继续可调用。此预览尚非最终的精简 DEX 工具接口，也不代表已通过完整发版验收。
+继续可调用。此模式保留通用 DEX 查询工具，职责更明确的接口使用 `artifact` 模式。
 句柄资源入口为 `droidasc://analysis/{analysis_id}/manifest` 和
 `droidasc://analysis/{analysis_id}/class`，支持 `offset`、`limit` 和类入口的
 `class_name` 查询参数；参数值须作 URI 编码。
@@ -91,23 +92,23 @@ CPython 3.11+、x86-64 Linux 安装原生 wheel：
 
 ```bash
 python3.11 -m venv .venv
-.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-manylinux_2_34_x86_64.whl
+.venv/bin/python -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 CPython 3.11+、Windows（PowerShell）：
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.4/droidasc_mcp-0.2.4-cp311-abi3-win_amd64.whl
+.\.venv\Scripts\python.exe -m pip install --force-reinstall --no-cache-dir https://github.com/cnlnn/droidasc-mcp/releases/download/v0.2.5/droidasc_mcp-0.2.5-cp311-abi3-win_amd64.whl
 ```
 
 CPython 3.10 使用 `python3.10` 或 `py -3.10` 创建环境，并将 wheel URL 中的
 `cp311-abi3` 替换为 `cp310-cp310`。stable-ABI wheel 支持 CPython 3.11 及以上，
-Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.4.tar.gz`；
+Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.5.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
 已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为本次构建。
-历史 v0.2.4 已并入重新发布的 v0.2.3；本次发布的是其后的工作流增量。
+已撤回的历史构建并入重新发布的 v0.2.3；当前版本的资产独立构建并验收。
 
 `operation="find_string_refs"`：可将字符串搜索结果的 `value` 原样传入，
 按字面子串查找 `const-string` 和 `const-string/jumbo` 使用位置，无需转义正则或构建索引。
@@ -463,7 +464,7 @@ uv run python scripts/validate_corpus.py /APK路径/one.apk /APK路径/two.apk
 uv run python scripts/stability_check.py /APK路径/one.apk --duration 300 --workers 2
 uv build
 # 使用 Python 3.12+ 验证源码包和 wheel：
-uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.4.tar.gz dist/*.whl
+uv run python scripts/verify_dist.py dist/droidasc_mcp-0.2.5.tar.gz dist/*.whl
 ```
 
 ## 许可证

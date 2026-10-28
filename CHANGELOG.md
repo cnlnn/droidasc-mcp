@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.5
+
+- Add explicit type-operand references with exact or literal-substring matching, and
+  reuse complete selected string/type results across bounded reference pages.
+- Add opt-in grouped reference pages with stable cursors, retaining every original
+  evidence row. Legacy flat output and existing matching defaults remain unchanged.
+- Add the opt-in `artifact` tool profile with one immutable artifact handle, lazy DEX
+  preparation and focused metadata/code tools. The default profile remains `legacy`.
+- Reuse the verified private archive hash during DEX preparation while preserving
+  original-input identity checks. Preparation copy and retained-storage costs remain.
+- Support explicit multi-module or all-module AAB DEX unions, duplicate-class rejection
+  and module-specific manifest/resource routing with original provenance. Protobuf XML
+  decoding and nested split reconstruction remain unsupported.
+- Read DEX 041 logical headers, shared pools and instructions from original physical
+  bytes without Java or JADX for core queries. Source handoff preserves original hashes;
+  explicit Java source remains optional, and legacy references retain standalone
+  Smali/JDK conversion.
+- Validate the scoped changes through Linux/Windows source and exact-package checks,
+  actual stdio/HTTP workflows and independent original-byte reference oracles. Recorded
+  high-temperature preservation measurements are not a universal performance claim.
+
 ## 0.2.4
 
 - Reuse complete selected method, field, outgoing-call and fuzzy-reference sets across

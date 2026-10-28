@@ -3,6 +3,25 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## v0.2.5 release candidate, 2026-10-29
+
+The maintainer approved publication after scoped B1-B6/G1-G6 acceptance. This
+candidate changes version metadata and release documentation, retaining the accepted
+`ead1a91` runtime sources. The final preservation receipt is
+artifacts/competitor-gap-b6-resume-20261029/g6-acceptance.json: 25 successful CI jobs,
+1967 tests per source/package cell, fresh raw stdio/HTTP DEX 041 workflows and 60
+independently checked complete large-APK collections. Its explicit current-host
+temperature override is recorded separately from cool-host performance claims.
+
+Fresh versioned release evidence belongs to artifacts/release-025-20261029.
+Publication requires successful Linux/Windows Python 3.10-3.13 source checks and
+both the canonical Ubuntu Python 3.11 sdist and exact native wheel in every
+distribution cell, plus signing, Rust and stability checks. Release assets must be
+the four unmodified CI wheels and that canonical sdist, with SHA256SUMS. Main, tag,
+latest release, asset metadata and downloaded bytes must agree. Earlier receipts
+are not renamed as 0.2.5 packages. Publication and the next catch-up goal have
+separate receipts; this candidate does not assert universal competitor parity.
+
 ## v0.2.4 release candidate, 2026-10-27
 
 The current candidate freezes the post-consolidation workflow changes described in

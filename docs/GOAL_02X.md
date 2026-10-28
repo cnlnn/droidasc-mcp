@@ -8,14 +8,31 @@ goals, highest benefit first. G6 now closes the final source/transport/package a
 large-APK preservation gates. The maintainer explicitly waived the temperature start
 guard for the final matched measurements; hardware protections were unchanged.
 This is completion of the scoped implementation plan, not universal competitor parity,
-cool-host performance proof or publication approval.
+cool-host performance proof. The maintainer subsequently approved publishing
+v0.2.5 and continuing catch-up on 2026-10-29. The versioned release candidate
+retains the accepted runtime; publication still requires fresh versioned CI
+packages and remote/download readback under artifacts/release-025-20261029.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
 this section. The cross-platform/package requirements and invariants below still apply.
 The maintainer requested continuous goal-mode execution on 2026-10-27: finish each
 batch's gates and automatically advance to the next without repeated confirmation.
-Publication is separate; this instruction does not approve another release.
+This approval covers v0.2.5 only, not automatic publication of later changes.
+
+### Publication and next increment, 2026-10-29
+
+| Goal | Deliverable | State |
+| --- | --- | --- |
+| R025 | Fresh versioned source/canonical-sdist/native-wheel gates, exact CI assets, main/tag/latest/download hash readback | candidate preparation; publication approved, gates pending |
+| G7 | Reduce the largest remaining real-workflow cost using the pinned comparator's reusable logic | read-only preparation/storage assessment while R025 is frozen; implementation follows publication |
+
+G7 selection starts with measured private-copy/expanded-archive costs and the actual
+preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
+readers before choosing an adaptation. Retain original-input immutability, quotas,
+selected-query correctness and cleanup. A smaller schema or a new timing gate alone
+does not close a product gap. Keep the published candidate immutable while evaluating
+the next increment; retain rejected prototypes and their measurements separately.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
