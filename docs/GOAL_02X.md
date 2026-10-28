@@ -438,6 +438,24 @@ owned temporary root after both real transports. Preserve the exact faulty/fixed
 test snapshots and all earlier receipts. Non-AAB outputs do not acquire irrelevant
 empty selected_modules metadata; the new field is scoped to AAB.
 
+The full first local gate also catches two exact resource-template discovery failures:
+adding a query parameter had changed an existing advertised template identity. Preserve
+all four old templates verbatim and add the separate module-addressed manifest template
+instead; update the discovery assertion to include it, retaining its legacy assertions
+and reads. CI `40753025160` at `4dfcc88` is also cancelled before accepting this revised
+candidate. The old full local receipt retains all five failures (three cleanup-test
+setup failures, two template-discovery assertions); it is not a passing source gate.
+
+The corrected final configured source gate passes 1856 tests with zero skips:
+`source-corrected-final.xml`. Raw real stdio/HTTP workflows pass in
+`workflows-retry2.json`, binding all four original DEX hashes and all five independently
+decoded classes, all 14 Smali call sites in the combined fixture, exact module manifests
+and resource content, empty removed temporary roots and no surviving owned processes.
+Two earlier workflow-helper failures remain: a synchronous file used as an async context,
+then an incomplete expected graph that omitted the second fixture's five sites connected
+through shared external operands. Neither was a product failure or a passing acceptance.
+Final Linux/Windows source/package gates and matched default-APK preservation remain open.
+
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
 ```sh

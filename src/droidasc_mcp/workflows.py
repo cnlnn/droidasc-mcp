@@ -192,13 +192,23 @@ def register_workflows(mcp, service, *, instructions=INSTRUCTIONS, focused=False
         )
 
     @mcp.resource(
-        "droidasc://analysis/{analysis_id}/manifest{?offset,limit,module}",
+        "droidasc://analysis/{analysis_id}/manifest{?offset,limit}",
         mime_type="application/json",
     )
-    def analysis_manifest(
-        analysis_id: str, offset: int = 0, limit: int = 200, module: str | None = None
-    ) -> str:
+    def analysis_manifest(analysis_id: str, offset: int = 0, limit: int = 200) -> str:
         """Paged manifest XML from the immutable artifact snapshot."""
+        return json.dumps(
+            service.query_artifact(
+                analysis_id, operation="manifest_xml", offset=offset, limit=limit
+            )
+        )
+
+    @mcp.resource(
+        "droidasc://analysis/{analysis_id}/module/{module}/manifest{?offset,limit}",
+        mime_type="application/json",
+    )
+    def module_manifest(analysis_id: str, module: str, offset: int = 0, limit: int = 200) -> str:
+        """Paged XML from one selected AAB module, retaining original entry provenance."""
         return json.dumps(
             service.query_artifact(
                 analysis_id, operation="manifest_xml", offset=offset, limit=limit, module=module

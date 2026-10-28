@@ -75,7 +75,8 @@ AAB 的 `module` 默认仍选 `base`，也可传精确名称、`["base", "featur
 这样的显式列表，或 `"*"` 选择全部模块，适用于 `load_artifact`、
 `asc_inspect_artifact` 和 `asc_open_artifact_session`。联合查询保留模块与原始 DEX
 来源，重复类定义直接报错。多模块摘要返回逐模块 `manifests`，不拼接成虚假单一清单；
-读取清单时，给 `apk_get_manifest` 或句柄资源 URI 指定一个已选 `module`。
+读取清单时，给 `apk_get_manifest` 指定一个已选 `module`，或使用
+`droidasc://analysis/{analysis_id}/module/{module}/manifest?offset=0&limit=100`。
 资源按含模块前缀的原始路径读取。AAB protobuf XML 解码和嵌套 split 重建仍不支持，
 原始条目字节可继续读取。
 

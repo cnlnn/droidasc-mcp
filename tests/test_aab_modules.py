@@ -313,7 +313,7 @@ async def test_all_modules_metadata_and_code_over_real_transports(
             manifest = await call("apk_get_manifest", analysis_id=key, module="feature-b")
             assert manifest["package_name"] == "feature-b"
             resource = await client.read_resource(
-                f"droidasc://analysis/{key}/manifest?module=feature-a&limit=1"
+                f"droidasc://analysis/{key}/module/feature-a/manifest?limit=1"
             )
             assert json.loads(resource.contents[0].text)["module"] == "feature-a"
             classes = await call("apk_list_classes", analysis_id=key, limit=100)

@@ -518,6 +518,7 @@ async def test_competitor_parity_views_and_resource_templates(
             "droidasc://artifact/manifest{?apk_path,offset,limit}",
             "droidasc://session/{session_id}/class{?class_name,offset,limit}",
             "droidasc://analysis/{analysis_id}/manifest{?offset,limit}",
+            "droidasc://analysis/{analysis_id}/module/{module}/manifest{?offset,limit}",
             "droidasc://analysis/{analysis_id}/class{?class_name,offset,limit}",
         }
         manifest_uri = "droidasc://artifact/manifest?" + urlencode(
