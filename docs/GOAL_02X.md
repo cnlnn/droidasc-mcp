@@ -5,7 +5,7 @@
 Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
 assessment complete. On 2026-10-29 the maintainer requested small, independently
 accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
-G3/B4 and G4/B5 are accepted with explicit residuals; G5/B6.1 is locally verified
+G3/B4, G4/B5 and G5/B6.1 are accepted with explicit scope/residuals;
 and G6/B6.2 combined acceptance is active;
 the previously paused goal-controller status remains separate from this scoped work.
 This section is the
@@ -89,7 +89,7 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | accepted at e79f670; one private archive hash reused, copy/storage residuals |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | accepted at 557f43e; explicit module union and metadata routing |
-| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 active; native original-byte receiving views and source compatibility candidate |
+| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 accepted at 29ef91f; G6 guidance/final preservation acceptance active |
 
 Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
@@ -104,8 +104,8 @@ because a batch or patch release passed.
 | G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | accepted at 631fcbc; 12/12 model tasks, 25/25 CI jobs; aggregate schema/latency residuals |
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
-| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | locally verified; shared original backing, C/Python parity, raw stdio/HTTP; final batch gates pending |
-| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; public source/legacy handoff corrected; frozen candidate gates next |
+| G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | accepted at 29ef91f; original-byte oracle, raw stdio/HTTP, 25/25 CI jobs |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility and package gates pass at 29ef91f; remaining guidance and cool-host preservation gates |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
 session/handle workflow already ported. Ship no changed default yet: opt-in
@@ -263,7 +263,7 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G4/B5 accepted; G5 native physical views locally verified; G6 combined acceptance active |
+| Current task | G5/B6.1 accepted; G6 instruction guidance and final preservation acceptance active |
 | Next action | Complete original-byte 041/native-query, malformed/alias/quota and real-transport evidence; preserve source handoff and verify combined platform/package gates in G6 |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
 | Planning checks | Frozen G4 final source 1856 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; G2 model matrix remains separate 12/12; later G5 candidate is not covered by G4's receipts |
@@ -535,6 +535,22 @@ uv run pytest tests/test_dex041_source.py
 
 The last command requires configured optional JADX/Smali/JDK fixtures. Required CI runs
 set `ASC_TEST_EXPECT_FIXTURE=1`, so missing configured cells fail instead of becoming passes.
+
+G5 is accepted at `29ef91fcbb687291459ca5934ae49df01a4c6917`. CI `40760520446`
+passes all 25 jobs, including eight Linux/Windows Python 3.10-3.13 source cells and eight
+canonical-sdist/exact-native-wheel cells, each with 1964 tests and zero skips. Eight signing
+receipts, Rust and stability gates pass. Four platform/ABI package pairs retain all 69
+runtime source files byte-for-byte. `g5-acceptance.json` binds the frozen 70-file runtime,
+original-byte native workflows, 36 public source/legacy compatibility probes, package/CI
+receipts and preserved failures. A fresh G4 raw-MCP baseline fails at DEX preparation with
+`backend_unavailable` without Java/standalone Smali; the native candidate succeeds.
+
+This acceptance is the native-format small goal, not completed B6 or competitor parity.
+G6 still corrects the remaining model-facing workflow text that describes mandatory 041
+normalization, then validates its final candidate. The fresh large-APK preservation gate
+remains open: CPU Tctl stayed 95-100.625 C after local load stopped. Preserve the successful
+functional/package evidence, but do not call the interrupted local suite or missing hot-host
+benchmark passes. No additional version, tag, release or main publication is approved.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
