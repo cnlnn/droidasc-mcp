@@ -89,7 +89,7 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | accepted at e79f670; one private archive hash reused, copy/storage residuals |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | accepted at 557f43e; explicit module union and metadata routing |
-| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 accepted at 29ef91f; G6 guidance/final preservation acceptance active |
+| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 accepted at 29ef91f; G6 functional/distribution gates pass at ead1a91; cool-host preservation pending |
 
 Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
@@ -105,7 +105,7 @@ because a batch or patch release passed.
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | accepted at 29ef91f; original-byte oracle, raw stdio/HTTP, 25/25 CI jobs |
-| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility passes at 29ef91f; three-profile guidance fixed; final candidate/package and cool-host preservation gates remain |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility, three-profile guidance and final 25/25 CI gates pass at ead1a91; cool-host large-APK preservation pending |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
 session/handle workflow already ported. Ship no changed default yet: opt-in
@@ -263,11 +263,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G5/B6.1 accepted; G6 final candidate/package and preservation acceptance active |
-| Next action | Validate corrected three-profile model instructions through final Linux/Windows/source/package gates; run fresh matched large-APK preservation only on a cool stable host |
+| Current task | G5/B6.1 accepted; G6 functional/distribution gates passed, final preservation acceptance active |
+| Next action | Run fresh matched Taobao/WeChat/Douyin preservation against accepted G4 with independent original-byte collection checks, only on a cool stable host |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
-| Planning checks | G5 at 29ef91f passes 25/25 CI jobs, 1964 tests per source/sdist/wheel suite with zero skips; corrected G6 guidance passes four targeted checks, not yet final distribution acceptance; G2 model matrix remains separate 12/12 |
-| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 final candidate/package and cool-host preservation acceptance |
+| Planning checks | G6 at ead1a91 passes 25/25 CI jobs, 1967 tests per Linux/Windows/source/canonical-sdist/exact-wheel suite with zero skips; all four platform/ABI package pairs match 69 runtime source files; G2 model matrix remains separate 12/12 |
+| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 cool-host large-APK preservation acceptance |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -552,12 +552,29 @@ conversion retain their separate dependencies. Actual in-process MCP instruction
 `droidasc://analysis-guide` checks fail for all three profiles before the change, then pass
 with the existing workflow-prompt check (four passed, five deselected in 0.82 seconds).
 Receipts are `g6-guidance-red.xml` and `g6-guidance-green.xml`. This later candidate adds
-three tests (1967 expected in the full suite); G5's 1964-test CI does not cover its changed
-instructions. Final candidate/source/package validation remains required.
+three tests; G5's 1964-test CI does not cover its changed instructions.
+
+The final G6 functional/distribution candidate is `ead1a910b234f4c3554bd3b356c8513659efbd98`.
+CI `40765270861` passes all 25 jobs: eight configured Linux/Windows Python 3.10-3.13
+source cells and eight canonical-sdist/exact-native-wheel cells each pass 1967 tests with
+zero skips. Eight signing receipts and the Rust/stability gates pass. All four platform/ABI
+package pairs match the candidate's 69 runtime source files byte-for-byte. The only runtime
+file changed since accepted G5 is `workflows.py`; source/legacy execution paths are unchanged
+and pass the complete configured distribution suite again. Evidence is separate under
+`artifacts/competitor-gap-b6-g6-20261029/`, with frozen candidate/runtime, red/green guidance,
+all CI/package receipts and `g6-functional-receipt.json`.
+
+The first candidate freezer accidentally bound the initially empty, still-running
+`ci-watch.log`, so the first final-freezer attempt correctly rejected its changed hash.
+Preserve that original receipt/helper/failure; `candidate-corrected.json` excludes only
+the live progress log, retaining every immutable runtime/test/ledger binding. The final
+functional receipt also binds the completed CI log and the correction history.
+
 The fresh large-APK preservation gate remains open: CPU Tctl stayed 95-100.625 C after
-local load stopped and the latest metadata-only check still observes 99.125 C. Preserve the successful
+local load stopped, with 95.5 C still observed after final CI. Preserve the successful
 functional/package evidence, but do not call the interrupted local suite or missing hot-host
-benchmark passes. No additional version, tag, release or main publication is approved.
+benchmark passes. G6, B6 and the overall goal remain incomplete. No additional version,
+tag, release or main publication is approved.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
