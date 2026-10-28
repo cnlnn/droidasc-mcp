@@ -2,12 +2,13 @@
 
 ## Current implementation plan, 2026-10-27
 
-Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
-assessment complete. On 2026-10-29 the maintainer requested small, independently
-accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
-G3/B4, G4/B5 and G5/B6.1 are accepted with explicit scope/residuals;
-and G6/B6.2 combined acceptance is active;
-the previously paused goal-controller status remains separate from this scoped work.
+Status: the agreed B1-B6 plan and G1-G6 small goals are accepted with explicit
+scope/residuals. On 2026-10-29 the maintainer requested small, independently accepted
+goals, highest benefit first. G6 now closes the final source/transport/package and
+large-APK preservation gates. The maintainer explicitly waived the temperature start
+guard for the final matched measurements; hardware protections were unchanged.
+This is completion of the scoped implementation plan, not universal competitor parity,
+cool-host performance proof or publication approval.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -89,7 +90,7 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
 | B4 | Measured preparation reuse/cost reduction | B3 accepted | accepted at e79f670; one private archive hash reused, copy/storage residuals |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | accepted at 557f43e; explicit module union and metadata routing |
-| B6 | Native DEX 041 logical views and query coverage | B5 accepted | G5 accepted at 29ef91f; G6 functional/distribution gates pass at ead1a91; cool-host preservation pending |
+| B6 | Native DEX 041 logical views and query coverage | B5 accepted | accepted on ead1a91 runtime; native G5 plus final source/transport/package and current-host preservation gates |
 
 Execution order changes need an evidence-backed entry here, not a silent expansion of B1.
 A failed optimization does not block unrelated later capabilities indefinitely: retain its
@@ -105,7 +106,7 @@ because a batch or patch release passed.
 | G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | accepted at e79f670; 60 matched trials, 120 original-byte checked collections, 25/25 CI jobs |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | accepted at 557f43e; raw stdio/HTTP workflows, 60 checked collections, 25/25 CI jobs |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | accepted at 29ef91f; original-byte oracle, raw stdio/HTTP, 25/25 CI jobs |
-| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | active; source/legacy compatibility, three-profile guidance and final 25/25 CI gates pass at ead1a91; cool-host large-APK preservation pending |
+| G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | accepted on ead1a91 runtime; 25/25 CI jobs, fresh stdio/HTTP and 60 independently checked full collections; current-host thermal override recorded |
 
 G1 has the broadest immediate reach across common tasks and reuses the upstream
 session/handle workflow already ported. Ship no changed default yet: opt-in
@@ -263,11 +264,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G5/B6.1 accepted; G6 functional/distribution gates passed, final preservation acceptance active |
-| Next action | Run fresh matched Taobao/WeChat/Douyin preservation against accepted G4 with independent original-byte collection checks, only on a cool stable host |
-| Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
+| Current task | B1-B6 and G1-G6 scoped acceptance complete |
+| Next action | No implementation gate remains in this plan; release selection/publication requires a separate maintainer decision |
+| Product changes | Backward-compatible operand/cache/grouped-reference improvements; opt-in 34-tool artifact workflow; measured private archive-hash reuse; explicit multi/all-module AAB union; original-byte native 041 logical views and source/legacy handoff; defaults unchanged |
 | Planning checks | G6 at ead1a91 passes 25/25 CI jobs, 1967 tests per Linux/Windows/source/canonical-sdist/exact-wheel suite with zero skips; all four platform/ABI package pairs match 69 runtime source files; G2 model matrix remains separate 12/12 |
-| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 copy/storage costs; B5 protobuf decoding limitation; B6 cool-host large-APK preservation acceptance |
+| Retained residuals | B3 aggregate schema/observed model-latency costs; B4 copy/storage costs; B5 protobuf XML decoding limitation; no real-device large-041 or normal-temperature performance claim; unresolved dynamic/reflection edges |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -570,11 +571,39 @@ Preserve that original receipt/helper/failure; `candidate-corrected.json` exclud
 the live progress log, retaining every immutable runtime/test/ledger binding. The final
 functional receipt also binds the completed CI log and the correction history.
 
-The fresh large-APK preservation gate remains open: CPU Tctl stayed 95-100.625 C after
-local load stopped, with 95.5 C still observed after final CI. Preserve the successful
-functional/package evidence, but do not call the interrupted local suite or missing hot-host
-benchmark passes. G6, B6 and the overall goal remain incomplete. No additional version,
-tag, release or main publication is approved.
+The large-APK gate was initially deferred at CPU Tctl 95-100.625 C. On 2026-10-29 the
+maintainer explicitly directed execution despite the temperature. Only the benchmark
+start guard was waived; hardware protections and existing worker/memory/disk/cleanup
+bounds were unchanged. The read-only resume preflight validates 115 frozen evidence
+bindings, all 70 current runtime files, all 69 accepted G4 baseline files and the complete
+stored CI receipts. Original APK content hashes are freshly checked by the benchmark
+and the independent review, not inferred from the lightweight preflight's file stats.
+
+Evidence is `artifacts/competitor-gap-b6-resume-20261029/`. Five alternating paired rounds
+per Taobao/WeChat/Douyin input pass under the same inherited four-CPU budget: 30 real-MCP
+trials and 60 complete collections. The frozen independent original-byte MethodBridge
+oracle checks every returned field-reference site and diagnostic against the original
+DEX entries (332/110/489 sites respectively). Source/input/helper hashes remain unchanged,
+all sessions close and no owned files/processes survive. A fresh final 041 workflow also
+passes stdio and HTTP on all six raw/APK shared/unshared cases with Java deliberately
+invalid and no JADX/dexlib2, including original-byte oracles and full cleanup.
+
+First-complete medians before/after are 1.0997/1.1521, 1.8453/1.8187 and 4.7091/4.7490
+seconds. Process-to-first-complete medians are 2.1207/2.1369, 3.3203/3.1806 and
+6.7183/6.7389 seconds. Repeated medians are 0.0627/0.0607, 0.0347/0.0339 and
+0.0728/0.0867 seconds. None crosses the combined >5% and >100-ms median regression gate.
+Retain every pair: one Douyin process-to-first pair is slower by 1.3096 seconds; its repeat
+median rises 13.9 ms (19.1%). Thirty temperature samples cover 97.75-100.5 C without
+sampling errors. These are noisy current-host preservation measurements, not a speedup
+claim, competitor comparison or evidence of normal-temperature latency. Sampled retained
+temporary storage changes by at most 1367 bytes; no storage/memory victory is claimed.
+
+G6/B6 and the agreed B1-B6 implementation plan are accepted within these boundaries.
+`g6-acceptance.json` binds the final runtime, current-host override/thermal records,
+matched/original-byte/transport evidence, prior accepted goals and final platform/package
+receipts; any final documentation-only CI recheck is recorded there. The deliberately
+interrupted local suite remains a failed/interrupted attempt, not a pass. No additional
+version, tag, release or main publication is approved.
 
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
