@@ -4,7 +4,8 @@
 
 Status: B1/B2 accepted with measured residuals; B3 baseline and scoped reuse
 assessment complete. On 2026-10-29 the maintainer requested small, independently
-accepted goals, highest benefit first. G1 local acceptance is complete; G2 is next;
+accepted goals, highest benefit first. G1/G2 and the B3 batch gates are complete;
+G3 is active with fresh preparation profiling;
 the previously paused goal-controller status remains separate from this scoped work.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
@@ -84,8 +85,8 @@ to that locator; it is not a reason to reject reuse of its grouping or workflow 
 | P0 | Source-backed plan and compatibility decisions | Current audit | complete |
 | B1 | Operand-only type scan, selected-set reuse, string cache and accurate API mapping | P0 | accepted at b64f85c; cold type/startup residuals retained for B4 |
 | B2 | Compact reference output and resumable full-result collection | B1 accepted | accepted at aca6b27; opt-in large-member benefit, not universal speedup |
-| B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | G1 locally accepted; G2 and full B3 gates remain open |
-| B4 | Measured preparation reuse/cost reduction | B3 accepted | deferred |
+| B3 | Unified artifact workflow and smaller tool contracts | B2 accepted | accepted at 631fcbc with schema/latency residuals; default stays legacy |
+| B4 | Measured preparation reuse/cost reduction | B3 accepted | G3 active; fresh cold-cost attribution |
 | B5 | Explicit multi-module AAB analysis | B4 accepted or closed with measured residuals | deferred |
 | B6 | Native DEX 041 logical views and query coverage | B5 accepted | deferred |
 
@@ -99,8 +100,8 @@ because a batch or patch release passed.
 | Goal | Independently usable result | Acceptance boundary | State |
 | --- | --- | --- | --- |
 | G1 (B3.1) | One immutable artifact handle for metadata and lazy code queries | Metadata does not prepare DEX; first code query prepares once; real stdio/HTTP, original hash, lifecycle/quotas and legacy compatibility; frozen real-model inventory/navigation/resource tasks | locally accepted; 1807 source tests, four successful model workflows and clean sdist/wheel checks |
-| G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | in progress; focused contracts under implementation |
-| G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | pending |
+| G2 (B3.2) | Focused DEX tools and final artifact profile | All 24 DEX operations reachable with smaller focused contracts; full 3-round model comparison and batch distribution gates | accepted at 631fcbc; 12/12 model tasks, 25/25 CI jobs; aggregate schema/latency residuals |
+| G3 (B4) | Remove one measured dominant cold-preparation cost | Matched cold/first-use/repeat measurements with correctness and mutation/cleanup checks; retain unsuccessful candidates | active; three-input preparation/first-query profiles and low-overhead phase attribution |
 | G4 (B5) | Explicit multi/all-module AAB selection | Cross-module inventory/references, duplicate identities and manifest/resource routing with module provenance | pending |
 | G5 (B6.1) | Validated DEX 041 physical/logical views without Java for inventory/instructions | Shared-data and malformed fixtures, independent original-byte oracle and every logical header | pending |
 | G6 (B6.2) | DEX 041 source handoff and combined acceptance | Decompiler/reference coverage, compatibility, full Linux/Windows/package gates | pending |
@@ -261,11 +262,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | G2 focused implementation ready for candidate freeze; full gates running |
-| Next action | Full three-round candidate model comparison and fresh Linux/Windows/package gates before B3 acceptance; do not repeat the frozen baseline |
+| Current task | G2/B3 accepted with residuals; G3 cold-preparation profiling active |
+| Next action | Attribute read/hash/inflate/directory/worker costs, select one bounded reuse/removal candidate, then run matched correctness/first-use/repeat gates |
 | Product changes | Opt-in artifact advertises 24 focused DEX adapters covering all 24 operations, plus the seven handle metadata tools and status/diff/secret bridges; legacy and artifact_preview advertisements remain unchanged; eight narrower typed output contracts retain extra diagnostics |
-| Planning checks | Initial G2 source variant: 1813 passed, zero skips, 301.85 seconds. Narrowed-output variant: 37 focused/registry/transport/handle checks pass, zero skips; final full source/package/CI/model gates remain pending |
-| Open dependencies | B3 focused surface, candidate comparison and cross-platform/package gates; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
+| Planning checks | Corrected G2 source: 1816 passed, zero skips; Linux/Windows Python 3.10-3.13 source and canonical-sdist/exact-wheel gates all pass; real native-only model matrix 12/12 |
+| Open dependencies | B3 aggregate schema/observed model-latency residuals; B4 cold costs; B5 module selection/routing beyond upstream all-entry scanning; B6 native physical-view integration and shared-data correctness |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | No new release/version selected; development completion and publication approval remain distinct |
 
@@ -305,6 +306,34 @@ attempt retains an assertion error about the direct archive runner's legacy
 `apk_sha256` field; no wire-field rename is part of this fix.
 G2 is not accepted until the corrected candidate's gates pass. Preserve the first
 candidate and model matrix separately rather than relabeling their runtime hashes.
+
+G2 final acceptance, corrected commit `631fcbcdf9438e22fab676007e6bdb877c96c14b`:
+CI [40739854382](https://github.com/cnlnn/droidasc-mcp/actions/runs/40739854382)
+passes all 25 jobs. Every Linux/Windows Python 3.10-3.13 source cell passes 1816
+tests with no errors/failures/skips; all eight distribution cells independently pass
+1816 tests from the same canonical sdist and another 1816 from the exact native wheel.
+The downloaded four platform/Python package pairs match the accepted runtime sources;
+eight signing receipts, real transports, Rust and stability gates pass. Failed network
+downloads/log fetches and freeze-helper assertion corrections remain separately retained.
+
+`g2-acceptance.json` binds source/tests/harnesses, downloaded packages, JUnit/signing
+receipts, complete CI logs, original inputs/oracle and final model results. The unchanged
+four tasks pass all three rounds on the corrected runtime, 57 product calls total,
+zero product errors/retries and verified handle/process cleanup. Each navigation report
+also matches all 40 original-byte operands after presentation-only normalization.
+Final median calls are 4/4/6/4 versus frozen legacy's 6/6/7/5 and comparator's 6/6/8/4.
+Observed final median seconds are 67.16/82.43/86.31/69.59 versus legacy's
+56.24/66.41/67.37/57.75. These historical, non-interleaved model timings do not establish
+a controlled performance ratio; they certainly do not support a speedup claim.
+Accept the focused workflow/selection change, not aggregate-schema reduction or general
+competitor superiority. `artifact` remains opt-in, `legacy` remains default, B4-B6 remain
+open and no publication/version/tag is approved.
+
+G3 starts under `artifacts/competitor-gap-b4-20261029/` with fresh Taobao, WeChat and
+Douyin preparation/first-query profiles and a reused low-overhead phase diagnostic.
+Cross-thread cProfile cumulative times are not additive phase budgets. Profile evidence
+alone is not performance acceptance; retain original hashes, mutation checks, first-use
+costs, quotas and cleanup while evaluating any bounded reuse candidate.
 
 G1 verification receipts are under `artifacts/competitor-gap-b3-20261029/`:
 
