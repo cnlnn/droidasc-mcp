@@ -205,7 +205,7 @@ def capabilities(archive, entries, kind, module, budget, *, preparation=False):
     metadata = {
         "artifact_kind": kind,
         "selected_module": chosen[0] if len(chosen) == 1 else None,
-        "selected_modules": chosen,
+        **({"selected_modules": chosen} if kind == "aab" else {}),
         "modules": modules,
         "dex_entries": selected,
         "jvm_class_count": len(classes),
@@ -283,7 +283,7 @@ def inspect(archive, entries, kind, query):
             from .artifact_summary import summarize
 
             result["summary"] = summarize(
-                archive, entries, kind, metadata["selected_modules"], budget - used
+                archive, entries, kind, metadata.get("selected_modules", []), budget - used
             )
         if query.get("compare_to"):
             from pathlib import Path

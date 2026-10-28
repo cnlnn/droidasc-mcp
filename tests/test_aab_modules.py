@@ -184,10 +184,6 @@ def test_exact_base_defaults_missing_lists_and_manifest_only_module(settings, tm
 
 def test_handle_freezes_selection_and_manifest_routing(settings, module_bundle):
     path, _ = module_bundle
-    owned = tmp_path / "owned-temporary"
-    owned.mkdir()
-    for name in ("TMPDIR", "TMP", "TEMP"):
-        monkeypatch.setenv(name, str(owned))
     selection = ["feature-b", "base"]
     with closing(DroidAscService(settings)) as svc:
         key = svc.load_artifact(str(path), module=selection, max_uncompressed_bytes=1024**2)[
@@ -288,6 +284,10 @@ async def test_all_modules_metadata_and_code_over_real_transports(
     module_bundle, tmp_path, monkeypatch, transport
 ):
     path, _ = module_bundle
+    owned = tmp_path / "owned-temporary"
+    owned.mkdir()
+    for name in ("TMPDIR", "TMP", "TEMP"):
+        monkeypatch.setenv(name, str(owned))
     monkeypatch.setenv("DROIDASC_MCP_ALLOWED_ROOTS", str(tmp_path))
     monkeypatch.setenv("DROIDASC_MCP_TOOL_PROFILE", "artifact")
     monkeypatch.setenv("DROIDASC_MCP_JAVA", "java-must-not-run")

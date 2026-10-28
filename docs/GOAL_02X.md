@@ -429,6 +429,15 @@ accepted yet. Original source fixtures provide base-to-feature and feature-to-fe
 static call sites, all five original classes and four hash-bound DEX entries, through
 both stdio and HTTP with Java/JADX/dexlib2 disabled for product execution.
 
+The additional physical-temp cleanup assertion was first placed in the wrong test;
+Ruff reports undefined fixture variables and the first full local run retains that
+test-harness failure. Candidate `2fcc42f` CI `40752639801` is cancelled deliberately
+after this known defect, never accepted. Move only the setup to the actual transport
+test and keep its assertions: the corrected 25-case suite passes, including an empty
+owned temporary root after both real transports. Preserve the exact faulty/fixed
+test snapshots and all earlier receipts. Non-AAB outputs do not acquire irrelevant
+empty selected_modules metadata; the new field is scoped to AAB.
+
 Reproduction for the candidate, replacing the frozen runtime/output paths as needed:
 
 ```sh
