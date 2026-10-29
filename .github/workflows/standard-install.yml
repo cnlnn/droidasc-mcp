@@ -1,0 +1,73 @@
+name: Standard Pip Consumers
+
+on:
+  push:
+    paths:
+      - .github/workflows/standard-install.yml
+      - scripts/verify_standard_install.py
+  workflow_dispatch:
+    inputs:
+      package_run_id:
+        description: Successful CI run containing the canonical Ubuntu Python 3.11 distributions
+        default: "40908697104"
+        required: true
+      source_sha:
+        description: Expected immutable Git revision of the engine dependency
+        default: "a6f96b864cc317116cd38af143c63fe82b149099"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  standard-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PACKAGE_RUN_ID: ${{ inputs.package_run_id || '40908697104' }}
+      SOURCE_SHA: ${{ inputs.source_sha || 'a6f96b864cc317116cd38af143c63fe82b149099' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Verify the canonical package run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$PACKAGE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PACKAGE_RUN_ID" > standard-install-provenance.json
+          python -c "import json; r=json.load(open('standard-install-provenance.json')); assert r['status']=='completed' and r['conclusion']=='success'; print('Canonical package commit:', r['head_sha'])"
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-distributions-ubuntu-latest-py3.11
+          path: canonical-dist
+          run-id: ${{ env.PACKAGE_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Set up the verified Smali fixture assembler
+        run: python scripts/setup_jadx.py
+      - name: Verify two ordinary pip consumers
+        env:
+          DROIDASC_MCP_JAVA: java
+        run: >-
+          python scripts/verify_standard_install.py
+          canonical-dist/*.tar.gz canonical-dist/*.whl
+          --source-sha "$SOURCE_SHA"
+          --provenance standard-install-provenance.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: standard-pip-consumers-linux-py3.13
+          path: |
+            standard-install-results
+            standard-install-provenance.json
+          if-no-files-found: error
