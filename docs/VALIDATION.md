@@ -3,6 +3,78 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Original type-link package check, 2026-10-29
+
+G14 independently verifies all 343 method/field tokens and nine selected complete
+reference-site sets against original DEX identities/instructions, but finds 25
+additional class links with invalid identities on the manifest-discovered F-Droid
+application class. G15 reuses adjacent original field/return/argument tokens and
+the existing ASC Writer-extension pattern for raw array types, without modifying
+bundled dadguard or introducing an MCP-private import. The first candidate misses
+one array-component identity and is not accepted; attempts.md retains that run.
+
+The final local dependency wheel `0.1.2.post3+sourcefixes.2`, local upstream commit
+140b05c, changes only the ASC decompiler file among 80 Python files. All 23 released
+dadguard files, accepted G12 MCP sources/native wheel, license and main environment
+remain unchanged. Normal installed-wheel fixtures fail 8/16 before and pass 16/16
+after; selected upstream tests pass 48 cases plus four subtests. Eight complete
+plain/metadata stdio/HTTP collections preserve all source bytes, correct 21 raw
+class identities, remove four keyword links and retain the other 635 ordered links
+and global Unicode spans. The independent oracle checks original type/member tables
+and the selected onCreate new-array operand. G14's nine instruction sites are reused
+only for byte-identical member links, not described as freshly rerun. Input-ID
+version-bound derivation is checked before normalizing cross-version pages.
+
+Evidence: artifacts/competitor-gap-g15-20261029/g15-acceptance.json. Scope is an
+isolated Linux Python 3.13 package candidate for this selected class, not default
+dependency adoption, a portable changed-dependency gate, a release or a performance
+claim.
+
+G16 completes 32 additional complete ordinary/metadata source collections over both
+transports on WeChat/Douyin manifest application classes. All source bytes match the
+official engine. Original owning-DEX type/member tables and encoded class definitions
+validate 460 member and 356 class tokens; all 69 original DEX hashes are checked using
+reported logical-to-container entry mappings. Eight class identities are corrected,
+42 keyword links removed and all other ordered links/spans preserved. The first
+verifier confused a logical DEX label with its original ZIP entry; the recorded
+provenance is correct and the verifier is corrected without rerunning workflows.
+The final receipt separately seals a formerly live output-log digest after process
+exit. Original failed verifier/log receipts are retained. Evidence:
+artifacts/competitor-gap-g16-20261029/g16-acceptance-final.json. Scope is two selected
+application classes in the same normal installed Linux environments, not all classes,
+fresh full instruction-site revalidation, portable adoption or a performance claim.
+
+## Annotation dependency package integration, 2026-10-29
+
+G13's local dependency build starts from the lock-pinned official droidasc sdist,
+whose 80 Python files equal the official wheel and installed dependency. The local
+`0.1.2.post3+annotations.1` wheel changes only the two lazy annotation-directory
+resolution lines; all 23 bundled dadguard files are unchanged. Wheel RECORD, sdist/
+wheel equality, license retention and the local modification notice are checked.
+Two clean environments install normal official/local dependency wheels and the same
+accepted G12 native MCP wheel, without PYTHONPATH, editable installs or source overlays.
+All other distribution versions and all 69 MCP runtime source files are equal.
+
+Four serial real MCP sessions (before/after, stdio/HTTP) collect complete ordinary and
+metadata source twice, 16 collections total. The class is discovered from the manifest
+and its complete outline is read first. Both transports and warm reads match. The
+only source changes are the two original-DEX-confirmed Throws annotations; all 660
+ordered links and shifted Unicode spans equal the corrected G10 output. Input IDs
+are independently reconstructed from engine version and ordered original DEX hashes,
+not silently ignored. Installed generated-fixture tests fail 2/4 on the official
+wheel and pass 4/4 on the local wheel. Original APK and 80 main-environment dependency
+files remain unchanged; all owned storage/children are removed. Verification retries
+and their narrow comparison mistakes are retained in package-integration/attempts.md.
+
+Evidence: artifacts/competitor-gap-g13-20261029/package-integration/
+integration-verification.json. This accepts an isolated Linux Python 3.13 installable
+candidate, not main dependency adoption, a cross-platform changed-dependency gate,
+performance parity or a release. A prepared upstream contribution remains local;
+no public fork/PR, upstream push, package publication or installed dependency change
+has occurred. Fresh checked main/dev/open-PR diffs contain no corresponding fix;
+source-review/review.json binds those read-only checks. Public contribution permission
+and portable dependency availability/integration remain open while G14 proceeds.
+
 ## Metadata source reuse acceptance, 2026-10-29
 
 G12 extends the same bounded snapshot mechanism to the existing ASC metadata

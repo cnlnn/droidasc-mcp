@@ -54,6 +54,58 @@ annotation integration and other residuals remain open. Its two-line upstream
 contribution and generated-fixture tests are prepared locally as G13; the installed
 dependency is unchanged. Neither increment establishes overall competitor parity.
 
+G13 also builds an isolated `0.1.2.post3+annotations.1` dependency from the official
+lock-pinned sdist rather than the Git tree, preserving all released dadguard bytes.
+The official sdist, wheel and installed dependency match across all 80 Python files;
+the local wheel changes only the two lazy-directory lines. Normal wheel installations
+with the accepted G12 native wheel pass 16 complete plain/metadata collections over
+stdio/HTTP, restoring exactly the two annotations and all 660 ordered token links
+with shifted global spans. Engine-bound input IDs are independently reconstructed
+before cross-version comparison. Installed generated-fixture tests fail 2/4 before
+and pass 4/4 after. This is Linux Python 3.13 package-integration evidence, not default
+dependency adoption, cross-platform changed-dependency acceptance or a new release.
+Fresh main/dev/open-PR source review finds no corresponding annotation fix in those
+checked sources. The public contribution awaits permission; other catch-up work
+continues. Receipts: artifacts/competitor-gap-g13-20261029/package-integration/
+integration-verification.json and source-review/review.json.
+
+G14 follows actual source tokens into method Smali and complete incoming/outgoing/
+field references over both transports. All 343 method/field tokens match independent
+original DEX pools/definitions, 57 declarations round-trip through the outline and
+all nine selected query sites match complete sequential decoding of 1,692,420 original
+instructions. However, 25 additional class tokens use abbreviated display names or
+`super` as identities (`LString;`, `Lsuper;`, etc.). This is an open source-navigation
+quality gap in our installed ASC path, not evidence that the comparator implements
+these extra class-token categories. G15's separate candidate below reuses original
+upstream type data. Evidence: artifacts/competitor-gap-
+g14-20261029/g14-probe.json. No product/default/release change is made by the probe.
+
+G15 accepts that separate local upstream adaptation at `140b05c`, based on G13's
+annotation contribution. Field/return/argument types reuse neighboring original
+tokens; the existing ASC Writer-extension pattern now also retains raw new-array/
+filled-array types without changing released dadguard files. The final normal wheel
+`0.1.2.post3+sourcefixes.2` corrects 21 original class identities and removes four
+keyword links, leaving 635 other links/global spans and all source bytes unchanged.
+The first sourcefixes.1 candidate missed one array link; its rejected oracle run and
+correction are retained. An independent original DEX type/member/selected-array-operand
+check finds no invalid remaining class links on the selected F-Droid class. Eight
+complete stdio/HTTP collections and 16 installed-fixture cases pass; the earlier
+normal annotation-only wheel fails eight of those cases. These results do not adopt
+the dependency or claim competitor/performance parity. Receipt:
+artifacts/competitor-gap-g15-20261029/g15-acceptance.json. G16 extends the same normal-
+package path to manifest-discovered application classes in the larger APK corpus.
+
+G16 completes that scoped check on WeChat and Douyin: 32 complete ordinary/metadata
+source collections over both transports, unchanged official-engine source bytes,
+460 independently valid member identities and 356 class identities. The adaptation
+corrects eight more types and removes 42 keyword links, preserving every member/string
+link and the other class links/spans. Original DEX hashes use the explicit logical
+`dex_entry` to physical `container_entry` mapping. Evidence:
+artifacts/competitor-gap-g16-20261029/g16-acceptance-final.json. This is two selected
+application classes and normal installed Linux wheels, not default dependency adoption,
+all-class source semantics or performance/competitor parity. G17 next follows selected
+source members into full exact-reference workflows on this corpus.
+
 ## v0.4.1 cold-query investigation, 2026-10-22
 
 The competitor's main was rechecked at `848c711f1d80a1c2577283f1fa5f475ff734aa40`.

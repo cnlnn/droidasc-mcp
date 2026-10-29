@@ -18,7 +18,13 @@ G11 plain-CLI source pagination reuse is accepted at 3709bf2 with a scoped error
 residual. G12 metadata/token-link pagination reuse is accepted at 5a96ea6 with complete
 matched stdio/HTTP and cross-platform source/package gates, restoring that error-field
 compatibility. G13 prepares the verified upstream annotation contribution without
-modifying installed dependencies or publishing a new version.
+modifying installed dependencies or publishing a new version. Its isolated normal-
+wheel integration now passes complete source workflows; default dependency adoption
+and the public upstream contribution remain separate and open. G14 independently
+verifies the member-navigation path and finds 25 invalid extra class-link identities.
+G15 accepts the separate upstream raw-type fix in a normal installed Linux candidate;
+G16 accepts its original-byte source-identity check on two larger APK application
+classes. Default upstream integration remains open; these are development candidates.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -38,7 +44,11 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
 | G11 | Reuse complete plain-CLI class source across immutable-session pages | accepted at 3709bf2 with scoped later-error optional-field residual; CI 40796945147 passes 25/25 jobs, 1992 tests per source/package suite; 24 complete stdio plus two HTTP collections pass, unreleased |
 | G12 | Reuse complete metadata source and ordered token links with exact Unicode spans | accepted at 5a96ea6; CI 40801161988 passes 25/25 jobs and 2013 tests per source/package suite; 24 matched stdio/two HTTP plus four adopted stdio collections, unreleased |
-| G13 | Integrate the verified annotation fix through upstream rather than a runtime monkeypatch | local upstream contribution 51e2b31 prepared with two runtime lines and generated-fixture regressions; baseline 2/4 fail, fixed 4/4 and selected 63 tests plus 21 subtests pass; dependency integration open |
+| G13 | Integrate the verified annotation fix through upstream rather than a runtime monkeypatch | local contribution 51e2b31 and normal-install dependency wheel prepared; 16 complete plain/metadata stdio/HTTP collections pass with all 660 links; default dependency adoption and public PR open |
+| G14 | Follow real source-token identities into exact method/field source and references | probe accepted: both transports equal, 343 member tokens and nine full query sites match original-byte oracle; 25 additional class-token identities are wrong in the default dependency |
+| G15 | Reuse original upstream type data for source class links | isolated normal-wheel candidate accepted at local upstream 140b05c: correct 21 original types/remove four keyword links, preserve all source bytes and 635 other links; default dependency adoption remains open |
+| G16 | Check the raw-type candidate on manifest-discovered application classes in larger APKs | accepted scoped corpus check: 32 complete source collections, 460 independent member identities, eight additional types corrected/42 keyword links removed; all source bytes and other links unchanged |
+| G17 | Follow selected larger-corpus source members through exact method source and complete references | next: choose targets from G16 source/outline rather than known answers, verify full selected result sets against original instructions; no new default, cache or release without a reproduced gap |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -196,6 +206,35 @@ performance matrix, an installed dependency fix or a dependency publication.
 Resolve distributable upstream integration while preserving the installed bundled
 dadguard differences. Do not turn the isolated overlay into a runtime monkeypatch.
 Later product changes need their own candidate gates.
+
+G13 subsequently verifies the official sdist/wheel/main install match across 80
+Python files and builds a normal isolated annotation-only wheel, retaining all
+23 released dadguard files. Sixteen complete stdio/HTTP collections restore only
+the two annotations and all 660 expected links. G14 then verifies exact member
+navigation and independently exposes 25 invalid extra class identities. G15's
+separate local upstream commit 140b05c reuses existing original token identities
+and ASC Writer extensions. Its final normal wheel corrects 21 types/removes four
+keyword links, preserves all source bytes/635 other links, and passes eight complete
+collections plus installed before/after regressions. Original type/member tables
+and the selected array operand independently confirm the changes. The incomplete
+first array-link attempt is retained rather than counted as final acceptance.
+Receipts: artifacts/competitor-gap-g13-20261029/package-integration/
+integration-verification.json, artifacts/competitor-gap-g14-20261029/g14-probe.json,
+and artifacts/competitor-gap-g15-20261029/g15-acceptance.json. Public contribution,
+distributable dependency adoption and changed-dependency portable gates remain
+separate/open; default dependencies and released v0.2.5 assets are unchanged.
+
+G16 reuses those same normal official/fixed dependency installations for the WeChat
+and Douyin manifest application classes. All 32 complete plain/metadata stdio/HTTP
+collections preserve official-engine source bytes. Independent original owning-DEX
+type/member tables and encoded definitions validate 460 member and 356 class tokens;
+all 69 original DEX source hashes are checked through explicit logical-to-container
+entry mappings. Eight further raw class identities are corrected and 42 keyword
+links removed; every member/string link and other class span remains unchanged.
+artifacts/competitor-gap-g16-20261029/g16-acceptance-final.json seals these results.
+The initial verifier's wrong logical/physical entry assumption and its live-log digest
+are retained/corrected in separate receipts without changing or replaying workflows.
+This covers two selected classes, not all application code or runtime resolution.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
