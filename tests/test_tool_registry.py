@@ -1,6 +1,7 @@
 """Compiled schema registration must preserve SDK contracts and strict validation."""
 
 import json
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pydantic
@@ -13,6 +14,28 @@ from droidasc_mcp import contracts
 
 def output() -> contracts.DexResult:
     return {"status": "ok", "items": [{"instruction_offset": 12}]}
+
+
+@pytest.mark.parametrize("contract", [contracts.DexResult, contracts.DexReferencePage])
+def test_reference_row_schema_is_inlined_only_at_the_flat_items_seam(contract):
+    import inspect
+
+    from droidasc_mcp.tool_registry import contract_schema
+
+    options = (
+        {"union_format": "primitive_type_array"}
+        if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters
+        else {}
+    )
+    original = TypeAdapter(contract).json_schema(**options)
+    expected = deepcopy(original)
+    expected["properties"]["items"]["items"] = deepcopy(original["$defs"]["DexRow"])
+    actual = contract_schema(contract)
+    assert actual == expected
+    leaf = actual["properties"]["items"]["items"]
+    assert leaf is not actual["$defs"]["DexRow"]
+    leaf["properties"]["caller"]["title"] = "changed by caller"
+    assert actual["$defs"] == original["$defs"]
 
 
 def test_compiled_descriptions_are_stable_across_python_docstring_dedenting():
@@ -236,14 +259,22 @@ def test_compact_schema_preserves_every_nullable_leaf_and_constrained_union():
         else:
             assert original == compact
 
-    for contract in OUTPUT_TYPES.values():
+    expanded = []
+    for name, contract in OUTPUT_TYPES.items():
         compact = contract_schema(contract)
         Draft202012Validator.check_schema(compact)
-        compare(TypeAdapter(contract).json_schema(), compact)
+        original = TypeAdapter(contract).json_schema()
+        if name in {"DexResult", "DexReferencePage"}:
+            assert original["properties"]["items"]["items"] == {"$ref": "#/$defs/DexRow"}
+            original["properties"]["items"]["items"] = deepcopy(original["$defs"]["DexRow"])
+            expanded.append(name)
+        compare(original, compact)
+    assert sorted(expanded) == ["DexReferencePage", "DexResult"]
     assert checked >= 30
 
 
-def test_schema_generation_falls_back_for_older_pydantic(monkeypatch):
+@pytest.mark.parametrize("contract", [contracts.DexResult, contracts.DexReferencePage])
+def test_schema_generation_falls_back_for_older_pydantic(monkeypatch, contract):
     from droidasc_mcp.tool_registry import contract_schema
 
     original = TypeAdapter.json_schema
@@ -251,16 +282,167 @@ def test_schema_generation_falls_back_for_older_pydantic(monkeypatch):
     def older(self):
         return original(self)
 
-    expected = original(TypeAdapter(contracts.DexResult))
+    expected = original(TypeAdapter(contract))
+    expected["properties"]["items"]["items"] = deepcopy(expected["$defs"]["DexRow"])
     monkeypatch.setattr(TypeAdapter, "json_schema", older)
-    assert contract_schema(contracts.DexResult) == expected
+    assert contract_schema(contract) == expected
+
+
+@pytest.mark.parametrize("contract", [contracts.DexResult, contracts.DexReferencePage])
+@pytest.mark.parametrize("location", ["root", "array", "leaf", "child", "other_definition"])
+@pytest.mark.parametrize(
+    "keyword",
+    [
+        "$id",
+        "id",
+        "$schema",
+        "$vocabulary",
+        "$anchor",
+        "$dynamicAnchor",
+        "$dynamicRef",
+        "$recursiveAnchor",
+        "$recursiveRef",
+    ],
+)
+def test_reference_row_scope_keywords_preserve_the_original_schema(
+    monkeypatch, contract, location, keyword
+):
+    from droidasc_mcp.tool_registry import contract_schema
+
+    schema = TypeAdapter(contract).json_schema()
+    nodes = {
+        "root": schema,
+        "array": schema["properties"]["items"],
+        "leaf": schema["$defs"]["DexRow"],
+        "child": schema["$defs"]["DexRow"]["properties"]["caller"],
+        "other_definition": schema["$defs"].setdefault("FutureScope", {}),
+    }
+    nodes[location][keyword] = "https://example.invalid/scope"
+    monkeypatch.setattr(TypeAdapter, "json_schema", lambda self: deepcopy(schema))
+    assert contract_schema(contract) == schema
+
+
+@pytest.mark.parametrize("contract", [contracts.DexResult, contracts.DexReferencePage])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "root",
+        "root_type",
+        "defs",
+        "properties",
+        "missing_leaf",
+        "leaf",
+        "leaf_type",
+        "leaf_properties",
+        "array",
+        "array_type",
+        "missing_ref",
+        "ref_sibling",
+        "other_ref",
+        "recursive_ref",
+        "nested_ref",
+        "nested_defs",
+        "legacy_definitions",
+    ],
+)
+def test_reference_row_unexpected_or_nonleaf_shapes_are_not_transformed(
+    monkeypatch, contract, fault
+):
+    from droidasc_mcp.tool_registry import contract_schema
+
+    schema = TypeAdapter(contract).json_schema()
+    leaf = schema["$defs"]["DexRow"]
+    items = schema["properties"]["items"]
+    if fault == "root":
+        schema = []
+    elif fault == "root_type":
+        schema["type"] = "array"
+    elif fault == "defs":
+        schema["$defs"] = []
+    elif fault == "properties":
+        schema["properties"] = None
+    elif fault == "missing_leaf":
+        del schema["$defs"]["DexRow"]
+    elif fault == "leaf":
+        schema["$defs"]["DexRow"] = True
+    elif fault == "leaf_type":
+        leaf["type"] = "array"
+    elif fault == "leaf_properties":
+        leaf["properties"] = None
+    elif fault == "array":
+        schema["properties"]["items"] = []
+    elif fault == "array_type":
+        items["type"] = "object"
+    elif fault == "missing_ref":
+        items["items"] = {}
+    elif fault == "ref_sibling":
+        items["items"]["description"] = "Keep this sibling"
+    elif fault == "other_ref":
+        items["items"]["$ref"] = "#/$defs/OtherRow"
+    elif fault == "recursive_ref":
+        leaf["properties"]["child"] = {"$ref": "#/$defs/DexRow"}
+    elif fault == "nested_ref":
+        leaf["properties"]["child"] = {"anyOf": [{"$ref": "#/$defs/OtherRow"}]}
+    elif fault == "nested_defs":
+        leaf["$defs"] = {"FutureRow": {"type": "object"}}
+    elif fault == "legacy_definitions":
+        leaf["definitions"] = {"FutureRow": {"type": "object"}}
+    monkeypatch.setattr(TypeAdapter, "json_schema", lambda self: deepcopy(schema))
+    assert contract_schema(contract) == schema
+
+
+@pytest.mark.parametrize("contract", [contracts.DexResult, contracts.DexReferencePage])
+@pytest.mark.parametrize("cached", [False, True])
+def test_inlined_row_preserves_jsonschema_and_strict_sdk_validation(tmp_path, contract, cached):
+    from jsonschema import Draft202012Validator
+
+    from droidasc_mcp.tool_registry import ToolRegistry, schema_document
+
+    def result():
+        return {}
+
+    result.__annotations__["return"] = contract
+    path = tmp_path / "schemas.json"
+    if cached:
+        path.write_text(json.dumps(schema_document()))
+    registry = ToolRegistry(schema_path=path)
+    registry.tool(annotations=None)(result)
+    tool = registry.tools[0]
+    original = Draft202012Validator(TypeAdapter(contract).json_schema())
+    transformed = Draft202012Validator(tool.output_schema)
+    cases = [
+        ({"status": "ok", "items": [{"future": {"arbitrary": [1, None]}}]}, True),
+        ({"status": "ok", "items": [{"instruction_offset": None, "target_dex_entry": None}]}, True),
+        ({"status": "ok", "items": [{"instruction_offset": 12, "access": "read"}]}, True),
+        ({"status": "ok", "items": [{"instruction_offset": "12"}]}, False),
+        ({"status": "ok", "items": [{"instruction_offset": True}]}, False),
+        ({"status": "ok", "items": [{"access": "execute"}]}, False),
+        ({"status": "ok", "items": [{"opcode": None}]}, False),
+        ({"status": "ok", "items": [{"parameter_types": [1]}]}, False),
+        ({"status": "ok", "items": None}, False),
+        ({"status": "ok", "items": [None]}, False),
+        ({"status": "success", "items": []}, False),
+    ]
+    for value, valid in cases:
+        assert original.is_valid(value) == transformed.is_valid(value) == valid
+        if valid:
+            assert tool.fn_metadata.convert_result(value).structured_content == value
+        else:
+            with pytest.raises(ValidationError):
+                tool.fn_metadata.convert_result(value)
 
 
 @pytest.mark.parametrize(
-    "fault", ["missing", "json", "source", "version", "schema", "digest", "oversize"]
+    "fault", ["missing", "json", "source", "version", "schema", "digest", "oversize", "old_format"]
 )
 def test_invalid_or_stale_schema_cache_falls_back_to_current_contract(tmp_path, fault):
-    from droidasc_mcp.tool_registry import ToolRegistry, contract_schema, schema_document
+    from droidasc_mcp.tool_registry import (
+        ToolRegistry,
+        compiled_schemas,
+        contract_schema,
+        schema_document,
+        schemas_digest,
+    )
 
     path = tmp_path / "output_schemas.json"
     if fault != "missing":
@@ -273,6 +455,13 @@ def test_invalid_or_stale_schema_cache_falls_back_to_current_contract(tmp_path, 
             document["schemas"].pop("DexResult")
         if fault == "digest":
             document["schemas_sha256"] = "0" * 64
+        if fault == "old_format":
+            document["schema"] = 1
+            for name in ("DexResult", "DexReferencePage"):
+                document["schemas"][name]["properties"]["items"]["items"] = {
+                    "$ref": "#/$defs/DexRow"
+                }
+            document["schemas_sha256"] = schemas_digest(document["schemas"])
         encoded = (
             "{"
             if fault == "json"
@@ -281,6 +470,7 @@ def test_invalid_or_stale_schema_cache_falls_back_to_current_contract(tmp_path, 
             else json.dumps(document)
         )
         path.write_text(encoded, encoding="utf-8")
+    assert compiled_schemas(path) is None
     registry = ToolRegistry(schema_path=path)
     registry.tool(annotations=None)(output)
     assert registry.tools[0].output_schema == contract_schema(contracts.DexResult)

@@ -55,19 +55,64 @@ def schemas_digest(schemas):
     ).hexdigest()
 
 
+def _has_schema_keys(value, keys):
+    if isinstance(value, dict):
+        return bool(keys.intersection(value)) or any(
+            _has_schema_keys(child, keys) for child in value.values()
+        )
+    return isinstance(value, list) and any(_has_schema_keys(child, keys) for child in value)
+
+
+def _inline_reference_row(schema):
+    scope_keys = {
+        "$id",
+        "id",
+        "$schema",
+        "$vocabulary",
+        "$anchor",
+        "$dynamicAnchor",
+        "$dynamicRef",
+        "$recursiveAnchor",
+        "$recursiveRef",
+    }
+    if not isinstance(schema, dict) or schema.get("type") != "object":
+        return schema
+    definitions, properties = schema.get("$defs"), schema.get("properties")
+    if not isinstance(definitions, dict) or not isinstance(properties, dict):
+        return schema
+    leaf, items = definitions.get("DexRow"), properties.get("items")
+    if (
+        not isinstance(leaf, dict)
+        or leaf.get("type") != "object"
+        or not isinstance(leaf.get("properties"), dict)
+        or not isinstance(items, dict)
+        or items.get("type") != "array"
+        or items.get("items") != {"$ref": "#/$defs/DexRow"}
+        or _has_schema_keys(schema, scope_keys)
+        or _has_schema_keys(leaf, {"$ref", "$defs", "definitions"})
+    ):
+        return schema
+    # Only this nonrecursive leaf is copied; definitions and all other paths stay intact.
+    items["items"] = deepcopy(leaf)
+    return schema
+
+
 def contract_schema(contract):
     options = (
         {"union_format": "primitive_type_array"}
         if "union_format" in inspect.signature(TypeAdapter.json_schema).parameters
         else {}
     )
-    return TypeAdapter(contract).json_schema(**options)
+    schema = TypeAdapter(contract).json_schema(**options)
+    if contract is contracts.DexResult or contract is contracts.DexReferencePage:
+        return _inline_reference_row(schema)
+    return schema
 
 
 def schema_document():
     schemas = {name: contract_schema(contract) for name, contract in OUTPUT_TYPES.items()}
     return {
-        "schema": 1,
+        "schema": 2,
         "contracts_sha256": contracts_digest(),
         "pydantic_version": pydantic.__version__,
         "schemas_sha256": schemas_digest(schemas),
@@ -86,7 +131,7 @@ def compiled_schemas(path=SCHEMA_PATH):
             return None
         schemas = document.get("schemas")
         if (
-            document.get("schema") != 1
+            document.get("schema") != 2
             or document.get("contracts_sha256") != contracts_digest()
             or document.get("pydantic_version") != pydantic.__version__
             or not isinstance(schemas, dict)

@@ -1,8 +1,8 @@
 {
-  "schema": 1,
+  "schema": 2,
   "contracts_sha256": "6e486a2c2ce43b1bdd317dc4071c33a2ecaba9b37505deebd5cfb4b8c8d279a2",
   "pydantic_version": "2.13.5",
-  "schemas_sha256": "2380bb4828e972a10d9c9d88100f39035db318f74f2a408b7456f4a0e72cbdc0",
+  "schemas_sha256": "12d0f27c3977b63177dfaaa1e10b237703d238dae1bd6701c5eed84f197c0da5",
   "schemas": {
     "ApkInfoResult": {
       "additionalProperties": true,
@@ -3712,7 +3712,179 @@
         },
         "items": {
           "items": {
-            "$ref": "#/$defs/DexRow"
+            "additionalProperties": true,
+            "properties": {
+              "target_index": {
+                "title": "Target Index",
+                "type": "integer"
+              },
+              "value": {
+                "title": "Value",
+                "type": "string"
+              },
+              "instruction": {
+                "title": "Instruction",
+                "type": "string"
+              },
+              "dispatch_kind": {
+                "title": "Dispatch Kind",
+                "type": "string"
+              },
+              "class_name": {
+                "title": "Class Name",
+                "type": "string"
+              },
+              "descriptor": {
+                "title": "Descriptor",
+                "type": "string"
+              },
+              "method_descriptor": {
+                "title": "Method Descriptor",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "kind": {
+                "title": "Kind",
+                "type": "string"
+              },
+              "dex_entry": {
+                "title": "Dex Entry",
+                "type": "string"
+              },
+              "caller": {
+                "title": "Caller",
+                "type": "string"
+              },
+              "callee": {
+                "title": "Callee",
+                "type": "string"
+              },
+              "source": {
+                "title": "Source",
+                "type": "string"
+              },
+              "type_descriptor": {
+                "title": "Type Descriptor",
+                "type": "string"
+              },
+              "field_descriptor": {
+                "title": "Field Descriptor",
+                "type": "string"
+              },
+              "instruction_offset": {
+                "title": "Instruction Offset",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "offset_unit": {
+                "title": "Offset Unit",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "opcode": {
+                "title": "Opcode",
+                "type": "string"
+              },
+              "relation": {
+                "title": "Relation",
+                "type": "string"
+              },
+              "detail": {
+                "title": "Detail",
+                "type": "string"
+              },
+              "access": {
+                "enum": [
+                  "read",
+                  "write"
+                ],
+                "title": "Access",
+                "type": "string"
+              },
+              "storage": {
+                "enum": [
+                  "static",
+                  "instance"
+                ],
+                "title": "Storage",
+                "type": "string"
+              },
+              "target_resolution": {
+                "title": "Target Resolution",
+                "type": "string"
+              },
+              "target_dex_entry": {
+                "title": "Target Dex Entry",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parameter_types": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Parameter Types",
+                "type": "array"
+              },
+              "return_type": {
+                "title": "Return Type",
+                "type": "string"
+              },
+              "access_flags": {
+                "title": "Access Flags",
+                "type": "integer"
+              },
+              "has_code": {
+                "title": "Has Code",
+                "type": "boolean"
+              },
+              "string_index": {
+                "title": "String Index",
+                "type": "integer"
+              },
+              "string": {
+                "title": "String",
+                "type": "string"
+              },
+              "raw": {
+                "title": "Raw",
+                "type": "string"
+              },
+              "method": {
+                "title": "Method",
+                "type": "string"
+              },
+              "matched": {
+                "title": "Matched",
+                "type": "string"
+              },
+              "dex": {
+                "title": "Dex",
+                "type": "string"
+              },
+              "target": {
+                "title": "Target",
+                "type": "string"
+              },
+              "reason": {
+                "title": "Reason",
+                "type": "string"
+              },
+              "call_site_prototype": {
+                "title": "Call Site Prototype",
+                "type": "string"
+              }
+            },
+            "title": "DexRow",
+            "type": "object"
           },
           "title": "Items",
           "type": "array"
@@ -4551,7 +4723,179 @@
         },
         "items": {
           "items": {
-            "$ref": "#/$defs/DexRow"
+            "additionalProperties": true,
+            "properties": {
+              "target_index": {
+                "title": "Target Index",
+                "type": "integer"
+              },
+              "value": {
+                "title": "Value",
+                "type": "string"
+              },
+              "instruction": {
+                "title": "Instruction",
+                "type": "string"
+              },
+              "dispatch_kind": {
+                "title": "Dispatch Kind",
+                "type": "string"
+              },
+              "class_name": {
+                "title": "Class Name",
+                "type": "string"
+              },
+              "descriptor": {
+                "title": "Descriptor",
+                "type": "string"
+              },
+              "method_descriptor": {
+                "title": "Method Descriptor",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "kind": {
+                "title": "Kind",
+                "type": "string"
+              },
+              "dex_entry": {
+                "title": "Dex Entry",
+                "type": "string"
+              },
+              "caller": {
+                "title": "Caller",
+                "type": "string"
+              },
+              "callee": {
+                "title": "Callee",
+                "type": "string"
+              },
+              "source": {
+                "title": "Source",
+                "type": "string"
+              },
+              "type_descriptor": {
+                "title": "Type Descriptor",
+                "type": "string"
+              },
+              "field_descriptor": {
+                "title": "Field Descriptor",
+                "type": "string"
+              },
+              "instruction_offset": {
+                "title": "Instruction Offset",
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "offset_unit": {
+                "title": "Offset Unit",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "opcode": {
+                "title": "Opcode",
+                "type": "string"
+              },
+              "relation": {
+                "title": "Relation",
+                "type": "string"
+              },
+              "detail": {
+                "title": "Detail",
+                "type": "string"
+              },
+              "access": {
+                "enum": [
+                  "read",
+                  "write"
+                ],
+                "title": "Access",
+                "type": "string"
+              },
+              "storage": {
+                "enum": [
+                  "static",
+                  "instance"
+                ],
+                "title": "Storage",
+                "type": "string"
+              },
+              "target_resolution": {
+                "title": "Target Resolution",
+                "type": "string"
+              },
+              "target_dex_entry": {
+                "title": "Target Dex Entry",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parameter_types": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Parameter Types",
+                "type": "array"
+              },
+              "return_type": {
+                "title": "Return Type",
+                "type": "string"
+              },
+              "access_flags": {
+                "title": "Access Flags",
+                "type": "integer"
+              },
+              "has_code": {
+                "title": "Has Code",
+                "type": "boolean"
+              },
+              "string_index": {
+                "title": "String Index",
+                "type": "integer"
+              },
+              "string": {
+                "title": "String",
+                "type": "string"
+              },
+              "raw": {
+                "title": "Raw",
+                "type": "string"
+              },
+              "method": {
+                "title": "Method",
+                "type": "string"
+              },
+              "matched": {
+                "title": "Matched",
+                "type": "string"
+              },
+              "dex": {
+                "title": "Dex",
+                "type": "string"
+              },
+              "target": {
+                "title": "Target",
+                "type": "string"
+              },
+              "reason": {
+                "title": "Reason",
+                "type": "string"
+              },
+              "call_site_prototype": {
+                "title": "Call Site Prototype",
+                "type": "string"
+              }
+            },
+            "title": "DexRow",
+            "type": "object"
           },
           "title": "Items",
           "type": "array"

@@ -62,8 +62,8 @@ async def test_every_tool_advertises_typed_wire_contract(settings):
         properties = schema["properties"]
         assert len(properties) >= 5, tool.name
         if tool.name.startswith(("asc_query_dex", "asc_analyze_dex")):
-            assert properties["items"]["items"]["$ref"].endswith("/DexRow")
-            offset_schema = schema["$defs"]["DexRow"]["properties"]["instruction_offset"]
+            assert properties["items"]["items"] == schema["$defs"]["DexRow"]
+            offset_schema = properties["items"]["items"]["properties"]["instruction_offset"]
             Draft202012Validator.check_schema(offset_schema)
             validator = Draft202012Validator(offset_schema)
             for value in (None, 0, 12):
