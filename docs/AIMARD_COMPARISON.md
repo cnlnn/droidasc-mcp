@@ -9,6 +9,35 @@ The pinned comparator remains 848c711f1d80a1c2577283f1fa5f475ff734aa40 for these
 comparisons. See GOAL_02X.md and VALIDATION.md for the current ledger; sections below
 retain historical runtimes, measurements and pre-reuse statements.
 
+Accepted W1 candidate `b325c012` addresses the diagnosed per-row client schema-reference
+cost without another cache, weaker validation or a format-default change. It
+locally expands two nonrecursive leaves; all definitions, input records and
+business output fields remain. Final revision A/B warm median is
+5.97930 -> 5.48055 s (-8.3413%), with 36 complete collections and 1314 equal
+page attempts. The separate fresh pinned comparison checks another 36 complete
+collections against sealed original-byte truth: preset aggregate warm median is
+5.47315/6.20615 s (-11.8109%). This replaces the historical G8 +6.86% aggregate
+result for this cell, not every workload or warm phase. In the second warm repeat
+the comparator wins all three rounds: product/competitor medians 5.5301/5.1056 s
+(product +8.3144%). Open is slower (3.2393/0.556 s), while process-to-first-complete
+favors the product (11.068/21.1063 s). Private temporary storage remains about
+478 MB versus zero observed, despite lower sampled server RSS.
+
+Eight actual baseline/final stdio/HTTP fixture cells retain strict SDK validation,
+complete pagination, provenance and cleanup. The schema tradeoff is explicit:
+legacy tool metadata +10260 bytes, artifact +22572 compact decoded JSON bytes;
+some invalid-result SDK schema-context dumps also grow. Validation constraints,
+rejection reasons/paths and product error fields remain, not identical schema
+representations or full SDK dump strings. The common comparison environment is
+verified zero-install path composition, not ordinary-pip acceptance. Existing CI
+40922087963 passes 25/25 jobs, eight source and sixteen canonical-sdist/exact-wheel
+suites, each 2162 tests without failures/errors/skips. The 12 CI ZIP digests and
+package identities pass. Combined closure is
+`artifacts/competitor-gap-warm-residual-20261030/W1-acceptance.json`, SHA-256
+`5be9b0cf2600cb29bd7a356371204b14cb323f0350c3c6cf480ee4c9e86ec8e7`.
+This finite batch is accepted development, not a new release or elimination of
+every observed comparator advantage. VALIDATION.md records component hashes.
+
 G17 closes the selected larger-APK application-member handoff without a new runtime
 change: 102 complete public calls over stdio/HTTP, 36 complete paginated collections,
 and independent scans of 69 original DEX files/73,977,365 instructions agree on all
@@ -43,8 +72,8 @@ unchanged and the development increment is unreleased. The checkpoint-specific
 G10-G16 integration statuses below are historical, superseded by D1 for default
 dependency adoption only; no public-upstream-PR or overall parity claim is added.
 
-G8 freshly checks 24 serial trials / 144 complete original-byte-validated collections.
-Douyin default-flat repeated concurrent batches remain about 6.86% slower (7.0980 versus
+Historically, G8 checks 24 serial trials / 144 complete original-byte-validated collections.
+Its Douyin default-flat repeated concurrent batches are about 6.86% slower (7.0980 versus
 6.6423 s median); the already adopted upstream-derived grouped option wins its matched
 cell (5.9162 versus 6.6485 s). First complete batches favor the product in both formats.
 WeChat repeated medians are 3.6886/3.9304 s flat and 3.7225/3.8728 s grouped.

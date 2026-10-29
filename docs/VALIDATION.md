@@ -3,6 +3,75 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Flat schema warm path, 2026-10-30
+
+Accepted W1 candidate `b325c012` expands only the nonrecursive `DexRow` leaf at
+`DexResult.properties.items.items` and `DexReferencePage.properties.items.items`.
+Definitions, all other schema paths, strict server/client validation, response
+fields and the default flat format remain. The output cache format becomes 2;
+all 49 input records remain identical, with their source hash refreshed. Only
+three of 69 runtime files change. The a6f96b8 engine and dependency metadata do not.
+
+Formal production A/B: six alternating fresh stdio servers, 36 complete
+collections and 1314 page attempts on the existing Douyin concurrent method/field
+cell. Every complete result and page agrees with the original baseline after
+checked session/cache-state normalization; input identity and provenance remain.
+Warm batch median is 5.97930 -> 5.48055 s (-8.3413%), cold 7.3437 -> 6.9929 s,
+and process-to-first-complete 11.3237 -> 10.9462 s. The registered compiled
+schemas are actually used and equal all 20 measured prototype schema dictionaries.
+
+A separate fresh pinned-competitor comparison uses the same interpreter,
+dependencies, original APK, four CPUs and resource limits. It reuses existing
+cached dependency files through a verified shared test path, not a new consumer
+installation. Its 36 new complete collections match the sealed G8 original-byte
+truth; current source mappings and engine-dependent input IDs are independently
+checked, with complete pagination replayed. No new oracle scan is claimed.
+
+| Batch metric | Product seconds | Competitor seconds |
+| --- | --- | --- |
+| First complete concurrent batch | 7.0884 | 19.7914 |
+| First warm batch | 5.4421 | 7.7288 |
+| Second warm batch | 5.5301 | 5.1056 |
+| Preset aggregate warm median | 5.47315 | 6.20615 |
+
+The aggregate improves by 11.8109%, replacing G8's historical +6.86% result for
+this refreshed cell only. The second warm batch still favors the comparator in
+all three rounds (+8.3144% product median); this is not every-repeat or universal
+parity. Open remains 3.2393/0.556 s, whereas process-to-first-complete is
+11.068/21.1063 s. Sampled peak server RSS is 164,282,368/1,999,163,392 bytes;
+private temporary logical storage is 477,976,012/0 observed bytes. Different
+resources and different output shapes are not interchangeable performance claims.
+
+Eight small existing-fixture baseline/final stdio/HTTP cells also pass: eight
+complete collections, 16 full pages, eight warm-first pages and 48 tool calls.
+Both advertised contract profiles keep the default strict SDK validator, all
+payload/provenance fields and clean close/storage/children. Decoded compact tool
+metadata grows 146416 -> 156676 bytes for legacy and 230098 -> 252670 for artifact.
+This is a measured listing-size cost, not a listing-latency or model-success win.
+Some invalid-result SDK schema-context dumps grow; constraints, rejection reasons
+and paths remain equivalent, not byte-identical dump strings.
+
+Existing source/package CI 40922087963 passes all 25 jobs: eight source and
+sixteen canonical-sdist/exact-wheel suites across Linux/Windows Python 3.10-3.13,
+each 2162 tests with zero failures/errors/skips. All 12 downloaded ZIPs match
+server digests; package sources, dependencies, four native wheels, signing,
+Rust and stability gates pass. No new ordinary-pip campaign was added.
+Independent combined closure is
+`artifacts/competitor-gap-warm-residual-20261030/W1-acceptance.json`, SHA-256
+`5be9b0cf2600cb29bd7a356371204b14cb323f0350c3c6cf480ee4c9e86ec8e7`.
+It rechecks existing receipt bindings and ZIP member bytes, not another benchmark
+or oracle run. Component evidence:
+`artifacts/competitor-gap-warm-residual-20261030/final-performance/acceptance.json`
+(`ddc918f41a5b21767d669e5f7bc1dd7b3058430275f4860b378a52cfcd6e353c`),
+`fresh-comparator/acceptance.json`
+(`129c0de5a1ce5f93cd9f2d9e7ac4167fb20090073f4a8a3b8248237579ef8299`)
+and `transport-smoke/attempt2/verification.json`
+(`37551fbd277c5fdc56ba8ed10d4124c1797c2afd5acdddab13fb96f08f307641`).
+The source dependency, preserved D1 ordinary-pip proof and published v0.2.5 are
+unchanged. W1 is accepted development, not a new release. The finite batch's
+agreed gates are complete; thermal-start waiver and all existing coverage limits
+remain explicit rather than new unbounded requirements.
+
 ## Default dependency adoption, 2026-10-30
 
 D1 is accepted for the development dependency `0.1.2.post3+sourcefixes.2`, pinned to
@@ -41,8 +110,9 @@ successful installs; the remote ordinary-pip gate now supplies the missing proof
 The Linux/Windows locked source/package matrix does not establish Windows ordinary
 pip acceptance, and the eight MCP collections use the verified uv environment rather
 than the pip consumers. Published v0.2.5 assets are unchanged; this accepted development
-increment is not released. The approximately 6.86% default-flat Douyin warm residual
-remains, so D1 establishes neither a latency improvement nor overall competitor parity.
+increment is not released. At the D1 checkpoint the approximately 6.86% default-flat
+Douyin warm residual remained; W1 above refreshes that cell separately. D1 itself
+establishes neither a latency improvement nor overall competitor parity.
 Uncached source-dependency installation still requires Git and GitHub HTTPS; no public
 upstream PR or new package release is claimed by this downstream adoption.
 Earlier sections below retain their original checkpoint-specific scope and failures.

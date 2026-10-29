@@ -32,6 +32,13 @@ transport sessions, 36 complete paginated collections and independent scans of a
 changed-dependency source/package matrix, ordinary Linux pip consumers and normal
 locked-uv identity/real-MCP workflows pass. Published v0.2.5 remains unchanged; the
 accepted development changes are not a new release or complete competitor parity.
+W1 now has a measured production schema-leaf optimization at `b325c012`: final
+revision A/B improves the preset flat warm median by 8.3413%, and a fresh pinned
+comparison favors the product on that aggregate by 11.8109%. The second warm
+repeat still favors the comparator; listing, open and private-copy costs remain
+explicit. The existing 25-job source/package CI 40922087963 and independent
+combined seal pass, so W1 and this finite implementation batch are accepted.
+Published v0.2.5 is unchanged; observed residuals are not hidden by that closure.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -57,6 +64,7 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G16 | Check the raw-type candidate on manifest-discovered application classes in larger APKs | accepted scoped corpus check: 32 complete source collections, 460 independent member identities, eight additional types corrected/42 keyword links removed; all source bytes and other links unchanged |
 | G17 | Follow selected larger-corpus source members through exact method source and complete references | accepted selected workflow: 102 public calls, 94 response pages, 36 complete collections; all 69 original DEX/73,977,365 instructions independently scanned; selected outgoing/incoming/field sets and exact Smali agree |
 | D1 | Make the verified annotation and raw-type fixes the normal development dependency | accepted at cdb4f35 with engine a6f96b8: 25-job changed-dependency matrix, two fresh Linux ordinary-pip consumers and eight normal locked-uv MCP collections pass; development only, not a release |
+| W1 | Reduce the demonstrated default-flat row-schema cost without changing validation or payloads | accepted b325c012; production A/B, fresh pinned comparator and eight transport smoke cells pass; CI 40922087963 passes 25 jobs and 24 suites x 2162 without failures/errors/skips; combined seal passes, unreleased |
 
 G17 evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
 130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e.
@@ -106,8 +114,64 @@ The retained local TLS/download failures and interrupted attempts remain histori
 evidence; successful remote ordinary-pip acceptance closes their outstanding install
 gate without relabeling those failures. The Windows/Linux locked matrix does not
 imply Windows ordinary-pip verification. Published v0.2.5 assets are unchanged and
-this development increment is unreleased. The approximately 6.86% Douyin default-flat
-warm residual remains; D1 is not a performance fix or an overall competitor-parity claim.
+this development increment is unreleased. At this checkpoint the approximately 6.86%
+Douyin default-flat warm residual remained; W1 below refreshes it separately.
+D1 is not a performance fix or an overall competitor-parity claim.
+
+### W1 flat schema warm path, 2026-10-30
+
+Only `tool_registry.py` and the two generated schema caches change at runtime.
+Two pure local `DexRow` references become independent leaf copies, retaining all
+definitions and declining scoped/recursive/unexpected shapes. Strict SDK/server
+validation, default flat behavior, payloads and all 49 input records remain;
+output cache format 2 rejects otherwise-valid old generator output. The fixed
+engine, scanner, query caches, pagination and resource limits are unchanged.
+
+Six real final-versus-original-baseline stdio trials check 36 complete collections
+and 1314 page attempts. Warm median is 5.97930 -> 5.48055 s (-8.3413%); cold is
+7.3437 -> 6.9929 s and process-to-first-complete 11.3237 -> 10.9462 s. A separate
+six-trial pinned-comparator run checks 36 new complete collections against the
+already sealed G8 original-byte truth, independently binding current source maps
+and engine-dependent input IDs. Its preset aggregate warm median is
+5.47315/6.20615 s (-11.8109%). Do not combine historical and new ratios.
+
+The second warm repeat still favors the comparator in all three rounds:
+5.5301/5.1056 s medians, product +8.3144%. Open remains 3.2393/0.556 s, private
+temporary storage about 478 MB/0 observed bytes, and flat response pages 219/36
+per trial. Process-to-first-complete is 11.068/21.1063 s and sampled peak server
+RSS 164,282,368/1,999,163,392 bytes. This closes neither every phase nor every
+resource dimension. No further unported safe fix is established by these numbers.
+
+Eight small existing-fixture baseline/final stdio/HTTP/profile cells pass with
+eight complete collections, 16 complete pages, eight warm-first pages and 48 tool
+calls. All response fields/provenance and strict SDK validators remain; all owned
+storage and children are cleaned. Actual compact tool metadata grows +10260 bytes
+legacy/+22572 artifact, with no listing-latency or model-success claim. Some SDK
+invalid-result schema-context text grows; constraints and rejection reasons/paths
+remain equivalent. The shared comparison path uses verified existing dependency
+files, not a fresh consumer installation. D1's unchanged dependency proof is reused.
+
+Evidence under `artifacts/competitor-gap-warm-residual-20261030`:
+`final-performance/acceptance.json` SHA-256
+`ddc918f41a5b21767d669e5f7bc1dd7b3058430275f4860b378a52cfcd6e353c`,
+`fresh-comparator/acceptance.json` SHA-256
+`129c0de5a1ce5f93cd9f2d9e7ac4167fb20090073f4a8a3b8248237579ef8299`,
+and `transport-smoke/attempt2/verification.json` SHA-256
+`37551fbd277c5fdc56ba8ed10d4124c1797c2afd5acdddab13fb96f08f307641`.
+Existing CI 40922087963 passes 25/25 jobs: eight Linux/Windows Python 3.10-3.13
+source suites and sixteen canonical-sdist/exact-wheel suites, each 2162 tests
+with zero failures/errors/skips. All 12 CI ZIP server digests, 69 package sources,
+unchanged engine/dependencies, four native wheels, signing, Rust and stability
+gates pass. Combined closure is `W1-acceptance.json`, SHA-256
+`5be9b0cf2600cb29bd7a356371204b14cb323f0350c3c6cf480ee4c9e86ec8e7`.
+It independently rechecks the existing evidence, not a fresh benchmark/oracle or
+a relabeled W1 ordinary-pip installation.
+
+The finite R1-R8 audit finds no new missing agreed implementation or correctness
+defect requiring another patch. The existing gates and combined seal now pass;
+this finite batch is closed while retaining the above tradeoffs and declared
+coverage limits. This is not authorization for new corpus/model/compression campaigns,
+public upstream writes or a later release. Published v0.2.5 remains unchanged.
 
 ### Historical increment evidence
 
