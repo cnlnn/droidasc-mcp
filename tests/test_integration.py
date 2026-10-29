@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import importlib.metadata
 import json
 import os
 import re
@@ -1471,7 +1472,8 @@ async def test_native_asc_smali_without_jvm(settings, tmp_path, smali_dex_files)
 
         plain = await query("run()V")
         debug = await query("run()V", debug_info=True)
-        assert plain["backend"] == "droidasc" and plain["backend_version"] == "0.1.2.post3"
+        assert plain["backend"] == "droidasc"
+        assert plain["backend_version"] == importlib.metadata.version("droidasc")
         assert "pick(I)V" in plain["source"] and "guarded()V" not in plain["source"]
         assert ".line 17" not in plain["source"] and ".line 17" in debug["source"]
         assert debug["debug_info"] is True

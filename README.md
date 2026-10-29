@@ -125,6 +125,13 @@ builds were consolidated into v0.2.3; current assets are built and validated sep
 Windows uses `.venv\Scripts\droidasc-mcp.exe` for the server command. For development,
 clone this repository and run `uv sync --locked --extra dev` instead.
 
+The development branch selects the reviewed downstream ASC source compatibility
+build at an immutable Git commit. Installing development source or development
+wheels therefore also requires Git and HTTPS access to GitHub. This includes the
+method-annotation and original-type-link fixes described in
+[the source provenance](third_party/droidasc_sourcefixes/PROVENANCE.md); it does not
+change the dependency or assets of the published v0.2.5 release.
+
 ## Connect
 
 The default transport is stdio. Limit the server to directories that contain APKs:

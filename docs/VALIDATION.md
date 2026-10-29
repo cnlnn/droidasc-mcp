@@ -3,6 +3,27 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Selected member navigation, 2026-10-30
+
+G17 completes four real stdio/HTTP sessions on the manifest-discovered WeChat and
+Douyin application classes: 102 calls, 94 response pages, 36 complete paginated
+collections and 12 exact Smali collections (six distinct methods). Independent
+Androguard scans consume all instructions in 69 original DEX files, 73,977,365
+instructions in total. All selected outgoing/incoming/field multisets match with
+no missing or extra sites; exact method flags/opcodes/member operands and the
+logical-to-original-physical DEX mappings agree. Full public responses are compared
+after checking and normalizing only per-session handles; engine and input identity
+remain checked. The first Douyin oracle hits its 300-second window; the separate
+600-second full attempt passes in 526.21 seconds. Both attempts are retained.
+
+Evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
+130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e;
+independent/verify_acceptance.py replays the sealed checks without another APK scan.
+Scope is the selected source-member navigation chain, not all classes, dynamic
+dispatch resolution or a performance claim. The next finite gate is default
+development dependency adoption of the already verified source fixes, rather than
+another corpus expansion. That changed-dependency gate remains pending.
+
 ## Original type-link package check, 2026-10-29
 
 G14 independently verifies all 343 method/field tokens and nine selected complete

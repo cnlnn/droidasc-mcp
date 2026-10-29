@@ -25,6 +25,11 @@ verifies the member-navigation path and finds 25 invalid extra class-link identi
 G15 accepts the separate upstream raw-type fix in a normal installed Linux candidate;
 G16 accepts its original-byte source-identity check on two larger APK application
 classes. Default upstream integration remains open; these are development candidates.
+G17 now accepts the selected application-member navigation chains: four matched
+transport sessions, 36 complete paginated collections and independent scans of all
+69 original DEX files agree. The finite next increment is normal dependency adoption
+of the already verified fixes, not another sampling goal; its changed-dependency
+source/package gates are pending. Published v0.2.5 remains unchanged.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -48,7 +53,20 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G14 | Follow real source-token identities into exact method/field source and references | probe accepted: both transports equal, 343 member tokens and nine full query sites match original-byte oracle; 25 additional class-token identities are wrong in the default dependency |
 | G15 | Reuse original upstream type data for source class links | isolated normal-wheel candidate accepted at local upstream 140b05c: correct 21 original types/remove four keyword links, preserve all source bytes and 635 other links; default dependency adoption remains open |
 | G16 | Check the raw-type candidate on manifest-discovered application classes in larger APKs | accepted scoped corpus check: 32 complete source collections, 460 independent member identities, eight additional types corrected/42 keyword links removed; all source bytes and other links unchanged |
-| G17 | Follow selected larger-corpus source members through exact method source and complete references | next: choose targets from G16 source/outline rather than known answers, verify full selected result sets against original instructions; no new default, cache or release without a reproduced gap |
+| G17 | Follow selected larger-corpus source members through exact method source and complete references | accepted selected workflow: 102 public calls, 94 response pages, 36 complete collections; all 69 original DEX/73,977,365 instructions independently scanned; selected outgoing/incoming/field sets and exact Smali agree |
+| D1 | Make the verified annotation and raw-type fixes the normal development dependency | in progress: source-only downstream candidate at an immutable preceding Git commit, ordinary pip and locked uv identity/workflow checks plus existing changed-dependency matrix; not a release |
+
+G17 evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
+130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e.
+Both stdio and HTTP responses match after validating and normalizing only their own
+session/analysis handles. Each application follows manifest/source/outline-derived
+targets through three exact methods and complete outgoing, incoming and field
+references. Original physical DEX mappings, IDs, definitions, access flags, opcodes
+and member operands agree; WeChat site counts are 3/1/3 and Douyin 6/11/14.
+The Douyin 300-second interrupted oracle attempt is retained; its separate full
+600-second attempt passes in 526.21 seconds. This proves the selected navigation
+chains, not all-class decompiler semantics, runtime dispatch or performance parity.
+No new product mismatch was found, so no new scanner/cache or corpus goal is added.
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded

@@ -9,6 +9,17 @@ The pinned comparator remains 848c711f1d80a1c2577283f1fa5f475ff734aa40 for these
 comparisons. See GOAL_02X.md and VALIDATION.md for the current ledger; sections below
 retain historical runtimes, measurements and pre-reuse statements.
 
+G17 closes the selected larger-APK application-member handoff without a new runtime
+change: 102 complete public calls over stdio/HTTP, 36 complete paginated collections,
+and independent scans of 69 original DEX files/73,977,365 instructions agree on all
+selected outgoing, incoming and field sites. Twelve exact Smali collections cover
+six distinct methods with matching flags/opcodes/member operands. This is bounded
+workflow evidence, not universal correctness or a new latency claim. The current
+highest-value change is normal installation of the verified upstream source fixes;
+development dependency adoption and its changed-dependency package gates are in
+progress, separate from published v0.2.5. No further corpus goal is needed merely
+because this selected workflow passed.
+
 G8 freshly checks 24 serial trials / 144 complete original-byte-validated collections.
 Douyin default-flat repeated concurrent batches remain about 7% slower (7.0980 versus
 6.6423 s median); the already adopted upstream-derived grouped option wins its matched

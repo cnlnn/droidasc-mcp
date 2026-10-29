@@ -107,6 +107,9 @@ CPython 3.10 使用 `python3.10` 或 `py -3.10` 创建环境，并将 wheel URL 
 Linux wheel 需要 glibc 2.34 或更新版本。canonical 源码包为 `droidasc_mcp-0.2.5.tar.gz`；
 源码安装时若无编译器会保留 Python 回退。macOS 仍未验收。Windows 的服务端命令为 `.venv\Scripts\droidasc-mcp.exe`。开发时改为克隆本仓库，
 运行 `uv sync --locked --extra dev`。
+开发分支使用固定 Git 提交的下游 ASC 源码兼容构建，安装开发源码或开发 wheel 时还需要
+Git 及 GitHub HTTPS 访问。该构建包含方法注解与原始类型链接修复，来源见
+[源码记录](third_party/droidasc_sourcefixes/PROVENANCE.md)；不改变已发布 v0.2.5 的依赖和资产。
 已安装撤回的 0.2.3-0.2.9 包时，使用 `--force-reinstall --no-cache-dir` 替换为本次构建。
 已撤回的历史构建并入重新发布的 v0.2.3；当前版本的资产独立构建并验收。
 

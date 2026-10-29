@@ -10,5 +10,6 @@ prune tests/fixtures/android/complex/build
 exclude tests/fixtures/android/local.properties
 recursive-include scripts *.py
 recursive-include scripts/upstream_sourcefixes *.json *.md *.patch LICENSE
+include third_party/droidasc_sourcefixes/manifest.json third_party/droidasc_sourcefixes/PROVENANCE.md third_party/droidasc_sourcefixes/LICENSE
 prune artifacts
 global-exclude *.apk *.xapk *.dex *.pyc

@@ -373,15 +373,11 @@ wheels = [
 
 [[package]]
 name = "droidasc"
-version = "0.1.2.post3"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.2.post3+sourcefixes.2"
+source = { git = "https://github.com/cnlnn/droidasc-mcp.git?subdirectory=third_party%2Fdroidasc_sourcefixes&rev=a6f96b864cc317116cd38af143c63fe82b149099#a6f96b864cc317116cd38af143c63fe82b149099" }
 dependencies = [
     { name = "axml" },
     { name = "mutf8" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/61/2c/107e0054d1501e3890e859eb671f5a2df5b1da94b86fcd5db13fe7b39d94/droidasc-0.1.2.post3.tar.gz", hash = "sha256:0e292a2756db85c5fd3fda0a397f2ad544c8de016135a79ed5ed739ecbb89230", size = 248064, upload-time = "2026-10-21T09:06:04.625Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/cf/ace5dc1ac1d8f8f89816713374727b4abc410ab352b10f28660625cb6085/droidasc-0.1.2.post3-py3-none-any.whl", hash = "sha256:e27b6635149a737c97e5ea5ed2db7a3fef4555806b0b84f096505517410a674c", size = 250852, upload-time = "2026-10-21T09:06:03.203Z" },
 ]
 
 [[package]]
@@ -411,7 +407,7 @@ dev = [
 requires-dist = [
     { name = "axml", specifier = ">=0.0.2,<0.1" },
     { name = "cryptography", specifier = ">=43,<51" },
-    { name = "droidasc", specifier = ">=0.1.2.post3,<0.2" },
+    { name = "droidasc", git = "https://github.com/cnlnn/droidasc-mcp.git?subdirectory=third_party%2Fdroidasc_sourcefixes&rev=a6f96b864cc317116cd38af143c63fe82b149099" },
     { name = "lxml", specifier = ">=5,<7" },
     { name = "mcp", specifier = ">=2.2,<3" },
     { name = "psutil", specifier = ">=7,<8" },

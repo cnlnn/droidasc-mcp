@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from email.parser import BytesParser
 from pathlib import Path
@@ -65,6 +66,9 @@ def distribution_identity(project: Path, wheel: Path) -> tuple[str, dict[str, st
         metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
         for field in ("Name", "Version"):
             assert source_metadata[field] and source_metadata[field] == metadata[field], field
+        assert sorted(source_metadata.get_all("Requires-Dist", [])) == sorted(
+            metadata.get_all("Requires-Dist", [])
+        ), "Requires-Dist differs between canonical sdist and wheel"
         package_files = {
             name.removeprefix("droidasc_mcp/"): archive.read(name)
             for name in archive.namelist()
@@ -276,7 +280,28 @@ def main():
 
         run(["uv", "sync", "--locked", "--extra", "dev", "--python", sys.executable])
         python = project / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        run([str(python), "-m", "pytest", "-q"])
+
+        def test_installed(label):
+            junit = root / f"{label}-tests.xml"
+            run([str(python), "-m", "pytest", "-q", f"--junitxml={junit}"])
+            selected = [
+                case
+                for case in ET.parse(junit).getroot().iter("testcase")
+                if case.get("classname", "").split(".")[-1]
+                in {"test_installed_upstream_identity", "test_upstream_engine_source"}
+            ]
+            assert len(selected) == 5 and not any(
+                case.find(status) is not None
+                for case in selected
+                for status in ("failure", "error", "skipped")
+            )
+            print(
+                "Installed upstream regressions passed:",
+                json.dumps({"installation": label, "tests": [c.get("name") for c in selected]}),
+                flush=True,
+            )
+
+        test_installed("canonical-sdist")
         # Replace editable installation with the built wheel; never import the original checkout.
         run(
             [
@@ -311,7 +336,7 @@ def main():
             ],
             root,
         )
-        run([str(python), "-m", "pytest", "-q"])
+        test_installed("exact-wheel")
         run([str(python), "-m", "droidasc_mcp", "--help"], root)
     print("sdist and wheel acceptance passed")
 

@@ -76,6 +76,13 @@ def test_canonical_metadata_rejects_wrong_project_or_version(distribution_pair, 
         check({name: files[name].replace(original, b"wrong")})
 
 
+def test_canonical_metadata_rejects_changed_dependency(distribution_pair):
+    check, files = distribution_pair
+    name = "droidasc_mcp-0.2.3.dist-info/METADATA"
+    with pytest.raises(AssertionError, match="Requires-Dist"):
+        check({name: files[name].replace(b"\n\n", b"\nRequires-Dist: unexpected-engine\n\n")})
+
+
 @pytest.mark.parametrize(
     "changes",
     [
