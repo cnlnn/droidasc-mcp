@@ -27,6 +27,15 @@ It is not integrated into the installed dependency or published release. The une
 source pilot cannot be used as an equal-correctness latency comparison. Receipts live
 under artifacts/competitor-gap-g{7,8,9,10}-20261029.
 
+G11 reuses the existing bounded public-CLI complete-source snapshot across session
+pages. This removes repeated plain-source rendering without adopting another scanner,
+decompiler or resident APK worker. Its final runtime passes 12 paired stdio trials,
+24 complete collections equal to original-APK public CLI and two complete HTTP
+readbacks. F-Droid five-page first/repeated medians change from 1.0565/1.0717 to
+0.2530/0.0349 seconds on the current host. Final full source/package gates are still
+pending under artifacts/competitor-gap-g11-20261029. Metadata/token-link pagination and G10's dependency
+integration remain separate; this increment does not establish overall comparator parity.
+
 ## v0.4.1 cold-query investigation, 2026-10-22
 
 The competitor's main was rechecked at `848c711f1d80a1c2577283f1fa5f475ff734aa40`.

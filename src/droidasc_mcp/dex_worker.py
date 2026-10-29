@@ -318,6 +318,7 @@ def analyze(request: dict, root: Path) -> dict:
     settings = WorkerSettings(request)
     query = request["query"]
     runner = WorkerRuntime(settings)
+    runner.source_snapshot_path = root / "source.txt" if request.get("source_snapshot") else None
     page = {"offset": query["offset"], "limit": query["limit"]}
     common = {
         "input_kind": "dex_set",
@@ -613,7 +614,16 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
         if name not in owners:
             raise DexInputError("class_not_found", "Class is absent from the supplied DEX files")
         result = runner.get_class_source(
-            source_bundle, class_name=name, threads=query["threads"], **page
+            source_bundle,
+            class_name=name,
+            threads=query["threads"],
+            **page,
+            **(
+                {"snapshot_path": runner.source_snapshot_path}
+                if vars(runner).get("source_snapshot_path") is not None
+                and not any(source.get("dex_version") == "041" for source in common["sources"])
+                else {}
+            ),
         ).as_dict()
         result.update(
             {

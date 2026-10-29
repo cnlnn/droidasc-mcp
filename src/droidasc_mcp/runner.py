@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -25,7 +26,7 @@ from typing import Literal
 
 from .config import Settings
 from .worker_errors import DroidAscError as DroidAscError
-from .worker_errors import page_bounds
+from .worker_errors import page_bounds, response_limit
 
 ReferenceKind = Literal["string", "type", "method", "field", "extends", "impl"]
 PREPARATION_PROGRESS = ContextVar("droidasc_preparation_progress", default=None)
@@ -74,6 +75,7 @@ class Snapshot:
     created_at: float
     lines: tuple[str, ...]
     size_bytes: int
+    metadata: bytes = b""
 
     @classmethod
     def build(cls, data: bytes, *, sort: bool, budget: int) -> Snapshot:
@@ -94,6 +96,11 @@ class Snapshot:
         if sort:
             lines.sort()
         return cls(time.monotonic(), tuple(lines), used)
+
+
+class _SourceResult(Exception):
+    def __init__(self, result):
+        self.result = result
 
 
 class DroidAscRunner:
@@ -216,8 +223,103 @@ class DroidAscRunner:
         request["prepared_root"] = str(root)
         if reference_cache is not None:
             request["reference_cache"] = reference_cache
+        if (
+            query.get("operation") == "get_class_source"
+            and "_source_view_budget" not in query
+            and query.get("_source_snapshot", True)
+        ):
+            return self._session_source(root, request)
         with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
             return self._run_dex_request(request, Path(temporary))
+
+    def _session_source(self, root, request):
+        from .memory_cache import signature
+
+        query = request["query"]
+        try:
+            offset, limit = self._page_bounds(query["offset"], query["limit"])
+            args = self._class_source_args(
+                root / "analysis.apk", query["class_name"], query["threads"]
+            )
+        except (ValueError, TypeError, KeyError):
+            with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+                return self._run_dex_request(request, Path(temporary))
+        identity = signature(self.settings, root)
+        if identity is not None:
+            identity = hashlib.sha256(repr(identity).encode()).digest()
+
+        def load():
+            with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+                workspace = Path(temporary)
+                result = self._run_dex_request({**request, "source_snapshot": True}, workspace)
+                path = workspace / "source.txt"
+                if result.get("status") != "ok" or not path.is_file():
+                    raise _SourceResult(result)
+                excluded = {
+                    "source",
+                    "total",
+                    "offset",
+                    "limit",
+                    "truncated",
+                    "has_more",
+                    "next_offset",
+                }
+                metadata = json.dumps(
+                    {key: value for key, value in result.items() if key not in excluded},
+                    separators=(",", ":"),
+                ).encode()
+                try:
+                    with path.open("rb") as stream:
+                        data = stream.read(self.settings.max_output_bytes + 1)
+                    if len(data) > self.settings.max_output_bytes:
+                        raise _SourceResult(result)
+                    snapshot = Snapshot.build(
+                        data,
+                        sort=False,
+                        budget=self.settings.max_output_bytes - sys.getsizeof(metadata),
+                    )
+                except DroidAscError:
+                    # A valid page still works when the complete snapshot cannot be retained.
+                    raise _SourceResult(result) from None
+                return Snapshot(
+                    snapshot.created_at,
+                    snapshot.lines,
+                    snapshot.size_bytes + sys.getsizeof(metadata),
+                    metadata,
+                )
+
+        try:
+            if identity is None:
+                with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+                    return self._run_dex_request(request, Path(temporary))
+            snapshot = self._get_snapshot(args, identity=identity, load=load)
+        except _SourceResult as exc:
+            # Equal concurrent requests receive independent response objects.
+            return json.loads(json.dumps(exc.result))
+        except OSError:
+            with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+                return self._run_dex_request(request, Path(temporary))
+        metadata = json.loads(snapshot.metadata)
+        try:
+            page = self._snapshot_page(snapshot, offset=offset, limit=limit).as_dict()
+        except DroidAscError as exc:
+            result = {**metadata, "status": "error", "code": "engine_error", "message": str(exc)}
+        else:
+            source = "\n".join(page.pop("items"))
+            result = {**metadata, **page, "source": source}
+        size = len(json.dumps(result).encode())
+        if size > 256 * 1024:
+            return response_limit()
+        if size == 256 * 1024:
+            # The worker also emits a final newline, counted by the host's wire cap.
+            raise DroidAscError("DEX result exceeds response budget; narrow the query")
+        return result
+
+    def forget_snapshots(self, root):
+        with self._cache_lock:
+            for key in list(self._cache):
+                if any(Path(arg).is_relative_to(root) for arg in key[0]):
+                    del self._cache[key]
 
     def _dex_request(self, paths: list[Path], query: dict) -> dict:
         from importlib.metadata import version
@@ -289,15 +391,34 @@ class DroidAscRunner:
         threads: int,
         offset: int,
         limit: int,
+        snapshot_path: Path | None = None,
     ) -> LinePage:
-        args = [
+        args = self._class_source_args(apk, class_name, threads)
+        if snapshot_path is None:
+            return self._run_paged(args, offset=offset, limit=limit)
+        page = self._run_paged(args, offset=offset, limit=limit)
+        snapshot = self._get_snapshot(args)
+        partial = snapshot_path.with_suffix(".partial")
+        try:
+            with partial.open("xb") as stream:
+                for line in snapshot.lines:
+                    stream.write(line.encode("utf-8") + b"\n")
+            partial.replace(snapshot_path)
+        except OSError:
+            # Export is optional; the original page remains usable.
+            with suppress(OSError):
+                partial.unlink()
+        return page
+
+    @staticmethod
+    def _class_source_args(apk, class_name, threads):
+        return [
             "getclass",
             "--threads",
             str(_threads(threads)),
             str(apk),
             class_name,
         ]
-        return self._run_paged(args, offset=offset, limit=limit)
 
     def find_refs(
         self,
@@ -358,6 +479,10 @@ class DroidAscRunner:
     def _run_paged(self, args: list[str], *, offset: int, limit: int) -> LinePage:
         offset, limit = self._page_bounds(offset, limit)
         snapshot = self._get_snapshot(args)
+        return self._snapshot_page(snapshot, offset=offset, limit=limit)
+
+    @staticmethod
+    def _snapshot_page(snapshot, *, offset, limit):
         items = []
         used = 0
         for line in snapshot.lines[offset : offset + limit]:
@@ -372,7 +497,7 @@ class DroidAscRunner:
             used += size
         return LinePage(items, len(snapshot.lines), offset, limit)
 
-    def _get_snapshot(self, args: list[str]) -> Snapshot:
+    def _get_snapshot(self, args: list[str], *, identity=None, load=None) -> Snapshot:
         apk = next(Path(arg) for arg in args if Path(arg).suffix.lower() == ".apk")
         stat = apk.stat()
         key = (
@@ -382,6 +507,7 @@ class DroidAscRunner:
             stat.st_size,
             stat.st_mtime_ns,
             stat.st_ctime_ns,
+            identity,
         )
         with self._acquire(self._cache_lock):
             now = time.monotonic()
@@ -410,25 +536,28 @@ class DroidAscRunner:
                     with self._cache_lock:
                         if self._inflight.get(key) is pending:
                             self._inflight.pop(key)
-                    return self._get_snapshot(args)
+                    return self._get_snapshot(args, identity=identity, load=load)
                 except FutureTimeoutError:
                     pass
         try:
-            with self._acquire(self._slots):
-                data = self._execute(args)
-                after = apk.stat()
-                if (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns) != (
-                    after.st_dev,
-                    after.st_ino,
-                    after.st_size,
-                    after.st_mtime_ns,
-                    after.st_ctime_ns,
-                ):
-                    raise DroidAscError("APK changed during analysis; retry the query")
-                snapshot = Snapshot.build(
-                    data, sort=args[0] == "findrefs", budget=self.settings.max_output_bytes
-                )
-                del data
+            if load is None:
+                with self._acquire(self._slots):
+                    data = self._execute(args)
+                    snapshot = Snapshot.build(
+                        data, sort=args[0] == "findrefs", budget=self.settings.max_output_bytes
+                    )
+                    del data
+            else:
+                snapshot = load()
+            after = apk.stat()
+            if (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns) != (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+                after.st_ctime_ns,
+            ):
+                raise DroidAscError("APK changed during analysis; retry the query")
             with self._acquire(self._cache_lock):
                 while (
                     self._cache

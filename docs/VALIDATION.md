@@ -3,6 +3,25 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Session source reuse candidate, 2026-10-29
+
+G11 reuses the existing public-CLI complete snapshot rather than decompiling each
+plain class-source page. Its decoded text and serialized provenance share the existing
+cache budget/TTL/entry count. Prepared/runtime changes invalidate reuse; session close
+removes it. Export storage uses the shared disk reservation, with normal-worker fallback
+when optional caching cannot be used. Page bounds, complete response limits, original
+source records and malformed-query error envelopes are preserved. Metadata/token-link
+source and physical DEX 041 normalization are separate. Final runtime evidence under
+artifacts/competitor-gap-g11-20261029/final checks 12 serial alternating stdio trials,
+24 complete original-byte/public-CLI-checked collections and two complete HTTP
+collections, including all page diagnostics and owned cleanup. F-Droid first/repeated
+complete-source medians change from 1.0565/1.0717 to 0.2530/0.0349 seconds; WeChat
+changes from 0.2746/0.2290 to 0.2556/0.0072. These are scoped current-host measurements,
+not comparator or general-memory claims. All 103 final focused tests pass, including
+17 new regressions. Earlier 1988/1989-test suites precede final compatibility guards;
+the final candidate still requires its own 1992-test full source/package cells.
+Final gates remain in progress; this is not released v0.2.5 code.
+
 ## Post-release compact handle inventory, 2026-10-29
 
 The development branch reuses PreparationZipFile for the upstream-derived artifact

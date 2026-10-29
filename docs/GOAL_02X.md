@@ -14,6 +14,8 @@ v0.2.5 and continuing catch-up on 2026-10-29. Publication is complete at
 artifacts/release-025-20261029. G7 is accepted separately on the development branch;
 G8 reassessment and G9 diagnosis are complete. G10 has reproduced a source-annotation
 gap and verified an isolated upstream fix, not an installed product/dependency change.
+G11 implements plain-CLI source pagination reuse; complete matched stdio/HTTP checks
+and focused regressions pass, while final full-source/package gates remain in progress.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -31,6 +33,7 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G8 | Fresh complete concurrent method/field comparison before another cache port | accepted reassessment: 24 serial real-MCP trials, 144 independently checked complete collections; Douyin flat warm residual remains, grouped option wins in this sample |
 | G9 | Locate the residual flat warm-path cost before selecting a rewrite | diagnosis accepted: 12 cached pages equal G8; client schema validation is prominent in the instrumented sample; no new cache/default change or performance-fix claim |
 | G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
+| G11 | Reuse complete plain-CLI class source across immutable-session pages | 12 matched trials / 24 complete stdio collections plus two HTTP collections pass; 103 focused tests pass; final full-source/package gates pending, unreleased |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -120,10 +123,37 @@ installed-deps-verification.json bind this prototype only:
 the installed dependency, published release and MCP runtime are unchanged. Integrate
 through a distributable upstream dependency before calling this an adopted product fix.
 
-Next small goal: evaluate complete source-pagination reuse through the existing bounded
-public-CLI snapshot machinery, rather than adding a second cache or copying a decompiler.
-Retain the verified upstream annotation patch separately while resolving dependency
-integration. Complete-result correctness and actual workflow benefit decide adoption.
+G11 keeps the existing public-CLI renderer and 60-second/eight-entry snapshot cache.
+The first normal class-source worker optionally exports its already-built complete
+snapshot to the host; later pages reuse the same bounded cache rather than another
+decompile. Serialized provenance and decoded text share its existing max_output_bytes
+budget. Equal requests coalesce without taking a second worker slot. Prepared/engine/
+runtime identities invalidate reuse, and closing the owning session drops its snapshots.
+Optional temporary export uses the shared session disk reservation; unavailable capacity
+or export/retention failures retain the normal worker path. Complete wire limits, error
+envelopes, original source rows and page defaults remain. Physical DEX 041 conversion,
+method source, source metadata/token links and the G10 annotation patch stay separate.
+No additional comparator/decompiler code or ASC-private import is introduced.
+
+G11 final-runtime evidence is under artifacts/competitor-gap-g11-20261029/final.
+Three serial alternating fresh-server rounds per input bind the same installed native
+extension and ASC/dadguard bytes. Every page, complete source, original DEX source row
+and continuation matches the baseline; uncached public CLI on each original APK agrees.
+Two further complete HTTP collections equal stdio, with original hashes and owned
+storage/process cleanup checked. F-Droid's five-page source medians before/after are
+1.0565/0.2530 seconds first complete and 1.0717/0.0349 repeated; WeChat's one-page
+application source is 0.2746/0.2556 first and 0.2290/0.0072 repeated. These are paired
+current-host plain-source measurements, not metadata-source, competitor, cool-host or
+overall memory claims. The temperature-start waiver and unchanged hardware protections
+are recorded. Seventeen new regressions are included in 103 passing focused tests.
+Earlier 1988/1989-test local runs precede the wire-limit/error-envelope guards and are
+retained as preliminary evidence. The final full-source/package candidate needs its
+own 1992-test source/canonical-sdist/exact-wheel cells before G11 is accepted.
+
+Next after G11's final gates: reuse complete metadata-source/token-link results across
+pages with original Unicode spans. Keep the verified upstream annotation patch separate
+while resolving distributable dependency integration. Complete-result correctness and
+actual workflow benefit decide adoption; later changes need their own candidate gates.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream

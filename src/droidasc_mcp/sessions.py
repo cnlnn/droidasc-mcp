@@ -78,6 +78,7 @@ class DexSessions:
 
     def _drop(self, key):
         entry = self.entries[key]
+        self.runner.forget_snapshots(entry.root)
         entry.storage.cleanup()
         del self.entries[key]
 
@@ -388,6 +389,21 @@ class DexSessions:
             try:
                 return self.runner.query_dex_session(
                     root, {**query, "_source_view_budget": reservation}
+                )
+            finally:
+                with self.lock:
+                    self.reserved -= reservation
+        if operation == "get_class_source":
+            reservation = self.settings.max_output_bytes
+            with self.lock:
+                available = self.settings.max_dex_session_bytes - self.reserved
+                if reservation + sum(e.size for e in self.entries.values()) > available:
+                    reservation = 0
+                else:
+                    self.reserved += reservation
+            try:
+                return self.runner.query_dex_session(
+                    root, query if reservation else {**query, "_source_snapshot": False}
                 )
             finally:
                 with self.lock:

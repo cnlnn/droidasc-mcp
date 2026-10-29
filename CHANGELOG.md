@@ -4,6 +4,8 @@
 
 - Reuse the compact code-entry directory when opening artifact handles, retaining
   all-entry expansion limits, discovery metadata and ordinary resource readers.
+- Reuse complete plain-CLI class-source snapshots across session pages in the
+  existing bounded cache, retaining provenance, response limits and close cleanup.
 
 ## 0.2.5
 
