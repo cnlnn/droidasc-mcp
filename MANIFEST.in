@@ -9,5 +9,6 @@ prune tests/fixtures/android/app/build
 prune tests/fixtures/android/complex/build
 exclude tests/fixtures/android/local.properties
 recursive-include scripts *.py
+recursive-include scripts/upstream_sourcefixes *.json *.md *.patch LICENSE
 prune artifacts
 global-exclude *.apk *.xapk *.dex *.pyc

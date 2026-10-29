@@ -1,0 +1,520 @@
+{
+  "schema": 1,
+  "name": "droidasc",
+  "version": "0.1.2.post3+sourcefixes.2",
+  "upstream_repository": "https://github.com/MG1937/ASC",
+  "upstream_base_commit": "9216fe234e1fc80f3148ca42e361e67e3174d0e2",
+  "prepared_local_contribution_commits": [
+    "51e2b31707d47ab28e3e78c4e8c52cd21da54900",
+    "140b05cd3a62a1603e4a70f35631adbd841cfe90"
+  ],
+  "source_distribution": {
+    "filename": "droidasc-0.1.2.post3.tar.gz",
+    "url": "https://files.pythonhosted.org/packages/61/2c/107e0054d1501e3890e859eb671f5a2df5b1da94b86fcd5db13fe7b39d94/droidasc-0.1.2.post3.tar.gz",
+    "sha256": "0e292a2756db85c5fd3fda0a397f2ad544c8de016135a79ed5ed739ecbb89230"
+  },
+  "evaluated_runtime_wheel": {
+    "filename": "droidasc-0.1.2.post3+sourcefixes.2-py3-none-any.whl",
+    "sha256": "0faa06b46dc25e12d93e18e8c2e47ab302943f56b9d2774fe69b6eafa3d96aee"
+  },
+  "carried_source_files": 96,
+  "carried_source_bytes": 1229849,
+  "runtime_python_files": 80,
+  "unchanged_released_dadguard_python_files": 23,
+  "public_upstream_tests": 12,
+  "changed_carried_paths_from_official_sdist": [
+    "README.md",
+    "droidasc/asc_core/utils/decompiler.py",
+    "pyproject.toml"
+  ],
+  "excluded_regenerable_paths": [
+    "PKG-INFO",
+    "droidasc.egg-info/"
+  ],
+  "additional_provenance_paths": [
+    "PROVENANCE.md",
+    "manifest.json"
+  ],
+  "files": {
+    "LICENSE": {
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "official_sdist_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    },
+    "README.md": {
+      "sha256": "5586bbd6daf88105ca678c5615ad9f88016ef320fe72cdcabffb07b8793b08a7",
+      "official_sdist_sha256": "afe866fbcdf56f6f879d345a0946747727c4c4f169d4325080eaa9dbc8e6831e",
+      "bytes": 9841
+    },
+    "dadguard/__init__.py": {
+      "sha256": "1dd97d08113e3820f96d1a91f82dc182e673056d5ed79a30b80802111097589e",
+      "official_sdist_sha256": "1dd97d08113e3820f96d1a91f82dc182e673056d5ed79a30b80802111097589e",
+      "bytes": 156
+    },
+    "dadguard/core/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "official_sdist_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "dadguard/core/analysis/__init__.py": {
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "official_sdist_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1
+    },
+    "dadguard/core/analysis/analysis.py": {
+      "sha256": "5c062317a863d2126206c80fb7544da2cf28b8b4fe09fd225b533d49261ac02b",
+      "official_sdist_sha256": "5c062317a863d2126206c80fb7544da2cf28b8b4fe09fd225b533d49261ac02b",
+      "bytes": 90577
+    },
+    "dadguard/core/androconf.py": {
+      "sha256": "a16c558d75c3f1bf57c2e2c27284bae537ac8504ec1d7def1ffce6d7f789cfcc",
+      "official_sdist_sha256": "a16c558d75c3f1bf57c2e2c27284bae537ac8504ec1d7def1ffce6d7f789cfcc",
+      "bytes": 7228
+    },
+    "dadguard/core/bytecode.py": {
+      "sha256": "623cb2d4825f761b50de9c23b90315b8d7fce0659dbdec5db86926cde1f7d2d8",
+      "official_sdist_sha256": "623cb2d4825f761b50de9c23b90315b8d7fce0659dbdec5db86926cde1f7d2d8",
+      "bytes": 5082
+    },
+    "dadguard/core/dex/__init__.py": {
+      "sha256": "30f6c339f23a23b8e29293b44feefc618ec32b38ee3ba7e7c8eddb889f62d5c7",
+      "official_sdist_sha256": "30f6c339f23a23b8e29293b44feefc618ec32b38ee3ba7e7c8eddb889f62d5c7",
+      "bytes": 295831
+    },
+    "dadguard/core/dex/dex_types.py": {
+      "sha256": "43fd92ace829bfacf15aee27b3275846c68f727270ebce98763f26d8d9d7ee60",
+      "official_sdist_sha256": "43fd92ace829bfacf15aee27b3275846c68f727270ebce98763f26d8d9d7ee60",
+      "bytes": 7689
+    },
+    "dadguard/core/mutf8/__init__.py": {
+      "sha256": "bfee3c2bd7aa08d6cfee662f08b7a04af182f65f8331ac3b673d4c48cd8aa508",
+      "official_sdist_sha256": "bfee3c2bd7aa08d6cfee662f08b7a04af182f65f8331ac3b673d4c48cd8aa508",
+      "bytes": 122
+    },
+    "dadguard/decompiler/__init__.py": {
+      "sha256": "7a3ceee91a0a5f9142d7e25f48d1ba95704e4d0216c33a98c974bc2ead3877fa",
+      "official_sdist_sha256": "7a3ceee91a0a5f9142d7e25f48d1ba95704e4d0216c33a98c974bc2ead3877fa",
+      "bytes": 40
+    },
+    "dadguard/decompiler/basic_blocks.py": {
+      "sha256": "fde05ef4f70bb465ad6933ab55764ceb50c243990e301af4d18f5c6f5fa498ca",
+      "official_sdist_sha256": "fde05ef4f70bb465ad6933ab55764ceb50c243990e301af4d18f5c6f5fa498ca",
+      "bytes": 11196
+    },
+    "dadguard/decompiler/control_flow.py": {
+      "sha256": "f592f5f793ef837494a8d1c277c209896b54112278d6934f8ec033142ccbb718",
+      "official_sdist_sha256": "f592f5f793ef837494a8d1c277c209896b54112278d6934f8ec033142ccbb718",
+      "bytes": 15409
+    },
+    "dadguard/decompiler/dast.py": {
+      "sha256": "1a95f5edf3df4f44e58b2b5ed437d7cf9da7ae2d562f153c2225759abc29253e",
+      "official_sdist_sha256": "1a95f5edf3df4f44e58b2b5ed437d7cf9da7ae2d562f153c2225759abc29253e",
+      "bytes": 27821
+    },
+    "dadguard/decompiler/dataflow.py": {
+      "sha256": "229a682aaee26a7293505f6c78aed461d97e8f462fd9cf69396bb3b3977090d8",
+      "official_sdist_sha256": "229a682aaee26a7293505f6c78aed461d97e8f462fd9cf69396bb3b3977090d8",
+      "bytes": 18565
+    },
+    "dadguard/decompiler/decompile.py": {
+      "sha256": "e1a7e9034eddb1029c14f19febef73d98e7af555f01a666bb8c836afca033596",
+      "official_sdist_sha256": "e1a7e9034eddb1029c14f19febef73d98e7af555f01a666bb8c836afca033596",
+      "bytes": 22449
+    },
+    "dadguard/decompiler/graph.py": {
+      "sha256": "09b2dea710cc574ad75af2cf6638a4f7a480366458a4ece9b8e918e98fe1acb3",
+      "official_sdist_sha256": "09b2dea710cc574ad75af2cf6638a4f7a480366458a4ece9b8e918e98fe1acb3",
+      "bytes": 19295
+    },
+    "dadguard/decompiler/instruction.py": {
+      "sha256": "13cf1933d81975160de2199fc6d9dfa0ec5899ff6cd2e6abdfb9fe038bebb5cb",
+      "official_sdist_sha256": "13cf1933d81975160de2199fc6d9dfa0ec5899ff6cd2e6abdfb9fe038bebb5cb",
+      "bytes": 37804
+    },
+    "dadguard/decompiler/node.py": {
+      "sha256": "7eee4e24c18e59426b2dec0d6d6b5e6f7de728dcec567e428672602304895145",
+      "official_sdist_sha256": "7eee4e24c18e59426b2dec0d6d6b5e6f7de728dcec567e428672602304895145",
+      "bytes": 4875
+    },
+    "dadguard/decompiler/opcode_ins.py": {
+      "sha256": "b6a0212cf718e2b52c45dcc85cec9460b4e9161c06562e943953ced4f771cdcc",
+      "official_sdist_sha256": "b6a0212cf718e2b52c45dcc85cec9460b4e9161c06562e943953ced4f771cdcc",
+      "bytes": 51647
+    },
+    "dadguard/decompiler/util.py": {
+      "sha256": "b23375c5f2b7a77ff059c5471c161fe3c09b63e89e4536162808cbd9a7c85597",
+      "official_sdist_sha256": "b23375c5f2b7a77ff059c5471c161fe3c09b63e89e4536162808cbd9a7c85597",
+      "bytes": 6725
+    },
+    "dadguard/decompiler/writer.py": {
+      "sha256": "97dafa1923cff4edcf2ddd3b35a57a1bdae03607cd3613ef3d361a6146c3a08d",
+      "official_sdist_sha256": "97dafa1923cff4edcf2ddd3b35a57a1bdae03607cd3613ef3d361a6146c3a08d",
+      "bytes": 27583
+    },
+    "dadguard/disassembler.py": {
+      "sha256": "cfb78b62e79206cbfb971c13615006edbfc370f7834bf81b9772b7e3c8061af9",
+      "official_sdist_sha256": "cfb78b62e79206cbfb971c13615006edbfc370f7834bf81b9772b7e3c8061af9",
+      "bytes": 25607
+    },
+    "dadguard/util.py": {
+      "sha256": "ac410ddc611f5fd267fea36d13b8e71a91660744fcfbfc9c591136928dec5574",
+      "official_sdist_sha256": "ac410ddc611f5fd267fea36d13b8e71a91660744fcfbfc9c591136928dec5574",
+      "bytes": 863
+    },
+    "droidasc/__init__.py": {
+      "sha256": "1cbe352ba62b6ee0ff7f3367866649fa43d2af435d742467bfb994a5cf2816ef",
+      "official_sdist_sha256": "1cbe352ba62b6ee0ff7f3367866649fa43d2af435d742467bfb994a5cf2816ef",
+      "bytes": 49
+    },
+    "droidasc/__main__.py": {
+      "sha256": "82e0af35b9a1e1a94b8269f12a256c928f034ea0954b7da8d3969f217131bf69",
+      "official_sdist_sha256": "82e0af35b9a1e1a94b8269f12a256c928f034ea0954b7da8d3969f217131bf69",
+      "bytes": 37
+    },
+    "droidasc/asc_client/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "official_sdist_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "droidasc/asc_client/apk/__init__.py": {
+      "sha256": "904f6ec7c04c5bf491009ae922e5695f70fe4f9d6ac22e5777b15e63bcd65980",
+      "official_sdist_sha256": "904f6ec7c04c5bf491009ae922e5695f70fe4f9d6ac22e5777b15e63bcd65980",
+      "bytes": 36
+    },
+    "droidasc/asc_client/apk/dex_reader.py": {
+      "sha256": "81d68dfc9986f1b8286da47049d418577534ba35951ac3d9ba8b6cec6765b36e",
+      "official_sdist_sha256": "81d68dfc9986f1b8286da47049d418577534ba35951ac3d9ba8b6cec6765b36e",
+      "bytes": 8042
+    },
+    "droidasc/asc_client/apk/loader.py": {
+      "sha256": "d110944e237f5a281b5913b6abb808fa6a5ab8d0d251c183ac18eb8689523c54",
+      "official_sdist_sha256": "d110944e237f5a281b5913b6abb808fa6a5ab8d0d251c183ac18eb8689523c54",
+      "bytes": 6940
+    },
+    "droidasc/asc_client/apk/worker.py": {
+      "sha256": "a6cd7ecf361565b6eb78fe9d9c3112a0380ca1e21956e3ef846713cfeaad160a",
+      "official_sdist_sha256": "a6cd7ecf361565b6eb78fe9d9c3112a0380ca1e21956e3ef846713cfeaad160a",
+      "bytes": 3006
+    },
+    "droidasc/asc_client/apk_handler.py": {
+      "sha256": "916ea96fa338965fc13f0bd140a94c2a14885f782c03d18607a5da99b70dd92e",
+      "official_sdist_sha256": "916ea96fa338965fc13f0bd140a94c2a14885f782c03d18607a5da99b70dd92e",
+      "bytes": 11344
+    },
+    "droidasc/asc_client/asc_handler.py": {
+      "sha256": "538025a65dca729bf811101676a1abbe79abcfcaf3d3a2695b013c5577a637a3",
+      "official_sdist_sha256": "538025a65dca729bf811101676a1abbe79abcfcaf3d3a2695b013c5577a637a3",
+      "bytes": 7217
+    },
+    "droidasc/asc_client/dex_container.py": {
+      "sha256": "353b1f85524b60b0bb0e7b1a80203a7ebc300e35833a2c6459aab66c059f1047",
+      "official_sdist_sha256": "353b1f85524b60b0bb0e7b1a80203a7ebc300e35833a2c6459aab66c059f1047",
+      "bytes": 5780
+    },
+    "droidasc/asc_client/gui/__init__.py": {
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "official_sdist_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1
+    },
+    "droidasc/asc_client/gui/app.py": {
+      "sha256": "15613d23fbc993ac0210133d401c0dc5d5fb3d47376c9ecb40aa0174bdc185eb",
+      "official_sdist_sha256": "15613d23fbc993ac0210133d401c0dc5d5fb3d47376c9ecb40aa0174bdc185eb",
+      "bytes": 20437
+    },
+    "droidasc/asc_client/gui/backend/__init__.py": {
+      "sha256": "b2d57c7d897e712baeffac5d25fa02f7bab15d1cc3bd1b7a3ae15d3bbd69d052",
+      "official_sdist_sha256": "b2d57c7d897e712baeffac5d25fa02f7bab15d1cc3bd1b7a3ae15d3bbd69d052",
+      "bytes": 148
+    },
+    "droidasc/asc_client/gui/backend/search.py": {
+      "sha256": "34c15cc4b5a1f7f8cf3ea312a3b73cec2b560c06514a623639b8694625c0d28d",
+      "official_sdist_sha256": "34c15cc4b5a1f7f8cf3ea312a3b73cec2b560c06514a623639b8694625c0d28d",
+      "bytes": 18653
+    },
+    "droidasc/asc_client/gui/backend/store.py": {
+      "sha256": "25094d90fd58a1a16c5f66900a0237ee1f1f29a880d164f1d953d7e44880d967",
+      "official_sdist_sha256": "25094d90fd58a1a16c5f66900a0237ee1f1f29a880d164f1d953d7e44880d967",
+      "bytes": 9117
+    },
+    "droidasc/asc_client/gui/backend/worker.py": {
+      "sha256": "d66ff0bd4d9b788f106924badf527199c354a0f91152923ac24345ed956d06ab",
+      "official_sdist_sha256": "d66ff0bd4d9b788f106924badf527199c354a0f91152923ac24345ed956d06ab",
+      "bytes": 940
+    },
+    "droidasc/asc_client/gui/editor/__init__.py": {
+      "sha256": "ac61950824206dd124a7340b2bbbc1c58799016034e6c855a2ba76e431b88416",
+      "official_sdist_sha256": "ac61950824206dd124a7340b2bbbc1c58799016034e6c855a2ba76e431b88416",
+      "bytes": 117
+    },
+    "droidasc/asc_client/gui/editor/controller.py": {
+      "sha256": "6af49e819af3e838504d1eac670cab49821dd06862a427ca6583241b2228c508",
+      "official_sdist_sha256": "6af49e819af3e838504d1eac670cab49821dd06862a427ca6583241b2228c508",
+      "bytes": 21470
+    },
+    "droidasc/asc_client/gui/editor/source.py": {
+      "sha256": "2c90409d8f3207d9f36c9863b5dc5e09c5176d24e09c7e6346714967d3c5b335",
+      "official_sdist_sha256": "2c90409d8f3207d9f36c9863b5dc5e09c5176d24e09c7e6346714967d3c5b335",
+      "bytes": 16813
+    },
+    "droidasc/asc_client/gui/editor/view.py": {
+      "sha256": "df85017d70b6e19e003035e6979ba9080b98e01c911b4e5cf7099ea37f54ccba",
+      "official_sdist_sha256": "df85017d70b6e19e003035e6979ba9080b98e01c911b4e5cf7099ea37f54ccba",
+      "bytes": 20364
+    },
+    "droidasc/asc_client/gui/state.py": {
+      "sha256": "16786d05cbb8feddd8f8611b1d6ddb7c787649d89f86a3aaae44e2bc1fa8f75b",
+      "official_sdist_sha256": "16786d05cbb8feddd8f8611b1d6ddb7c787649d89f86a3aaae44e2bc1fa8f75b",
+      "bytes": 527
+    },
+    "droidasc/asc_client/gui/ui/__init__.py": {
+      "sha256": "4913718908557d2b3be8ea30ca94e3e935d5013e5384059e3dfb5f01eb149e06",
+      "official_sdist_sha256": "4913718908557d2b3be8ea30ca94e3e935d5013e5384059e3dfb5f01eb149e06",
+      "bytes": 341
+    },
+    "droidasc/asc_client/gui/ui/class_tree.py": {
+      "sha256": "f2c0d502fbab1de3a52fd4319680ec73d9edde5ba66d6930d2d6bb104c02265f",
+      "official_sdist_sha256": "f2c0d502fbab1de3a52fd4319680ec73d9edde5ba66d6930d2d6bb104c02265f",
+      "bytes": 5755
+    },
+    "droidasc/asc_client/gui/ui/dialogs.py": {
+      "sha256": "0d94045b88644f1282f83d59f3b5b7e768dc38d936bf0128e0e7a9aea5a70f1f",
+      "official_sdist_sha256": "0d94045b88644f1282f83d59f3b5b7e768dc38d936bf0128e0e7a9aea5a70f1f",
+      "bytes": 12169
+    },
+    "droidasc/asc_client/gui/ui/tab_bar.py": {
+      "sha256": "d79e6ce2cbe87d6f3433473275c56004b1bba4388a2d87562a09b48960341173",
+      "official_sdist_sha256": "d79e6ce2cbe87d6f3433473275c56004b1bba4388a2d87562a09b48960341173",
+      "bytes": 21433
+    },
+    "droidasc/asc_client/gui/ui/theme.py": {
+      "sha256": "82de765bffd5166151e0f95a0180e1fc26b19bf0661ab26867ae1f0aa5c2acba",
+      "official_sdist_sha256": "82de765bffd5166151e0f95a0180e1fc26b19bf0661ab26867ae1f0aa5c2acba",
+      "bytes": 6232
+    },
+    "droidasc/asc_client/manifest_handler.py": {
+      "sha256": "05855ac5928a6aeee8a40944fe38620b72dd21784741db3879f1d27acfbcc8c5",
+      "official_sdist_sha256": "05855ac5928a6aeee8a40944fe38620b72dd21784741db3879f1d27acfbcc8c5",
+      "bytes": 1272
+    },
+    "droidasc/asc_core/__init__.py": {
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "official_sdist_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1
+    },
+    "droidasc/asc_core/core/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "official_sdist_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "droidasc/asc_core/core/dex/dex_builder.py": {
+      "sha256": "f83d33cd86bba92b99b4491b1b3a23f048f071ea1379bdac6d3a8e2b3da96c0c",
+      "official_sdist_sha256": "f83d33cd86bba92b99b4491b1b3a23f048f071ea1379bdac6d3a8e2b3da96c0c",
+      "bytes": 22367
+    },
+    "droidasc/asc_core/core/dex/dex_constructor.py": {
+      "sha256": "c6d6bffb564701ebc6fe0f1c4de64d84e9f60e074898c8f25da8819723d29699",
+      "official_sdist_sha256": "c6d6bffb564701ebc6fe0f1c4de64d84e9f60e074898c8f25da8819723d29699",
+      "bytes": 14971
+    },
+    "droidasc/asc_core/core/dex/dex_manager.py": {
+      "sha256": "35a51f2d01a1f4da612b5096c28755cf641f4ec5b8a5641839f0aa36b9e3e3c5",
+      "official_sdist_sha256": "35a51f2d01a1f4da612b5096c28755cf641f4ec5b8a5641839f0aa36b9e3e3c5",
+      "bytes": 3950
+    },
+    "droidasc/asc_core/core/dex/dex_remapper.py": {
+      "sha256": "160f031b71d421f28965645420dc4e521a6f1157122540f20b33980f7a646a00",
+      "official_sdist_sha256": "160f031b71d421f28965645420dc4e521a6f1157122540f20b33980f7a646a00",
+      "bytes": 18616
+    },
+    "droidasc/asc_core/core/dvm_handlers.py": {
+      "sha256": "0305bd8cda43debe36c31a898bb18874eba53e85cc5916e625ec0a792dee940f",
+      "official_sdist_sha256": "0305bd8cda43debe36c31a898bb18874eba53e85cc5916e625ec0a792dee940f",
+      "bytes": 4096
+    },
+    "droidasc/asc_core/core/dvm_interpreter.py": {
+      "sha256": "f60aac21b5d03bebfe89b529863f467615ef7bf2def3f06cf737d1db0c6709db",
+      "official_sdist_sha256": "f60aac21b5d03bebfe89b529863f467615ef7bf2def3f06cf737d1db0c6709db",
+      "bytes": 1882
+    },
+    "droidasc/asc_core/findrefs/__init__.py": {
+      "sha256": "fe66b3d35b74312bf0f2e8a76d9c518f36fe795749b6ab41e6182e3c8d9dbcd4",
+      "official_sdist_sha256": "fe66b3d35b74312bf0f2e8a76d9c518f36fe795749b6ab41e6182e3c8d9dbcd4",
+      "bytes": 209
+    },
+    "droidasc/asc_core/findrefs/findrefs_manager.py": {
+      "sha256": "19bab436bf154df6ca1da9cbede95e004de8260a6b22a5d2231862f94efde503",
+      "official_sdist_sha256": "19bab436bf154df6ca1da9cbede95e004de8260a6b22a5d2231862f94efde503",
+      "bytes": 6235
+    },
+    "droidasc/asc_core/findrefs/locator/__init__.py": {
+      "sha256": "a297eb4901deb6d8648c4f44b520f2a38baf4ac15f51b99ef2b39c284d2160f5",
+      "official_sdist_sha256": "a297eb4901deb6d8648c4f44b520f2a38baf4ac15f51b99ef2b39c284d2160f5",
+      "bytes": 58
+    },
+    "droidasc/asc_core/findrefs/locator/base_locator.py": {
+      "sha256": "ed2a6b18ea07f918c80198dd9ca758b1287a6242472a73eded09b13e9b6208d2",
+      "official_sdist_sha256": "ed2a6b18ea07f918c80198dd9ca758b1287a6242472a73eded09b13e9b6208d2",
+      "bytes": 791
+    },
+    "droidasc/asc_core/findrefs/locator/field_locator.py": {
+      "sha256": "b5155bc7b8288b3f93886a100f0d156718f58be85c11b9408a7d6056f17ca046",
+      "official_sdist_sha256": "b5155bc7b8288b3f93886a100f0d156718f58be85c11b9408a7d6056f17ca046",
+      "bytes": 5172
+    },
+    "droidasc/asc_core/findrefs/locator/insn_locator.py": {
+      "sha256": "716c14c15fab354f1cc81b1d5428da6fcde9bc3b9b01425da579849c8b24a2b0",
+      "official_sdist_sha256": "716c14c15fab354f1cc81b1d5428da6fcde9bc3b9b01425da579849c8b24a2b0",
+      "bytes": 8878
+    },
+    "droidasc/asc_core/findrefs/locator/method_locator.py": {
+      "sha256": "dd27653b4368d25de59c9b786498fd4faf919df641a694c5c52d0751e097c381",
+      "official_sdist_sha256": "dd27653b4368d25de59c9b786498fd4faf919df641a694c5c52d0751e097c381",
+      "bytes": 5282
+    },
+    "droidasc/asc_core/findrefs/locator/string_locator.py": {
+      "sha256": "b48b9679b5fd0b4320a0ef9230ec3d619c5cb233b1acf12b487e2a9982dfa1c2",
+      "official_sdist_sha256": "b48b9679b5fd0b4320a0ef9230ec3d619c5cb233b1acf12b487e2a9982dfa1c2",
+      "bytes": 3342
+    },
+    "droidasc/asc_core/findrefs/locator/type_locator.py": {
+      "sha256": "cb4f4aa8103bbf898e6fd124044c2c0061d038f3dab7283fdc8f0a57166528b6",
+      "official_sdist_sha256": "cb4f4aa8103bbf898e6fd124044c2c0061d038f3dab7283fdc8f0a57166528b6",
+      "bytes": 2340
+    },
+    "droidasc/asc_core/findrefs/scan/class_def_item_scan.py": {
+      "sha256": "17caa7f618b1ecaa04968fc3a39f416fc2a7f43b79f450418d193029483de418",
+      "official_sdist_sha256": "17caa7f618b1ecaa04968fc3a39f416fc2a7f43b79f450418d193029483de418",
+      "bytes": 2164
+    },
+    "droidasc/asc_core/findrefs/scan/code_item_scan.py": {
+      "sha256": "b44a6936383666108b54097964a810bd6e95b1a907f420ef64cbc6d794f1a65d",
+      "official_sdist_sha256": "b44a6936383666108b54097964a810bd6e95b1a907f420ef64cbc6d794f1a65d",
+      "bytes": 9937
+    },
+    "droidasc/asc_core/models/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "official_sdist_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "droidasc/asc_core/models/dvm_opcode.py": {
+      "sha256": "343d828068ba1899c7af63d6463ae82857861b4241d59d6aff70d94692f8f825",
+      "official_sdist_sha256": "343d828068ba1899c7af63d6463ae82857861b4241d59d6aff70d94692f8f825",
+      "bytes": 33175
+    },
+    "droidasc/asc_core/resource/dvmopcode_template.py": {
+      "sha256": "6ac6a72257656ee533d772698256289cc2059c1fe4b1691d3360cbe93cf1c869",
+      "official_sdist_sha256": "6ac6a72257656ee533d772698256289cc2059c1fe4b1691d3360cbe93cf1c869",
+      "bytes": 2535
+    },
+    "droidasc/asc_core/resource/gen_dvmopcode.py": {
+      "sha256": "250891f25a6bb47d42ddcaacda7f8be88049158418ef9a2989f4f08da9cbc521",
+      "official_sdist_sha256": "250891f25a6bb47d42ddcaacda7f8be88049158418ef9a2989f4f08da9cbc521",
+      "bytes": 973
+    },
+    "droidasc/asc_core/utils/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "official_sdist_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "droidasc/asc_core/utils/decompiler.py": {
+      "sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+      "official_sdist_sha256": "9ee1e46f8f970235fa8bb2278a7a58b1bd26649de9acbd1948cb5963b2a7782f",
+      "bytes": 18155
+    },
+    "droidasc/asc_core/utils/dex_parser.py": {
+      "sha256": "6f0cff767582c9fd5c8122406e7f938192b59b9648b94a01594bd91067de35a2",
+      "official_sdist_sha256": "6f0cff767582c9fd5c8122406e7f938192b59b9648b94a01594bd91067de35a2",
+      "bytes": 10781
+    },
+    "droidasc/asc_core/utils/dvm_regdec.py": {
+      "sha256": "b7e7194761f8dc2c94eda9508e7933c90109b8e1bcd59a9d72ce6ae57fd91db0",
+      "official_sdist_sha256": "b7e7194761f8dc2c94eda9508e7933c90109b8e1bcd59a9d72ce6ae57fd91db0",
+      "bytes": 6086
+    },
+    "droidasc/asc_core/utils/leb128.py": {
+      "sha256": "b5dd2927110c6b3e363ac041437cb22fcd22c30ba7b090a66a489c2bf1992110",
+      "official_sdist_sha256": "b5dd2927110c6b3e363ac041437cb22fcd22c30ba7b090a66a489c2bf1992110",
+      "bytes": 1759
+    },
+    "droidasc/asc_core/utils/tinydex.py": {
+      "sha256": "a608825c6625dea664dbb071dae8ef0589123b70f0544ef184e490a4815c3a1e",
+      "official_sdist_sha256": "a608825c6625dea664dbb071dae8ef0589123b70f0544ef184e490a4815c3a1e",
+      "bytes": 19846
+    },
+    "droidasc/cli.py": {
+      "sha256": "0439572bcd819258b776400cb6eb973dc02123125897e58f17b753addf05757e",
+      "official_sdist_sha256": "0439572bcd819258b776400cb6eb973dc02123125897e58f17b753addf05757e",
+      "bytes": 21204
+    },
+    "pyproject.toml": {
+      "sha256": "1c335b1551f07b98e2fda84c59ebf6dfb7b9de75046f2733e66ec573625f7bae",
+      "official_sdist_sha256": "3f55ea4e2e3df1292311963e6c6d052171222e78004dff5efd40f4e024aa16d5",
+      "bytes": 603
+    },
+    "setup.cfg": {
+      "sha256": "a29823dd9fbb34b0b00c45fe5823d7c25a3133805e072cad4920cf76dee85bfa",
+      "official_sdist_sha256": "a29823dd9fbb34b0b00c45fe5823d7c25a3133805e072cad4920cf76dee85bfa",
+      "bytes": 42
+    },
+    "tests/test_apk_modules.py": {
+      "sha256": "f6e19357cb85ef019fd39d64b4e2159e57983c086304e703cf5cad7d3ee811fd",
+      "official_sdist_sha256": "f6e19357cb85ef019fd39d64b4e2159e57983c086304e703cf5cad7d3ee811fd",
+      "bytes": 7690
+    },
+    "tests/test_decompiler.py": {
+      "sha256": "811aff3ba6cff8d9eb11f71f617a2d812cd92b5324fc2283e14ab9fc36423e4d",
+      "official_sdist_sha256": "811aff3ba6cff8d9eb11f71f617a2d812cd92b5324fc2283e14ab9fc36423e4d",
+      "bytes": 5995
+    },
+    "tests/test_disassembler.py": {
+      "sha256": "2b9906c29c4d1fe99ca77cad1e8f095c74d9075b91e340561938609d8c4b34de",
+      "official_sdist_sha256": "2b9906c29c4d1fe99ca77cad1e8f095c74d9075b91e340561938609d8c4b34de",
+      "bytes": 8950
+    },
+    "tests/test_gui_backend.py": {
+      "sha256": "bd6febfd9934c8c1e89a532cd017889f4c1eb2b8ac61ef28749021aaebce8797",
+      "official_sdist_sha256": "bd6febfd9934c8c1e89a532cd017889f4c1eb2b8ac61ef28749021aaebce8797",
+      "bytes": 11661
+    },
+    "tests/test_gui_editor.py": {
+      "sha256": "03be7924fc222a52960605a68b49f4b38471b41723151fcb5d5c2ecb4e0ebafa",
+      "official_sdist_sha256": "03be7924fc222a52960605a68b49f4b38471b41723151fcb5d5c2ecb4e0ebafa",
+      "bytes": 13717
+    },
+    "tests/test_gui_views.py": {
+      "sha256": "db84b97d76ac3da53768e76f1f768e8490d11bbca9096477f1b2ca20070d10a1",
+      "official_sdist_sha256": "db84b97d76ac3da53768e76f1f768e8490d11bbca9096477f1b2ca20070d10a1",
+      "bytes": 12114
+    },
+    "tests/test_listclass.py": {
+      "sha256": "10b8976a78058d0c2dfb93a95bb8305c708b1b776b772e40379f8baacb1b1f04",
+      "official_sdist_sha256": "10b8976a78058d0c2dfb93a95bb8305c708b1b776b772e40379f8baacb1b1f04",
+      "bytes": 8115
+    },
+    "tests/test_mutf8_strings.py": {
+      "sha256": "80e7f99ab27992f40bd36fe9eb7bd2f09ac4c0e5a3b0e01d38766558f7c6c80f",
+      "official_sdist_sha256": "80e7f99ab27992f40bd36fe9eb7bd2f09ac4c0e5a3b0e01d38766558f7c6c80f",
+      "bytes": 4721
+    },
+    "tests/test_performance_compare.py": {
+      "sha256": "22ff428ff4f0ea82b61c34a475c478daa08e1224880eeab1d7dc3c051baa288f",
+      "official_sdist_sha256": "22ff428ff4f0ea82b61c34a475c478daa08e1224880eeab1d7dc3c051baa288f",
+      "bytes": 2592
+    },
+    "tests/test_references.py": {
+      "sha256": "fe49c6fa50b3cae76722f11b26269bb7bac7b19c5cb3733e65f8c24ac93be4d0",
+      "official_sdist_sha256": "fe49c6fa50b3cae76722f11b26269bb7bac7b19c5cb3733e65f8c24ac93be4d0",
+      "bytes": 10789
+    },
+    "tests/test_release.py": {
+      "sha256": "300e5768d2c6dd81cebf11e044adc2e1b707637706a3e78317636920f9fd53ed",
+      "official_sdist_sha256": "300e5768d2c6dd81cebf11e044adc2e1b707637706a3e78317636920f9fd53ed",
+      "bytes": 2340
+    },
+    "tests/test_source_edit.py": {
+      "sha256": "b5c066fbf8659dbf842237947f6d194b3719145dbf33eb48a69d7d9cdaf2f8fd",
+      "official_sdist_sha256": "b5c066fbf8659dbf842237947f6d194b3719145dbf33eb48a69d7d9cdaf2f8fd",
+      "bytes": 19711
+    }
+  }
+}

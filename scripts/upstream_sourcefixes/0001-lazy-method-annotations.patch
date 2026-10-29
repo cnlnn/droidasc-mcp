@@ -1,0 +1,81 @@
+From 51e2b31707d47ab28e3e78c4e8c52cd21da54900 Mon Sep 17 00:00:00 2001
+From: cnlnn <azazel.1000x@gmail.com>
+Date: Thu, 29 Oct 2026 21:57:30 +0800
+Subject: [PATCH] fix: load lazy method annotation directories
+
+---
+ droidasc/asc_core/utils/decompiler.py |  2 ++
+ tests/test_method_annotations.py      | 48 +++++++++++++++++++++++++++
+ 2 files changed, 50 insertions(+)
+ create mode 100644 tests/test_method_annotations.py
+
+diff --git a/droidasc/asc_core/utils/decompiler.py b/droidasc/asc_core/utils/decompiler.py
+index 38cd7fa..494500b 100644
+--- a/droidasc/asc_core/utils/decompiler.py
++++ b/droidasc/asc_core/utils/decompiler.py
+@@ -91,6 +91,8 @@ def _annotation_set_to_source(cm, annotations_off):
+ 
+ def _build_method_annotation_map(dvclass):
+     directory = getattr(dvclass, "annotations_directory_item", None)
++    if directory is None and getattr(dvclass, "annotations_off", 0):
++        directory = dvclass.CM.get_annotations_directory_item(dvclass.annotations_off)
+     if directory is None:
+         return {}
+     ret = {}
+diff --git a/tests/test_method_annotations.py b/tests/test_method_annotations.py
+new file mode 100644
+index 0000000..cee6315
+--- /dev/null
++++ b/tests/test_method_annotations.py
+@@ -0,0 +1,48 @@
++import unittest
++from types import SimpleNamespace
++from unittest.mock import Mock, patch
++
++from dex_fixture import make_rich_dex
++from droidasc.asc_client.asc_handler import AscHandler
++from droidasc.asc_core.utils import decompiler
++
++
++class MethodAnnotationTests(unittest.TestCase):
++    def setUp(self):
++        self.annotation = SimpleNamespace(
++            get_method_idx=lambda: 7,
++            get_annotations_off=lambda: 120,
++        )
++        self.directory = SimpleNamespace(get_method_annotations=lambda: [self.annotation])
++
++    def test_lazy_annotation_directory_is_loaded_for_selected_class(self):
++        manager = SimpleNamespace(get_annotations_directory_item=Mock(return_value=self.directory))
++        target = SimpleNamespace(annotations_directory_item=None, annotations_off=100, CM=manager)
++        with patch.object(decompiler, "_annotation_set_to_source", return_value=["@Deprecated"]):
++            self.assertEqual(decompiler._build_method_annotation_map(target), {7: ["@Deprecated"]})
++        manager.get_annotations_directory_item.assert_called_once_with(100)
++
++    def test_preloaded_directory_does_not_repeat_lookup(self):
++        manager = SimpleNamespace(get_annotations_directory_item=Mock())
++        target = SimpleNamespace(annotations_directory_item=self.directory, annotations_off=100, CM=manager)
++        with patch.object(decompiler, "_annotation_set_to_source", return_value=["@Deprecated"]):
++            self.assertEqual(decompiler._build_method_annotation_map(target), {7: ["@Deprecated"]})
++        manager.get_annotations_directory_item.assert_not_called()
++
++    def test_unannotated_class_does_not_request_directory(self):
++        manager = SimpleNamespace(get_annotations_directory_item=Mock())
++        target = SimpleNamespace(annotations_directory_item=None, annotations_off=0, CM=manager)
++        self.assertEqual(decompiler._build_method_annotation_map(target), {})
++        manager.get_annotations_directory_item.assert_not_called()
++
++    def test_original_fixture_method_annotation_survives_both_source_paths(self):
++        source = AscHandler().getclass(make_rich_dex(), "Lexample/Rich;")
++        metadata, references = AscHandler().getclass_with_metadata(make_rich_dex(), "Lexample/Rich;")
++        self.assertIn("@Deprecated", source)
++        self.assertIn("@Deprecated", metadata)
++        self.assertTrue(references)
++        self.assertTrue(all(0 <= row[0] < row[1] <= len(metadata) for row in references))
++
++
++if __name__ == "__main__":
++    unittest.main()
+-- 
+2.56.0
+

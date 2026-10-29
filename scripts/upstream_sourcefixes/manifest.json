@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "upstream_repository": "https://github.com/MG1937/ASC",
+  "upstream_base_commit": "9216fe234e1fc80f3148ca42e361e67e3174d0e2",
+  "local_contribution_commits": [
+    "51e2b31707d47ab28e3e78c4e8c52cd21da54900",
+    "140b05cd3a62a1603e4a70f35631adbd841cfe90"
+  ],
+  "sdist": {
+    "filename": "droidasc-0.1.2.post3.tar.gz",
+    "size_bytes": 248064,
+    "url": "https://files.pythonhosted.org/packages/61/2c/107e0054d1501e3890e859eb671f5a2df5b1da94b86fcd5db13fe7b39d94/droidasc-0.1.2.post3.tar.gz",
+    "sha256": "0e292a2756db85c5fd3fda0a397f2ad544c8de016135a79ed5ed739ecbb89230",
+    "root": "droidasc-0.1.2.post3"
+  },
+  "original_version": "0.1.2.post3",
+  "original_source_version": "0.1.2-post3",
+  "local_version": "0.1.2.post3+sourcefixes.2",
+  "runtime_path": "droidasc/asc_core/utils/decompiler.py",
+  "original_runtime_sha256": "9ee1e46f8f970235fa8bb2278a7a58b1bd26649de9acbd1948cb5963b2a7782f",
+  "prepared_runtime_sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+  "python_files": 80,
+  "dadguard_python_files": 23,
+  "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "patches": [
+    {
+      "filename": "0001-lazy-method-annotations.patch",
+      "sha256": "9223e17728209211a6a0d81d398d96a4d6f1aee4645c99b74c3a65cb8c5ce9b7"
+    },
+    {
+      "filename": "0002-source-type-links.patch",
+      "sha256": "4c57eced3c66c8b998b9ebff465f5d63bfa996a02fc861824bb98d08f50b43b1"
+    }
+  ],
+  "expected_changed_paths": [
+    "README.md",
+    "droidasc/asc_core/utils/decompiler.py",
+    "pyproject.toml"
+  ]
+}

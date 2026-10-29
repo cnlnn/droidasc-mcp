@@ -56,3 +56,14 @@ without relocating physical data or rewriting the original header bytes.
 The public ASC source handoff streams the upstream selected-header copy into a
 bounded query-owned ZIP; explicit Java and legacy-reference handoffs retain the
 existing bounded dexlib2 standalone conversion with separate view provenance.
+
+third_party/droidasc_sourcefixes contains a downstream source compatibility build
+of MG1937/ASC, based on the official droidasc 0.1.2.post3 source distribution and
+reviewed upstream revision 9216fe234e1fc80f3148ca42e361e67e3174d0e2.
+Upstream: https://github.com/MG1937/ASC
+The original Apache-2.0 LICENSE and bundled dadguard/Androguard copyright notices
+are retained there. PROVENANCE.md and manifest.json identify the source archive
+and local changes: lazy annotation-directory resolution and original class-type
+identities in source tokens, with the released dadguard files unchanged.
+The corresponding prepared contribution patches and original license are retained
+in scripts/upstream_sourcefixes for offline reproduction and upstream review.

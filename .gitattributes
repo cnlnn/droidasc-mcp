@@ -1,2 +1,6 @@
 # Keep release source bytes identical in Linux and Windows checkouts.
 * text=auto eol=lf
+
+# Retain reviewed upstream bytes, including original mixed line endings.
+third_party/droidasc_sourcefixes/** -text
+scripts/upstream_sourcefixes/*.patch -text

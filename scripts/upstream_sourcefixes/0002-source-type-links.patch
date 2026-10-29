@@ -1,0 +1,280 @@
+From 140b05cd3a62a1603e4a70f35631adbd841cfe90 Mon Sep 17 00:00:00 2001
+From: cnlnn <azazel.1000x@gmail.com>
+Date: Thu, 29 Oct 2026 23:13:40 +0800
+Subject: [PATCH] fix: preserve original class identities in source tokens
+
+---
+ droidasc/asc_core/utils/decompiler.py |  53 +++++++++-
+ tests/dex_fixture.py                  |   4 +-
+ tests/test_source_type_links.py       | 141 ++++++++++++++++++++++++++
+ 3 files changed, 193 insertions(+), 5 deletions(-)
+ create mode 100644 tests/test_source_type_links.py
+
+diff --git a/droidasc/asc_core/utils/decompiler.py b/droidasc/asc_core/utils/decompiler.py
+index 494500b..7abaa5b 100644
+--- a/droidasc/asc_core/utils/decompiler.py
++++ b/droidasc/asc_core/utils/decompiler.py
+@@ -215,6 +215,25 @@ def patched_base_class_visit(self, visitor):
+     return visitor.visit_base_class(self.cls, data=self.clsdesc or self.cls)
+ 
+ 
++def patched_writer_new_array(self, atype, size):
++    value = 'new %s[' % dadguard_writer.get_type(atype[1:])
++    self.write(value)
++    self.write_ext(("NEW_ARRAY", value, atype))
++    size.visit(self)
++    self.write(']', data="NEW_ARRAY_END")
++
++
++def patched_writer_filled_new_array(self, atype, size, args):
++    value = 'new %s {' % dadguard_writer.get_type(atype)
++    self.write(value)
++    self.write_ext(("NEW_ARRAY_FILLED", value, atype))
++    for index, arg in enumerate(args):
++        arg.visit(self)
++        if index + 1 < len(args):
++            self.write(', ', data="COMMA")
++    self.write('})', data="NEW_ARRAY_FILLED_END")
++
++
+ dadguard_instruction.InstanceExpression.visit = patched_instance_expression_visit
+ dadguard_instruction.InstanceInstruction.visit = patched_instance_instruction_visit
+ dadguard_instruction.StaticExpression.visit = patched_static_expression_visit
+@@ -223,6 +242,8 @@ dadguard_instruction.BaseClass.visit = patched_base_class_visit
+ decompile.Writer.visit_get_static = patched_writer_get_static
+ decompile.Writer.visit_put_static = patched_writer_put_static
+ decompile.Writer.visit_constant = patched_writer_visit_constant
++decompile.Writer.visit_new_array = patched_writer_new_array
++decompile.Writer.visit_filled_new_array = patched_writer_filled_new_array
+ # --- End of String/Type Optimizations ---
+ 
+ # We also completely disable ALL dadguard loggers via python's standard logging module
+@@ -300,11 +321,31 @@ def _dalvik_reference_class(name : str):
+     if not name or name in {
+         "V", "Z", "B", "S", "C", "I", "J", "F", "D",
+         "void", "boolean", "byte", "short", "char", "int", "long", "float", "double",
++        "this", "super",
+     }:
+         return None
+     return _dalvik_class_name(name)
+ 
+ 
++def _source_token_type(tokens, index):
++    expected, position = {
++        "FIELD_TYPE": ("NAME_FIELD", 3),
++        "PROTOTYPE_TYPE": ("NAME_METHOD_PROTOTYPE", 2),
++        "ARG_TYPE": ("NAME_ARG", 2),
++    }[tokens[index][0]]
++    if index + 2 >= len(tokens) or tokens[index + 1][0] != "SPACE":
++        return None
++    following = tokens[index + 2]
++    if following[0] != expected or len(following) <= position:
++        return None
++    original = following[position]
++    if expected == "NAME_FIELD":
++        return original.get_descriptor()
++    if expected == "NAME_METHOD_PROTOTYPE":
++        return original.type
++    return original
++
++
+ # reuse dadguard daddecompiler's token type, we can extract source' semantics, enhance gui xref ability
+ # 20260921 we may extract daddecompiler from dadguard in future, for better development
+ def _source_with_member_references(source_ext):
+@@ -314,7 +355,7 @@ def _source_with_member_references(source_ext):
+ 
+     def append_tokens(tokens):
+         nonlocal offset
+-        for token in tokens:
++        for index, token in enumerate(tokens):
+             if len(token) < 2:
+                 continue
+             kind, value = token[0], token[1]
+@@ -361,7 +402,8 @@ def _source_with_member_references(source_ext):
+                 type_end = value.find(") ", type_start) if kind == "CHECKCAST" else value.rfind("[")
+                 if kind == "NEW_ARRAY_FILLED":
+                     type_end = value.rfind(" {")
+-                class_name = _dalvik_reference_class(value[type_start:type_end])
++                raw_type = token[2] if len(token) >= 3 else value[type_start:type_end]
++                class_name = _dalvik_reference_class(raw_type)
+                 if class_name is not None:
+                     references.append((
+                         start + type_start, start + type_end,
+@@ -373,7 +415,12 @@ def _source_with_member_references(source_ext):
+                 "NAME_SUPERCLASS", "NAME_INTERFACE", "NAME_PROTOTYPE",
+                 "NAME_BASE_CLASS", "NAME_CLASS_NEW",
+             ):
+-                raw_name = token[2] if len(token) >= 3 else value
++                if len(token) >= 3:
++                    raw_name = token[2]
++                elif kind in {"FIELD_TYPE", "PROTOTYPE_TYPE", "ARG_TYPE"}:
++                    raw_name = _source_token_type(tokens, index)
++                else:
++                    raw_name = value
+                 declaration = kind == "NAME_PROTOTYPE"
+                 if declaration and len(token) >= 3 and token[2]:
+                     raw_name = f"{token[2]}.{value}"
+diff --git a/tests/dex_fixture.py b/tests/dex_fixture.py
+index 0f3ce03..fa357b1 100644
+--- a/tests/dex_fixture.py
++++ b/tests/dex_fixture.py
+@@ -107,10 +107,10 @@ def make_invoke_dex():
+     return bytes(buf)
+ 
+ 
+-def make_instance_field_dex():
++def make_instance_field_dex(field_type=b'Lexample/Target;'):
+     """Build a class whose getA method reads this.a with iget-object."""
+     strings = [
+-        b'Lexample/Test;', b'Ljava/lang/Object;', b'Lexample/Target;',
++        b'Lexample/Test;', b'Ljava/lang/Object;', field_type,
+         b'L', b'getA', b'a',
+     ]
+     buf = bytearray(112)
+diff --git a/tests/test_source_type_links.py b/tests/test_source_type_links.py
+new file mode 100644
+index 0000000..742f358
+--- /dev/null
++++ b/tests/test_source_type_links.py
+@@ -0,0 +1,141 @@
++import unittest
++from types import SimpleNamespace
++
++from dex_fixture import make_instance_field_dex
++from droidasc.asc_client.asc_handler import AscHandler
++from droidasc.asc_core.utils.decompiler import _source_with_member_references
++from dadguard.decompiler.decompile import Writer
++
++
++class SourceTypeLinkTests(unittest.TestCase):
++    def field(self, descriptor):
++        return SimpleNamespace(
++            get_class_name=lambda: "Lexample/Test;",
++            get_name=lambda: "value",
++            get_descriptor=lambda: descriptor,
++        )
++
++    def method(self, descriptor):
++        return SimpleNamespace(
++            type=descriptor, cls_name="Lexample/Test;", name="run",
++            triple=("example/Test", "run", "()" + descriptor),
++        )
++
++    def test_field_display_name_uses_neighboring_original_field_type(self):
++        source, refs = _source_with_member_references([
++            ("FIELD", [
++                ("FIELD_TYPE", "String"), ("SPACE", " "),
++                ("NAME_FIELD", "value", "String", self.field("Lshadow/String;")),
++            ]),
++        ])
++        self.assertEqual(source, "String value")
++        self.assertEqual(refs, [
++            (0, 6, "class", "Lshadow/String;", "", "", False),
++            (7, 12, "field", "Lexample/Test;", "value", "Lshadow/String;", True),
++        ])
++
++    def test_return_display_name_uses_original_method_return_type(self):
++        source, refs = _source_with_member_references([
++            ("PROTOTYPE_TYPE", "Boolean"), ("SPACE", " "),
++            ("NAME_METHOD_PROTOTYPE", "run", self.method("Lshadow/Boolean;")),
++        ])
++        self.assertEqual(source, "Boolean run")
++        self.assertEqual(refs, [
++            (0, 7, "class", "Lshadow/Boolean;", "", "", False),
++            (8, 11, "method", "Lexample/Test;", "run", "()Lshadow/Boolean;", True),
++        ])
++
++    def test_argument_array_uses_original_parameter_type(self):
++        source, refs = _source_with_member_references([
++            ("ARG_TYPE", "String[][]"), ("SPACE", " "),
++            ("NAME_ARG", "p0", "[[Lshadow/String;", self.method("V")),
++        ])
++        self.assertEqual(source, "String[][] p0")
++        self.assertEqual(refs, [(0, 10, "class", "Lshadow/String;", "", "", False)])
++
++    def test_default_package_type_is_not_assumed_to_be_java_lang(self):
++        source, refs = _source_with_member_references([
++            ("FIELD_TYPE", "String"), ("SPACE", " "),
++            ("NAME_FIELD", "value", "String", self.field("LString;")),
++        ])
++        self.assertEqual(source, "String value")
++        self.assertEqual(refs[0][3], "LString;")
++
++    def test_display_only_types_without_matching_raw_context_have_no_link(self):
++        source, refs = _source_with_member_references([
++            ("FIELD_TYPE", "String"), ("SPACE", " "), ("TEXT", "x;"),
++            ("ARG_TYPE", "Boolean"), ("SPACE", " "), ("TEXT", "p0"),
++            ("PROTOTYPE_TYPE", "Object"),
++        ])
++        self.assertEqual(source, "String x;Boolean p0Object")
++        self.assertEqual(refs, [])
++
++    def test_keyword_bases_do_not_become_class_identities(self):
++        source, refs = _source_with_member_references([
++            ("NAME_BASE_CLASS", "super", "super"), ("TEXT", " "),
++            ("NAME_BASE_CLASS", "this", "this"),
++        ])
++        self.assertEqual(source, "super this")
++        self.assertEqual(refs, [])
++
++    def test_explicit_raw_type_token_remains_supported(self):
++        source, refs = _source_with_member_references([("FIELD_TYPE", "String", "Lshadow/String;")])
++        self.assertEqual(source, "String")
++        self.assertEqual(refs, [(0, 6, "class", "Lshadow/String;", "", "", False)])
++
++    def test_original_primitive_array_has_no_class_link(self):
++        source, refs = _source_with_member_references([
++            ("ARG_TYPE", "int[]"), ("SPACE", " "), ("NAME_ARG", "p0", "[I", None),
++        ])
++        self.assertEqual(source, "int[] p0")
++        self.assertEqual(refs, [])
++
++    def test_new_array_writer_preserves_original_component_type(self):
++        writer = Writer(None, None)
++        size = SimpleNamespace(visit=lambda out: out.write("2", data="CONSTANT_INTEGER"))
++        writer.visit_new_array("[Lshadow/Object;", size)
++        source, refs = _source_with_member_references(writer.str_ext())
++        self.assertEqual(source, str(writer))
++        self.assertEqual(source, "new shadow.Object[2]")
++        self.assertEqual(refs, [(4, 17, "class", "Lshadow/Object;", "", "", False)])
++        writer = Writer(None, None)
++        writer.visit_new_array("[Ljava/lang/Object;", size)
++        source, refs = _source_with_member_references(writer.str_ext())
++        self.assertEqual(source, str(writer))
++        self.assertEqual(source, "new Object[2]")
++        self.assertEqual(refs, [(4, 10, "class", "Ljava/lang/Object;", "", "", False)])
++
++    def test_filled_array_writer_preserves_original_component_type(self):
++        writer = Writer(None, None)
++        item = SimpleNamespace(visit=lambda out: out.write("null", data="CONSTANT_INTEGER"))
++        writer.visit_filled_new_array("[Ljava/lang/Object;", 1, [item])
++        source, refs = _source_with_member_references(writer.str_ext())
++        self.assertEqual(source, str(writer))
++        self.assertEqual(source, "new Object[] {null})")
++        self.assertEqual(refs, [(4, 12, "class", "Ljava/lang/Object;", "", "", False)])
++
++    def test_new_primitive_array_writer_retains_text_without_class_link(self):
++        writer = Writer(None, None)
++        size = SimpleNamespace(visit=lambda out: out.write("2", data="CONSTANT_INTEGER"))
++        writer.visit_new_array("[[I", size)
++        source, refs = _source_with_member_references(writer.str_ext())
++        self.assertEqual(source, str(writer))
++        self.assertEqual(source, "new int[][2]")
++        self.assertEqual(refs, [])
++
++    def test_real_fixture_field_type_uses_original_descriptor(self):
++        source, refs = AscHandler().getclass_with_metadata(
++            make_instance_field_dex(b"Ljava/lang/String;"), "Lexample/Test;"
++        )
++        self.assertTrue(source)
++        fields = [r for r in refs if r[2] == "field" and r[6] and r[5].startswith("L")]
++        self.assertTrue(fields)
++        for field in fields:
++            line_start = source.rfind("\n", 0, field[0]) + 1
++            types = [r for r in refs if r[2] == "class" and line_start <= r[0] < field[0]]
++            self.assertTrue(types)
++            self.assertEqual(types[-1][3], field[5])
++
++
++if __name__ == "__main__":
++    unittest.main()
