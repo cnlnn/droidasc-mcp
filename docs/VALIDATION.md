@@ -3,7 +3,7 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
-## Metadata source reuse candidate, 2026-10-29
+## Metadata source reuse acceptance, 2026-10-29
 
 G12 extends the same bounded snapshot mechanism to the existing ASC metadata
 facade. It retains complete source and serialized ordered token links in one shared
@@ -24,10 +24,17 @@ one-page first call changes from 0.1299 to 0.1328, not an improvement, while its
 repeat changes from 0.1060 to 0.0089 seconds. Original APKs and 80 installed
 ASC/dadguard Python files remain unchanged. Four CPUs, serial timing and the thermal
 start waiver are recorded; this is no comparator, cool-host or general-memory claim.
-All 124 focused tests pass, including 21 new cases. The exact adopted runtime passes
-all 2013 local tests without skips; cross-platform source/canonical-sdist/native-wheel
-gates remain pending. G10 annotation integration
-remains separate. Neither G11 nor G12 changes the published v0.2.5 assets.
+All 124 focused tests pass, including 21 new cases. Final adopted commit 5a96ea6
+passes all 2013 local tests and [CI 40801161988](https://github.com/cnlnn/droidasc-mcp/actions/runs/40801161988),
+25/25 jobs. Eight Linux/Windows Python 3.10-3.13 source suites and sixteen installed
+canonical-sdist/exact-wheel suites each pass 2013 tests with zero failures/errors/skips.
+Twelve artifact ZIPs, canonical sdist/four native wheels and all 69 runtime source
+files match the frozen candidate. Four more complete adopted-runtime stdio collections
+match the byte-identical prototype. g12-acceptance.json binds these checks, original
+input hashes and unchanged main/tag/latest/asset digests. G10 annotation dependency
+integration remains separate; a local upstream contribution with generated-fixture
+regressions is prepared under artifacts/competitor-gap-g13-20261029, not installed.
+Neither G11 nor G12 changes the published v0.2.5 assets.
 
 ## Session source reuse acceptance, 2026-10-29
 

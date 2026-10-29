@@ -15,9 +15,10 @@ artifacts/release-025-20261029. G7 is accepted separately on the development bra
 G8 reassessment and G9 diagnosis are complete. G10 has reproduced a source-annotation
 gap and verified an isolated upstream fix, not an installed product/dependency change.
 G11 plain-CLI source pagination reuse is accepted at 3709bf2 with a scoped error-field
-residual. G12 metadata/token-link pagination reuse passes complete matched stdio/HTTP
-checks and focused regressions; its adopted-runtime full-source/package gates remain
-in progress and restore that error-field compatibility.
+residual. G12 metadata/token-link pagination reuse is accepted at 5a96ea6 with complete
+matched stdio/HTTP and cross-platform source/package gates, restoring that error-field
+compatibility. G13 prepares the verified upstream annotation contribution without
+modifying installed dependencies or publishing a new version.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -36,7 +37,8 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G9 | Locate the residual flat warm-path cost before selecting a rewrite | diagnosis accepted: 12 cached pages equal G8; client schema validation is prominent in the instrumented sample; no new cache/default change or performance-fix claim |
 | G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
 | G11 | Reuse complete plain-CLI class source across immutable-session pages | accepted at 3709bf2 with scoped later-error optional-field residual; CI 40796945147 passes 25/25 jobs, 1992 tests per source/package suite; 24 complete stdio plus two HTTP collections pass, unreleased |
-| G12 | Reuse complete metadata source and ordered token links with exact Unicode spans | isolated 12 trials / 24 complete stdio plus two HTTP collections, 124 focused tests and 2013 adopted-runtime local tests pass; cross-platform source/package gates pending, unreleased |
+| G12 | Reuse complete metadata source and ordered token links with exact Unicode spans | accepted at 5a96ea6; CI 40801161988 passes 25/25 jobs and 2013 tests per source/package suite; 24 matched stdio/two HTTP plus four adopted stdio collections, unreleased |
+| G13 | Integrate the verified annotation fix through upstream rather than a runtime monkeypatch | local upstream contribution 51e2b31 prepared with two runtime lines and generated-fixture regressions; baseline 2/4 fail, fixed 4/4 and selected 63 tests plus 21 subtests pass; dependency integration open |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -175,12 +177,25 @@ WeChat first is 0.1299/0.1328 (slightly slower) and repeated is 0.1060/0.0089 s.
 The same native extension and 80 installed ASC/dadguard files are unchanged. These
 are current-host measurements with the temperature-start waiver, not comparator,
 cool-host or general-memory claims. Twenty-one new cases pass in 124 focused tests;
-all 2013 adopted-runtime local tests pass without skips. Cross-platform source/package
-gates remain pending.
+all 2013 adopted-runtime local tests pass without skips. Final candidate 5a96ea6
+passes CI 40801161988, 25/25 jobs: eight source and sixteen installed canonical-sdist/
+exact-wheel suites each pass 2013 tests without failures/errors/skips. All twelve CI
+ZIPs, canonical sdist/four native wheels and 69 runtime source files match the frozen
+candidate. Four additional complete stdio collections from the adopted byte-identical
+runtime match the prototype. g12-acceptance.json binds these gates and fresh unchanged
+main/tag/latest/asset digests. This accepts development only, not replacement release
+assets or universal competitor parity.
 
-Next after G12's gates: resolve distributable upstream integration of G10's verified
-annotation fix, preserving the installed bundled dadguard differences. Do not turn
-the isolated overlay into a runtime monkeypatch. Later changes need their own gates.
+G13 uses a separate local upstream worktree at 51e2b31, based on freshly checked
+upstream main 9216fe2. Only the two-line lazy-directory change and four generated-
+fixture regressions are included; no private APK or bundled dadguard change is added.
+The baseline fails two of four regressions; the fix passes all four and selected
+upstream decompiler/reference/disassembler/string/class/container tests (63 tests plus
+21 subtests). This is a prepared upstream contribution, not the full upstream GUI/
+performance matrix, an installed dependency fix or a dependency publication.
+Resolve distributable upstream integration while preserving the installed bundled
+dadguard differences. Do not turn the isolated overlay into a runtime monkeypatch.
+Later product changes need their own candidate gates.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
@@ -429,11 +444,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1-B6/G1-G6/R025 complete; G7/G11 accepted with scoped residuals, G8 reassessed, G9 diagnosed; G12 metadata-source reuse in final gates; G10 annotation dependency not integrated |
-| Next action | Finish G12 adopted-runtime full source/package gates, then distributable upstream annotation integration |
+| Current task | B1-B6/G1-G6/R025 complete; G7/G11/G12 accepted with scoped residuals, G8 reassessed, G9 diagnosed; G13 upstream annotation contribution prepared, dependency integration open |
+| Next action | Resolve upstream annotation contribution and distributable dependency integration without changing installed dadguard or the immutable published release |
 | Product changes | Backward-compatible operand/cache/grouped-reference improvements; opt-in 34-tool artifact workflow; measured private archive-hash reuse; explicit multi/all-module AAB union; original-byte native 041 logical views and source/legacy handoff; defaults unchanged |
-| Planning checks | G11 3709bf2 passes 25/25 CI jobs and 1992 tests per source/canonical-sdist/exact-wheel suite; G12 prototype passes 24 complete stdio/two HTTP collections and 124 focused tests; G8 144 complete collections and G2 model matrix 12/12 remain separate |
-| Retained residuals | Douyin default-flat warm latency; B3 aggregate schema/observed model-latency costs; B4 copy/storage; B5 protobuf XML; G10 upstream source annotations/integration; G12 final gates; no real-device large-041/cool-host claim; dynamic/reflection edges |
+| Planning checks | G12 5a96ea6 passes 25/25 CI jobs and 2013 tests per source/canonical-sdist/exact-wheel suite; 24 matched stdio/two HTTP and four adopted stdio collections pass; G8 144 complete collections and G2 model matrix 12/12 remain separate |
+| Retained residuals | Douyin default-flat warm latency; B3 aggregate schema/observed model-latency costs; B4 copy/storage; B5 protobuf XML; G10/G13 upstream source annotations/integration; no real-device large-041/cool-host claim; dynamic/reflection edges |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | v0.2.5 published at 87b3630; subsequent G7/G11/G12 changes remain unreleased and do not move main or the release tag |
 

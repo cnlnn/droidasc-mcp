@@ -45,9 +45,14 @@ medians change from 0.7985/0.7781 to 0.2413/0.0779 seconds; WeChat's one-page fi
 call is slightly slower (0.1299/0.1328), while repeated access is 0.1060/0.0089.
 This is a paired current-host adapter optimization, not an equal-correctness
 competitor comparison. Unpaged original-byte ASC output verifies pagination, not
-independent decompiler correctness. Its 124 focused tests and all 2013 adopted-runtime
-local tests pass; cross-platform source/package gates remain pending. G10's distributable annotation integration and
-the other residuals remain open; neither increment establishes overall parity.
+independent decompiler correctness. Commit 5a96ea6 passes all 2013 local tests and
+CI 40801161988, all 25 jobs: 2013 tests per source/canonical-sdist/exact-wheel suite,
+with exact package/runtime identities checked. Four further adopted-runtime stdio
+collections match the prototype bytes and complete pages. g12-acceptance.json
+records development acceptance and unchanged published assets. G10's distributable
+annotation integration and other residuals remain open. Its two-line upstream
+contribution and generated-fixture tests are prepared locally as G13; the installed
+dependency is unchanged. Neither increment establishes overall competitor parity.
 
 ## v0.4.1 cold-query investigation, 2026-10-22
 
