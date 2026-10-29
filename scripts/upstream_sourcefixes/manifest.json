@@ -18,7 +18,13 @@
   "local_version": "0.1.2.post3+sourcefixes.2",
   "runtime_path": "droidasc/asc_core/utils/decompiler.py",
   "original_runtime_sha256": "9ee1e46f8f970235fa8bb2278a7a58b1bd26649de9acbd1948cb5963b2a7782f",
-  "prepared_runtime_sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+  "evaluated_runtime_sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+  "prepared_runtime_sha256": "ccc302d8b5d980a8e2254f1eaa228a11600d01f002938f6a29ec32738d4ebf82",
+  "downstream_change_notice": {
+    "author": "cnlnn/droidasc-mcp",
+    "date": "2026-10-30",
+    "runtime_change_from_evaluated_candidate": "comment-only prefix; executable AST unchanged"
+  },
   "python_files": 80,
   "dadguard_python_files": 23,
   "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",

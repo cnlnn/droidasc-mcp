@@ -1,3 +1,6 @@
+# Modified by cnlnn/droidasc-mcp on 2026-10-30.
+# Downstream build: local sourcefixes.2 version for annotation and type-link fixes.
+
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"

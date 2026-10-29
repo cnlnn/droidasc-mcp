@@ -17,8 +17,25 @@
     "filename": "droidasc-0.1.2.post3+sourcefixes.2-py3-none-any.whl",
     "sha256": "0faa06b46dc25e12d93e18e8c2e47ab302943f56b9d2774fe69b6eafa3d96aee"
   },
+  "runtime_difference_from_evaluated_wheel": {
+    "path": "droidasc/asc_core/utils/decompiler.py",
+    "evaluated_sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+    "prepared_sha256": "ccc302d8b5d980a8e2254f1eaa228a11600d01f002938f6a29ec32738d4ebf82",
+    "change": "ASCII downstream-change comment prefix only; executable AST unchanged",
+    "modifier": "cnlnn/droidasc-mcp",
+    "date": "2026-10-30",
+    "unchanged_other_runtime_python_files": 79
+  },
+  "modified_file_notices": {
+    "modifier": "cnlnn/droidasc-mcp",
+    "date": "2026-10-30",
+    "paths": [
+      "droidasc/asc_core/utils/decompiler.py",
+      "pyproject.toml"
+    ]
+  },
   "carried_source_files": 96,
-  "carried_source_bytes": 1229849,
+  "carried_source_bytes": 1230184,
   "runtime_python_files": 80,
   "unchanged_released_dadguard_python_files": 23,
   "public_upstream_tests": 12,
@@ -417,9 +434,9 @@
       "bytes": 0
     },
     "droidasc/asc_core/utils/decompiler.py": {
-      "sha256": "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836",
+      "sha256": "ccc302d8b5d980a8e2254f1eaa228a11600d01f002938f6a29ec32738d4ebf82",
       "official_sdist_sha256": "9ee1e46f8f970235fa8bb2278a7a58b1bd26649de9acbd1948cb5963b2a7782f",
-      "bytes": 18155
+      "bytes": 18357
     },
     "droidasc/asc_core/utils/dex_parser.py": {
       "sha256": "6f0cff767582c9fd5c8122406e7f938192b59b9648b94a01594bd91067de35a2",
@@ -447,9 +464,9 @@
       "bytes": 21204
     },
     "pyproject.toml": {
-      "sha256": "1c335b1551f07b98e2fda84c59ebf6dfb7b9de75046f2733e66ec573625f7bae",
+      "sha256": "376be0e5d0d540514ca0964e30f3438cb9a88dde2e45312603c9bebccbdf1a36",
       "official_sdist_sha256": "3f55ea4e2e3df1292311963e6c6d052171222e78004dff5efd40f4e024aa16d5",
-      "bytes": 603
+      "bytes": 736
     },
     "setup.cfg": {
       "sha256": "a29823dd9fbb34b0b00c45fe5823d7c25a3133805e072cad4920cf76dee85bfa",

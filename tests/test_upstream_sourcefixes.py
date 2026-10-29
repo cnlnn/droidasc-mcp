@@ -65,7 +65,10 @@ def sourcefixes(tmp_path, monkeypatch):
         patch(middle, final, "second.patch"),
     ]
     manifest["original_runtime_sha256"] = digest(official[manifest["runtime_path"]])
-    manifest["prepared_runtime_sha256"] = digest(final[manifest["runtime_path"]])
+    manifest["evaluated_runtime_sha256"] = digest(final[manifest["runtime_path"]])
+    manifest["prepared_runtime_sha256"] = digest(
+        tool.RUNTIME_NOTICE + final[manifest["runtime_path"]]
+    )
     manifest["python_files"], manifest["dadguard_python_files"] = 2, 1
     archive_path = tmp_path / "official.tar.gz"
     with tarfile.open(archive_path, "w:gz") as archive:
@@ -91,20 +94,23 @@ def test_offline_preparation_uses_standard_git_patches_and_retains_released_byte
     receipt = tool.prepare_source(archive, output, bundle=bundle)
     assert archive.read_bytes() == original_archive
     assert (output / "source/dadguard/writer.py").read_bytes() == official["dadguard/writer.py"]
-    assert (output / "source/droidasc/asc_core/utils/decompiler.py").read_bytes() == final[
-        manifest["runtime_path"]
-    ]
+    assert (output / "source/droidasc/asc_core/utils/decompiler.py").read_bytes() == (
+        tool.RUNTIME_NOTICE + final[manifest["runtime_path"]]
+    )
     assert (output / "source/tests/dex_fixture.py").read_bytes() == official["tests/dex_fixture.py"]
     assert not (output / "source/tests/test_method_annotations.py").exists()
     assert not (output / "source/tests/test_source_type_links.py").exists()
     assert (
         b'version = "0.1.2.post3+sourcefixes.2"' in (output / "source/pyproject.toml").read_bytes()
     )
+    assert (output / "source/pyproject.toml").read_bytes().startswith(tool.BUILD_NOTICE)
     assert (output / "source/README.md").read_bytes().endswith(official["README.md"])
     assert receipt["changed_source_paths"] == manifest["expected_changed_paths"]
     assert receipt["changed_runtime_paths"] == [manifest["runtime_path"]]
     assert receipt["application_scope"] == "runtime_hunks_only"
     assert not receipt["contribution_test_hunks_applied"]
+    assert receipt["runtime_ast_unchanged_by_notice"]
+    assert receipt["evaluated_runtime_sha256"] == manifest["evaluated_runtime_sha256"]
     assert receipt["unchanged_released_dadguard_python_files"] == 1
     assert receipt["original_archive_unchanged"]
     assert not receipt["built_or_installed"] and not receipt["default_dependency_changed"]
@@ -129,9 +135,9 @@ def test_official_archive_without_git_fixture_needs_only_runtime_hunks(sourcefix
     (bundle / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     output = tmp_path / "prepared"
     receipt = tool.prepare_source(archive, output, bundle=bundle)
-    assert (output / "source" / manifest["runtime_path"]).read_bytes() == final[
-        manifest["runtime_path"]
-    ]
+    assert (output / "source" / manifest["runtime_path"]).read_bytes() == (
+        tool.RUNTIME_NOTICE + final[manifest["runtime_path"]]
+    )
     assert not (output / "source/tests").exists()
     assert (output / "source/dadguard/writer.py").read_bytes() == official["dadguard/writer.py"]
     assert receipt["changed_source_paths"] == manifest["expected_changed_paths"]
@@ -196,6 +202,16 @@ def test_reviewed_bundle_hashes_and_runtime_boundaries_are_locked(monkeypatch):
     assert tool.sha256(tool.BUNDLE / "LICENSE") == manifest["license_sha256"]
     assert all(tool.sha256(tool.BUNDLE / p["filename"]) == p["sha256"] for p in manifest["patches"])
     assert (
-        manifest["prepared_runtime_sha256"]
+        manifest["evaluated_runtime_sha256"]
         == "81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836"
     )
+    vendor = scripts.parent / "third_party/droidasc_sourcefixes"
+    vendor_manifest = json.loads((vendor / "manifest.json").read_text())
+    assert (
+        vendor_manifest["files"][manifest["runtime_path"]]["sha256"]
+        == manifest["prepared_runtime_sha256"]
+    )
+    notice = vendor_manifest["modified_file_notices"]
+    assert notice["modifier"] == manifest["downstream_change_notice"]["author"]
+    assert notice["date"] == manifest["downstream_change_notice"]["date"]
+    assert notice["paths"] == [manifest["runtime_path"], "pyproject.toml"]

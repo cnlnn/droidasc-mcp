@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import io
 import json
@@ -15,6 +16,15 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 BUNDLE = Path(__file__).resolve().parent
+RUNTIME_NOTICE = (
+    b"# Modified by cnlnn/droidasc-mcp on 2026-10-30.\n"
+    b"# Downstream fixes: load lazy method annotations; preserve original field,\n"
+    b"# parameter, return, and array class links; exclude this/super keyword links.\n\n"
+)
+BUILD_NOTICE = (
+    b"# Modified by cnlnn/droidasc-mcp on 2026-10-30.\n"
+    b"# Downstream build: local sourcefixes.2 version for annotation and type-link fixes.\n\n"
+)
 
 
 def sha256(path: Path) -> str:
@@ -136,7 +146,16 @@ def prepare_source(sdist: Path, output: Path, *, bundle: Path = BUNDLE) -> dict:
                         "exit_code": 0,
                     }
                 )
-        if sha256(source / runtime_path) != manifest["prepared_runtime_sha256"]:
+        runtime = source / runtime_path
+        if sha256(runtime) != manifest["evaluated_runtime_sha256"]:
+            raise ValueError("Evaluated ASC runtime SHA-256 mismatch")
+        evaluated = runtime.read_bytes()
+        runtime.write_bytes(RUNTIME_NOTICE + evaluated)
+        evaluated_ast = ast.dump(ast.parse(evaluated), include_attributes=False)
+        prepared_ast = ast.dump(ast.parse(runtime.read_bytes()), include_attributes=False)
+        if prepared_ast != evaluated_ast:
+            raise ValueError("Downstream runtime notice changed executable AST")
+        if sha256(runtime) != manifest["prepared_runtime_sha256"]:
             raise ValueError("Prepared ASC runtime SHA-256 mismatch")
         pyproject = source / "pyproject.toml"
         original = pyproject.read_bytes()
@@ -144,7 +163,7 @@ def prepare_source(sdist: Path, output: Path, *, bundle: Path = BUNDLE) -> dict:
         new = f'version = "{manifest["local_version"]}"'.encode("ascii")
         if original.count(old) != 1:
             raise ValueError("Unexpected official project version declaration")
-        pyproject.write_bytes(original.replace(old, new))
+        pyproject.write_bytes(BUILD_NOTICE + original.replace(old, new))
         readme = source / "README.md"
         notice = (
             "# Local source compatibility build\n\n"
@@ -179,7 +198,11 @@ def prepare_source(sdist: Path, output: Path, *, bundle: Path = BUNDLE) -> dict:
             "changed_source_paths": changes,
             "changed_runtime_paths": runtime_changes,
             "unchanged_released_dadguard_python_files": len(dadguard_files),
+            "evaluated_runtime_sha256": manifest["evaluated_runtime_sha256"],
             "prepared_runtime_sha256": after[runtime_path],
+            "runtime_ast_unchanged_by_notice": True,
+            "runtime_ast_sha256": hashlib.sha256(evaluated_ast.encode()).hexdigest(),
+            "runtime_ast_python_version": sys.version.split()[0],
             "source_files_sha256": after,
             "original_archive_unchanged": True,
             "built_or_installed": False,

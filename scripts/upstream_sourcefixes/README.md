@@ -29,7 +29,11 @@ bundled dadguard/Androguard. The prepared README records these local modificatio
 The official sdist, rather than a Git-tree copy, preserves the released dadguard
 fixes. All 23 bundled dadguard Python files retain their original bytes. Among the
 80 dependency Python files, only `droidasc/asc_core/utils/decompiler.py` changes.
-Its final SHA-256 is locked to the previously evaluated sourcefixes.2 candidate.
+Its executable AST matches the previously evaluated sourcefixes.2 candidate.
+The only byte difference from that runtime is an ASCII comment prefix identifying
+the downstream modifier, date, and fixes. The evaluated and final SHA-256 values
+are locked separately in `manifest.json`. Both the modified runtime file and
+`pyproject.toml` carry prominent `cnlnn/droidasc-mcp` notices dated 2026-10-30.
 The local project version and README notice are the only other allowed changes.
 
 The full contribution patches target the upstream Git tree, whose generated-test
@@ -56,6 +60,7 @@ Preparation uses the repository's standard-library `scripts/verify_dist.py` safe
 sdist extractor, then Git's ordinary offline runtime-hunk application. It rejects changed
 inputs/patches, changed runtime boundaries and existing output directories. The
 original archive is read-only. `receipt.json` records hashes and the precise scope;
+it also records AST equivalence before and after the runtime comment notice.
 `source/` contains the separate candidate. No dependency or toolchain is installed.
 
 A separate build can use the normal upstream backend:

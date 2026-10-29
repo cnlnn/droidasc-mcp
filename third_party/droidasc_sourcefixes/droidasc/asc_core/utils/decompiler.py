@@ -1,3 +1,7 @@
+# Modified by cnlnn/droidasc-mcp on 2026-10-30.
+# Downstream fixes: load lazy method annotations; preserve original field,
+# parameter, return, and array class links; exclude this/super keyword links.
+
 from dadguard.core.dex import DEX
 from dadguard.core.analysis.analysis import Analysis
 import dadguard.core.dex as dadguard_dex

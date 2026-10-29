@@ -32,12 +32,22 @@ Prepared on 2026-10-29 for the cnlnn/droidasc-mcp development branch:
    `140b05cd3a62a1603e4a70f35631adbd841cfe90`.
 3. `pyproject.toml`: identify this downstream build with the local version above.
 4. `README.md`: add the compatibility-build and source-link modification notice.
+5. On 2026-10-30, add prominent ASCII downstream-change comments at the start of
+   the modified decompiler and `pyproject.toml`, naming cnlnn/droidasc-mcp, the
+   modification date, and the specific runtime fixes or local-version change.
 
 These contributions are prepared locally; their commit IDs do not imply an
-upstream merge or published release. All 80 runtime Python files exactly match
-the evaluated `droidasc-0.1.2.post3+sourcefixes.2-py3-none-any.whl`, SHA-256
+upstream merge or published release. Of the 80 runtime Python files, 79 exactly
+match the evaluated `droidasc-0.1.2.post3+sourcefixes.2-py3-none-any.whl`, SHA-256
 `0faa06b46dc25e12d93e18e8c2e47ab302943f56b9d2774fe69b6eafa3d96aee`.
-Only the decompiler runtime file differs from the original released sdist.
+The sole difference is the decompiler's downstream comment prefix; removing that
+exact prefix reproduces the evaluated file SHA-256
+`81fc8edff8881949441bcdeb3ed6b54bb371203aaf6bd99c028af5236d9d8836`.
+With the notice, its SHA-256 is
+`ccc302d8b5d980a8e2254f1eaa228a11600d01f002938f6a29ec32738d4ebf82`.
+The executable Python AST is unchanged by the notice. All 23 released dadguard
+files remain byte-identical. Only the decompiler runtime file differs from the
+original released sdist.
 
 ## Contents
 
