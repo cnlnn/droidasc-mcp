@@ -6,6 +6,9 @@
   all-entry expansion limits, discovery metadata and ordinary resource readers.
 - Reuse complete plain-CLI class-source snapshots across session pages in the
   existing bounded cache, retaining provenance, response limits and close cleanup.
+- Reuse complete ASC metadata source and ordered token links across session pages,
+  preserving Unicode code-point spans, original source hashes and page contracts.
+  Render failures use the normal worker's exact error output.
 
 ## 0.2.5
 

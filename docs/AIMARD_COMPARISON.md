@@ -32,9 +32,22 @@ pages. This removes repeated plain-source rendering without adopting another sca
 decompiler or resident APK worker. Its final runtime passes 12 paired stdio trials,
 24 complete collections equal to original-APK public CLI and two complete HTTP
 readbacks. F-Droid five-page first/repeated medians change from 1.0565/1.0717 to
-0.2530/0.0349 seconds on the current host. Final full source/package gates are still
-pending under artifacts/competitor-gap-g11-20261029. Metadata/token-link pagination and G10's dependency
-integration remain separate; this increment does not establish overall comparator parity.
+0.2530/0.0349 seconds on the current host. Commit 3709bf2 passes all 25 jobs in CI
+40796945147, with 1992 tests per source/canonical-sdist/exact-wheel suite. Closure
+under artifacts/competitor-gap-g11-20261029 explicitly records the later oversized-
+line error's two extra optional provenance fields; G12 restores exact worker errors.
+
+G12 reuses the existing ASC metadata renderer and ordered token-link results, not a
+new decompiler. Its isolated runtime passes 12 paired real-MCP trials, 24 complete
+stdio collections and two complete HTTP readbacks, preserving all source bytes,
+page diagnostics and global Unicode token spans. F-Droid's five-page first/repeated
+medians change from 0.7985/0.7781 to 0.2413/0.0779 seconds; WeChat's one-page first
+call is slightly slower (0.1299/0.1328), while repeated access is 0.1060/0.0089.
+This is a paired current-host adapter optimization, not an equal-correctness
+competitor comparison. Unpaged original-byte ASC output verifies pagination, not
+independent decompiler correctness. Its 124 focused tests and all 2013 adopted-runtime
+local tests pass; cross-platform source/package gates remain pending. G10's distributable annotation integration and
+the other residuals remain open; neither increment establishes overall parity.
 
 ## v0.4.1 cold-query investigation, 2026-10-22
 

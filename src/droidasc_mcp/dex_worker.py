@@ -534,7 +534,21 @@ def _query_prepared(runner, bundle, common, owners, query, workspace):
         name = query.get("class_name")
         if name not in owners:
             return {**common, "status": "error", "code": "class_not_found"}
-        return {**common, **query_source_metadata(runner.settings, bundle, owners[name], query)}
+        return {
+            **common,
+            **query_source_metadata(
+                runner.settings,
+                bundle,
+                owners[name],
+                query,
+                snapshot_root=(
+                    workspace
+                    if vars(runner).get("source_snapshot_path") is not None
+                    and not any(source.get("dex_version") == "041" for source in common["sources"])
+                    else None
+                ),
+            ),
+        }
     if operation in INDEX_OPERATIONS:
         indexed = query_index(runner.settings, bundle, common, query, workspace)
         if indexed is not None:

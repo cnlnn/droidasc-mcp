@@ -78,17 +78,31 @@ class Snapshot:
     metadata: bytes = b""
 
     @classmethod
-    def build(cls, data: bytes, *, sort: bool, budget: int) -> Snapshot:
+    def build(cls, data: bytes, *, sort: bool, budget: int, keepends=False) -> Snapshot:
+        if keepends:
+            with io.StringIO(data.decode("utf-8"), newline="") as source:
+                return cls.from_lines(
+                    (line for chunk in source for line in chunk.splitlines(keepends=True)),
+                    sort=sort,
+                    budget=budget,
+                )
+        return cls.from_lines(
+            (raw.rstrip(b"\r\n").decode("utf-8", errors="replace") for raw in io.BytesIO(data)),
+            sort=sort,
+            budget=budget,
+        )
+
+    @classmethod
+    def from_lines(cls, source, *, sort, budget):
         # Account for decoded strings and tuple pointers, not just wire bytes.
         lines = []
         used = sys.getsizeof(())
         if used > budget:
             raise DroidAscError("Decoded snapshot exceeds memory budget; narrow the query")
         pointer_bytes = sys.getsizeof((None,)) - sys.getsizeof(())
-        for index, raw in enumerate(io.BytesIO(data)):
+        for index, line in enumerate(source):
             if index % 256 == 0:
                 _check_cancelled()
-            line = raw.rstrip(b"\r\n").decode("utf-8", errors="replace")
             used += sys.getsizeof(line) + pointer_bytes
             if used > budget:
                 raise DroidAscError("Decoded snapshot exceeds memory budget; narrow the query")
@@ -224,7 +238,7 @@ class DroidAscRunner:
         if reference_cache is not None:
             request["reference_cache"] = reference_cache
         if (
-            query.get("operation") == "get_class_source"
+            query.get("operation") in {"get_class_source", "get_class_source_metadata"}
             and "_source_view_budget" not in query
             and query.get("_source_snapshot", True)
         ):
@@ -236,10 +250,15 @@ class DroidAscRunner:
         from .memory_cache import signature
 
         query = request["query"]
+        source_metadata = query["operation"] == "get_class_source_metadata"
         try:
             offset, limit = self._page_bounds(query["offset"], query["limit"])
-            args = self._class_source_args(
-                root / "analysis.apk", query["class_name"], query["threads"]
+            args = (
+                ["source-metadata", str(root / "analysis.apk"), query["class_name"]]
+                if source_metadata
+                else self._class_source_args(
+                    root / "analysis.apk", query["class_name"], query["threads"]
+                )
             )
         except (ValueError, TypeError, KeyError):
             with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
@@ -263,22 +282,33 @@ class DroidAscRunner:
                     "truncated",
                     "has_more",
                     "next_offset",
+                    "source_start",
+                    "source_end",
+                    "member_references",
                 }
-                metadata = json.dumps(
-                    {key: value for key, value in result.items() if key not in excluded},
-                    separators=(",", ":"),
-                ).encode()
+                header = {key: value for key, value in result.items() if key not in excluded}
                 try:
                     with path.open("rb") as stream:
                         data = stream.read(self.settings.max_output_bytes + 1)
                     if len(data) > self.settings.max_output_bytes:
                         raise _SourceResult(result)
+                    if source_metadata:
+                        if hashlib.sha256(data).hexdigest() != result["source_sha256"]:
+                            raise _SourceResult(result)
+                        remaining = self.settings.max_output_bytes - len(data)
+                        with (workspace / "source-refs.json").open("rb") as stream:
+                            encoded = stream.read(remaining + 1)
+                        if len(encoded) > remaining:
+                            raise _SourceResult(result)
+                        header["_references"] = json.loads(encoded)
+                    metadata = json.dumps(header, separators=(",", ":")).encode()
                     snapshot = Snapshot.build(
                         data,
                         sort=False,
                         budget=self.settings.max_output_bytes - sys.getsizeof(metadata),
+                        **({"keepends": True} if source_metadata else {}),
                     )
-                except DroidAscError:
+                except (DroidAscError, OSError, ValueError, TypeError):
                     # A valid page still works when the complete snapshot cannot be retained.
                     raise _SourceResult(result) from None
                 return Snapshot(
@@ -301,12 +331,20 @@ class DroidAscRunner:
                 return self._run_dex_request(request, Path(temporary))
         metadata = json.loads(snapshot.metadata)
         try:
-            page = self._snapshot_page(snapshot, offset=offset, limit=limit).as_dict()
-        except DroidAscError as exc:
-            result = {**metadata, "status": "error", "code": "engine_error", "message": str(exc)}
-        else:
-            source = "\n".join(page.pop("items"))
-            result = {**metadata, **page, "source": source}
+            if source_metadata:
+                from .source_metadata import source_page
+
+                page = source_page(
+                    snapshot.lines, metadata.pop("_references"), offset=offset, limit=limit
+                )
+                result = {**metadata, **page}
+            else:
+                page = self._snapshot_page(snapshot, offset=offset, limit=limit).as_dict()
+                source = "\n".join(page.pop("items"))
+                result = {**metadata, **page, "source": source}
+        except (DroidAscError, ValueError, TypeError):
+            with tempfile.TemporaryDirectory(prefix="droidasc-query-") as temporary:
+                return self._run_dex_request(request, Path(temporary))
         size = len(json.dumps(result).encode())
         if size > 256 * 1024:
             return response_limit()

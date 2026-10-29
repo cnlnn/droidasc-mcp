@@ -3,7 +3,33 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
-## Session source reuse candidate, 2026-10-29
+## Metadata source reuse candidate, 2026-10-29
+
+G12 extends the same bounded snapshot mechanism to the existing ASC metadata
+facade. It retains complete source and serialized ordered token links in one shared
+cache budget, preserving Python Unicode line boundaries and global code-point spans.
+Source plus reference export bytes share one disk reservation. No new decompiler,
+cache database or ASC-private import is added; physical DEX 041 stays on its old path.
+An oversized later plain-source line now falls back to the worker's exact error
+envelope instead of adding two optional provenance fields, the scoped G11 residual.
+
+Evidence under artifacts/competitor-gap-g12-20261029 binds 12 serial alternating
+fresh-server stdio trials, 24 complete collections and two complete HTTP collections.
+Every source byte, page diagnostic, ordered token row and global span equals the
+baseline. An unpaged ASC facade on separately read original DEX bytes checks the
+adapter/pagination, not independent decompiler correctness. F-Droid has 489 lines,
+five pages and all 660 token links; WeChat has 62 lines and all 38 links. F-Droid
+first/repeated medians change from 0.7985/0.7781 to 0.2413/0.0779 seconds. WeChat's
+one-page first call changes from 0.1299 to 0.1328, not an improvement, while its
+repeat changes from 0.1060 to 0.0089 seconds. Original APKs and 80 installed
+ASC/dadguard Python files remain unchanged. Four CPUs, serial timing and the thermal
+start waiver are recorded; this is no comparator, cool-host or general-memory claim.
+All 124 focused tests pass, including 21 new cases. The exact adopted runtime passes
+all 2013 local tests without skips; cross-platform source/canonical-sdist/native-wheel
+gates remain pending. G10 annotation integration
+remains separate. Neither G11 nor G12 changes the published v0.2.5 assets.
+
+## Session source reuse acceptance, 2026-10-29
 
 G11 reuses the existing public-CLI complete snapshot rather than decompiling each
 plain class-source page. Its decoded text and serialized provenance share the existing
@@ -18,9 +44,14 @@ collections, including all page diagnostics and owned cleanup. F-Droid first/rep
 complete-source medians change from 1.0565/1.0717 to 0.2530/0.0349 seconds; WeChat
 changes from 0.2746/0.2290 to 0.2556/0.0072. These are scoped current-host measurements,
 not comparator or general-memory claims. All 103 final focused tests pass, including
-17 new regressions. Earlier 1988/1989-test suites precede final compatibility guards;
-the final candidate still requires its own 1992-test full source/package cells.
-Final gates remain in progress; this is not released v0.2.5 code.
+17 new regressions. Earlier 1988/1989-test suites precede final compatibility guards.
+Final commit 3709bf2 passes [CI 40796945147](https://github.com/cnlnn/droidasc-mcp/actions/runs/40796945147),
+25/25 jobs: eight source and sixteen canonical-sdist/exact-wheel suites each pass
+1992 tests with zero failures/errors/skips. All twelve CI ZIPs, four native wheels
+and 69 runtime sources match the frozen candidate. g11-acceptance.json binds these
+checks and unchanged main/tag/latest/asset digests, with the later oversized-line
+error's two extra optional fields explicitly retained as a residual, addressed by
+G12. This is development acceptance, not released v0.2.5 code or universal parity.
 
 ## Post-release compact handle inventory, 2026-10-29
 

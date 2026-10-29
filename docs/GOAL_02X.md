@@ -14,8 +14,10 @@ v0.2.5 and continuing catch-up on 2026-10-29. Publication is complete at
 artifacts/release-025-20261029. G7 is accepted separately on the development branch;
 G8 reassessment and G9 diagnosis are complete. G10 has reproduced a source-annotation
 gap and verified an isolated upstream fix, not an installed product/dependency change.
-G11 implements plain-CLI source pagination reuse; complete matched stdio/HTTP checks
-and focused regressions pass, while final full-source/package gates remain in progress.
+G11 plain-CLI source pagination reuse is accepted at 3709bf2 with a scoped error-field
+residual. G12 metadata/token-link pagination reuse passes complete matched stdio/HTTP
+checks and focused regressions; its adopted-runtime full-source/package gates remain
+in progress and restore that error-field compatibility.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -33,7 +35,8 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G8 | Fresh complete concurrent method/field comparison before another cache port | accepted reassessment: 24 serial real-MCP trials, 144 independently checked complete collections; Douyin flat warm residual remains, grouped option wins in this sample |
 | G9 | Locate the residual flat warm-path cost before selecting a rewrite | diagnosis accepted: 12 cached pages equal G8; client schema validation is prominent in the instrumented sample; no new cache/default change or performance-fix claim |
 | G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
-| G11 | Reuse complete plain-CLI class source across immutable-session pages | 12 matched trials / 24 complete stdio collections plus two HTTP collections pass; 103 focused tests pass; final full-source/package gates pending, unreleased |
+| G11 | Reuse complete plain-CLI class source across immutable-session pages | accepted at 3709bf2 with scoped later-error optional-field residual; CI 40796945147 passes 25/25 jobs, 1992 tests per source/package suite; 24 complete stdio plus two HTTP collections pass, unreleased |
+| G12 | Reuse complete metadata source and ordered token links with exact Unicode spans | isolated 12 trials / 24 complete stdio plus two HTTP collections, 124 focused tests and 2013 adopted-runtime local tests pass; cross-platform source/package gates pending, unreleased |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -147,13 +150,37 @@ current-host plain-source measurements, not metadata-source, competitor, cool-ho
 overall memory claims. The temperature-start waiver and unchanged hardware protections
 are recorded. Seventeen new regressions are included in 103 passing focused tests.
 Earlier 1988/1989-test local runs precede the wire-limit/error-envelope guards and are
-retained as preliminary evidence. The final full-source/package candidate needs its
-own 1992-test source/canonical-sdist/exact-wheel cells before G11 is accepted.
+retained as preliminary evidence. Final commit 3709bf2 passes CI 40796945147, all
+25 jobs: eight source and sixteen installed canonical-sdist/exact-wheel suites each
+pass 1992 tests with no failures/errors/skips. All twelve artifact ZIP digests,
+canonical sdist/four native wheels and 69 runtime sources match the frozen candidate.
+g11-acceptance.json freshly confirms unchanged main/tag/latest/asset digests. G12
+fault injection found an untested later oversized-line error that adds optional
+class_name/dex_entry fields, with unchanged code/message. G11 closure records this
+scoped residual rather than claiming exact universal error-field preservation.
 
-Next after G11's final gates: reuse complete metadata-source/token-link results across
-pages with original Unicode spans. Keep the verified upstream annotation patch separate
-while resolving distributable dependency integration. Complete-result correctness and
-actual workflow benefit decide adoption; later changes need their own candidate gates.
+G12 extends that same mechanism to the existing ASC metadata facade, retaining
+complete source and serialized token links within one cache budget and one combined
+source/reference disk reservation. It preserves exact Unicode line boundaries,
+source hashes, ordered link identities and global code-point spans. Cache render
+errors fall back to the normal worker, restoring the G11 error-field boundary.
+No new ASC-private import or decompiler is introduced; 041 metadata stays uncached.
+artifacts/competitor-gap-g12-20261029 contains 12 serial alternating fresh-server
+trials, 24 complete stdio collections and two complete HTTP readbacks. F-Droid's
+489 lines/five pages/all 660 links and WeChat's 62 lines/all 38 links match the
+baseline and separate unpaged ASC output on original DEX bytes. This independently
+checks pagination, not decompiler semantics; missing Throws annotations remain.
+F-Droid first/repeated medians before/after are 0.7985/0.2413 and 0.7781/0.0779 s.
+WeChat first is 0.1299/0.1328 (slightly slower) and repeated is 0.1060/0.0089 s.
+The same native extension and 80 installed ASC/dadguard files are unchanged. These
+are current-host measurements with the temperature-start waiver, not comparator,
+cool-host or general-memory claims. Twenty-one new cases pass in 124 focused tests;
+all 2013 adopted-runtime local tests pass without skips. Cross-platform source/package
+gates remain pending.
+
+Next after G12's gates: resolve distributable upstream integration of G10's verified
+annotation fix, preserving the installed bundled dadguard differences. Do not turn
+the isolated overlay into a runtime monkeypatch. Later changes need their own gates.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
@@ -402,13 +429,13 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1-B6/G1-G6/R025 complete; G7 accepted, G8 reassessed, G9 diagnosed; G10 upstream source-annotation candidate verified but not integrated |
-| Next action | Evaluate complete source-pagination reuse through existing bounded public-CLI snapshots; retain the isolated annotation fix for distributable upstream integration |
+| Current task | B1-B6/G1-G6/R025 complete; G7/G11 accepted with scoped residuals, G8 reassessed, G9 diagnosed; G12 metadata-source reuse in final gates; G10 annotation dependency not integrated |
+| Next action | Finish G12 adopted-runtime full source/package gates, then distributable upstream annotation integration |
 | Product changes | Backward-compatible operand/cache/grouped-reference improvements; opt-in 34-tool artifact workflow; measured private archive-hash reuse; explicit multi/all-module AAB union; original-byte native 041 logical views and source/legacy handoff; defaults unchanged |
-| Planning checks | G7 eb8159a passes 25/25 CI jobs, 1975 tests per source/canonical-sdist/exact-wheel suite with zero skips; final stdio/HTTP and package identities pass; G8 accepts 144 complete collections; G2 model matrix remains separate 12/12 |
-| Retained residuals | Douyin default-flat warm latency; B3 aggregate schema/observed model-latency costs; B4 copy/storage; B5 protobuf XML; G10 upstream source annotations/integration and source pagination; no real-device large-041/cool-host claim; dynamic/reflection edges |
+| Planning checks | G11 3709bf2 passes 25/25 CI jobs and 1992 tests per source/canonical-sdist/exact-wheel suite; G12 prototype passes 24 complete stdio/two HTTP collections and 124 focused tests; G8 144 complete collections and G2 model matrix 12/12 remain separate |
+| Retained residuals | Douyin default-flat warm latency; B3 aggregate schema/observed model-latency costs; B4 copy/storage; B5 protobuf XML; G10 upstream source annotations/integration; G12 final gates; no real-device large-041/cool-host claim; dynamic/reflection edges |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
-| Release state | v0.2.5 published at 87b3630; subsequent G7 changes remain unreleased and do not move main or the release tag |
+| Release state | v0.2.5 published at 87b3630; subsequent G7/G11/G12 changes remain unreleased and do not move main or the release tag |
 
 G2 contract-size investigation: initially reusing `DexResult` on every wrapper
 inflated the full canonical tool surface to 77131 o200k_base tokens. Eight focused

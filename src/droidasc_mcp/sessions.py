@@ -393,8 +393,8 @@ class DexSessions:
             finally:
                 with self.lock:
                     self.reserved -= reservation
-        if operation == "get_class_source":
-            reservation = self.settings.max_output_bytes
+        if operation in {"get_class_source", "get_class_source_metadata"}:
+            reservation = self.settings.max_output_bytes if not physical_sources else 0
             with self.lock:
                 available = self.settings.max_dex_session_bytes - self.reserved
                 if reservation + sum(e.size for e in self.entries.values()) > available:
