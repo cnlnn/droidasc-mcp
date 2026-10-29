@@ -12,10 +12,58 @@ copy/hash/identity checks, lazy code preparation and ordinary resource readers r
 Eight new adopted regressions pass. The isolated prototype passes 1975 local tests,
 30 serial alternating real-MCP trials and 60 complete collections independently
 checked against original bytes. Production adoption only removes an unused import
-and formats the same function bodies. Fresh final-commit cross-platform/package
-gates remain pending; this is not part of the published v0.2.5 runtime.
+and formats the same function bodies. Final development commit
+`eb8159a6416dabd231ff074fb1cf3fb27ec0d23e` passes
+[CI 40787653294](https://github.com/cnlnn/droidasc-mcp/actions/runs/40787653294),
+25/25 jobs. Eight Linux/Windows Python 3.10-3.13 source cells and sixteen installed
+canonical-sdist/exact-wheel suites each pass 1975 tests with zero failures/errors/skips.
+Twelve original CI ZIP digests, the canonical sdist, four exact native wheels and all
+69 frozen runtime source files are checked. Fresh stdio/HTTP covers resource-heavy APK,
+multi-module AAB, nested AAR, prefixed ZIP64, deferred DEX, original entry metadata,
+aggregate expanded/DEX limits and complete owned cleanup. g7-acceptance.json accepts
+development only and freshly checks main/tag/latest/asset digests unchanged.
+This is not part of the published v0.2.5 runtime or a final-commit optimization ratio.
 Evidence: artifacts/competitor-gap-g7-20261029. Its initial Taobao pilot overlapped
 owned tests and is excluded from latency acceptance; clean-matched is separate.
+
+## Complete concurrency reassessment, 2026-10-29
+
+artifacts/competitor-gap-g8-20261029/g8-acceptance.json binds 24 serial alternating
+real-MCP trials and 144 independently checked complete collections against original
+APK bytes, with pinned comparator source/runtime and original request/cursor replay.
+Two APKs, flat/grouped cells, four CPUs and three rounds are checked; no code or
+default changes occur. Douyin first complete concurrent batches are 8.6289/22.8832 s
+flat and 7.5928/23.7598 s grouped, product/comparator medians. Repeated medians are
+7.0980/6.6423 s flat and 5.9162/6.6485 s grouped. WeChat repeated medians are
+3.6886/3.9304 s flat and 3.7225/3.8728 s grouped. Douyin default flat retains a
+roughly 7% warm residual. Separate format cells do not prove a causal format speedup,
+and the explicit temperature-start waiver does not establish cool-host performance.
+Historical Taobao comparator failures are not declared fixed by these cells.
+
+The G9 diagnosis under artifacts/competitor-gap-g9-20261029 verifies twelve cached
+flat pages equal G8, including cleanup/runtime identity. Client instrumentation shows
+substantial jsonschema validation cost; it does not justify another cache or disabling
+validation. g9-diagnosis.json records diagnosis only, not a performance fix or release.
+
+## Source navigation probe, 2026-10-29
+
+artifacts/competitor-gap-g10-20261029 retains a full real manifest-to-application-class
+source workflow. A separate original-DEX annotation reader confirms two Throws method
+annotations missing in current ASC CLI and metadata output but shown by the comparator.
+The source outputs differ, so the single pilot pair is not equal-correctness timing
+acceptance. Current and historical reference-query correctness gates are separate.
+
+An isolated upstream ASC candidate at 9216fe2 adds lazy annotation-directory loading
+for the selected class and reuses existing source rendering. The new focused tests
+first fail twice, then 48 tests plus four subtests pass. Fresh public CLI adds only the
+two annotation lines; real stdio reconstructs all five metadata pages equal to comparator
+text, and all 660 existing token links preserve identity and shifted code-point spans.
+The first verifier's invalid plain-CLI/metadata text equality assertion is retained and
+documented separately. A final overlay retains the actual installed dadguard wheel
+rather than the Git checkout's two differing files, repeating all 52 tests/subtests
+and five complete metadata pages. installed-deps-verification.json binds that retest.
+upstream-candidate-verification.json accepts an isolated prototype,
+not an installed dependency change, MCP product fix, new package gate or publication.
 
 ## v0.2.5 published, 2026-10-29
 

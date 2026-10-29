@@ -11,7 +11,9 @@ This is completion of the scoped implementation plan, not universal competitor p
 cool-host performance proof. The maintainer subsequently approved publishing
 v0.2.5 and continuing catch-up on 2026-10-29. Publication is complete at
 `87b3630`, with fresh versioned CI packages and remote/download readback under
-artifacts/release-025-20261029. G7 now continues separately on the development branch.
+artifacts/release-025-20261029. G7 is accepted separately on the development branch;
+G8 reassessment and G9 diagnosis are complete. G10 has reproduced a source-annotation
+gap and verified an isolated upstream fix, not an installed product/dependency change.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -25,7 +27,10 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | Goal | Deliverable | State |
 | --- | --- | --- |
 | R025 | Fresh versioned source/canonical-sdist/native-wheel gates, exact CI assets, main/tag/latest/download hash readback | published and verified at 87b3630; CI 40784077867, 25/25 jobs and six downloaded assets; older releases unchanged |
-| G7 | Reduce artifact-open preparation cost by reusing the compact directory in the upstream-derived handle workflow | implemented after publication; eight adopted regressions pass; isolated 1975-test/30-trial/60-collection proof passes; final-commit package gates pending |
+| G7 | Reduce artifact-open preparation cost by reusing the compact directory in the upstream-derived handle workflow | accepted at eb8159a; CI 40787653294 passes 25/25 jobs, 1975 tests per source/package cell; final stdio/HTTP and prototype 30-trial/60-collection proof pass; unreleased |
+| G8 | Fresh complete concurrent method/field comparison before another cache port | accepted reassessment: 24 serial real-MCP trials, 144 independently checked complete collections; Douyin flat warm residual remains, grouped option wins in this sample |
+| G9 | Locate the residual flat warm-path cost before selecting a rewrite | diagnosis accepted: 12 cached pages equal G8; client schema validation is prominent in the instrumented sample; no new cache/default change or performance-fix claim |
+| G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -52,8 +57,73 @@ Clean prototype load medians before/after are 0.2653/0.2432 seconds Taobao,
 2.0334/2.0101, 2.9637/2.9446 and 5.7201/5.5281 seconds. Retained bytes are effectively
 unchanged, and these are current-host prototype comparisons, not competitor, normal-
 temperature, final-commit performance or overall memory claims. Production adoption
-only removes an unused import and reformats the same runtime function bodies. Freeze
-and validate the final development commit before accepting G7; do not republish v0.2.5.
+only removes an unused import and reformats the same runtime function bodies. Final
+commit eb8159a passes CI 40787653294: all 25 jobs, eight Linux/Windows Python 3.10-3.13
+source cells and sixteen canonical-sdist/exact-wheel suites each pass 1975 tests without
+failures/errors/skips. All twelve CI ZIPs match server digests; four native wheels and
+the canonical sdist match 69 frozen runtime source files. Fresh stdio/HTTP workflows
+cover many-resource APK, explicit multi-module AAB, nested AAR, prefixed ZIP64, lazy
+DEX preparation, aggregate budgets and cleanup. g7-acceptance.json binds these gates
+and fresh unchanged main/tag/latest/asset-digest readback. These development packages
+are not replacement v0.2.5 assets; prototype timings remain prototype-only.
+
+G8 evidence: artifacts/competitor-gap-g8-20261029/g8-acceptance.json. Two APKs, two
+formats and three alternating rounds produce 24 fresh-server trials and 144 complete
+collections, all independently checked against original bytes: 72 product and 72 pinned
+comparator collections. Each trial completes three concurrent method/field batches.
+Four CPUs, the same interpreter/input/limits, serial timing and the explicit temperature
+start-guard waiver are recorded. No product code/default changes are made by G8.
+
+| Input / format | First complete batch, ours / comparator | Repeated complete batch, ours / comparator |
+| --- | --- | --- |
+| Douyin / flat | 8.6289 / 22.8832 s | 7.0980 / 6.6423 s |
+| Douyin / grouped | 7.5928 / 23.7598 s | 5.9162 / 6.6485 s |
+| WeChat / flat | 4.6458 / 10.5124 s | 3.6886 / 3.9304 s |
+| WeChat / grouped | 4.4254 / 10.3207 s | 3.7225 / 3.8728 s |
+
+Douyin's default flat warm batch remains about 7% slower; the already accepted,
+upstream-derived grouped option is about 11% faster in its matched cell. Format cells
+are separate, not a paired flat-to-grouped optimization experiment. This is neither
+universal/cool-host parity nor a before/after G7 speed claim. Historical Taobao field
+false positives are not retested or declared fixed by these two-input cells.
+
+G9 evidence: artifacts/competitor-gap-g9-20261029/g9-diagnosis.json. Twelve real cached
+flat pages exactly match the accepted G8 responses. Client cProfile records 2.0118
+instrumented seconds, with 1.3657 cumulative seconds in jsonschema properties; one
+host page records 0.0348 total / 0.0266 reference-read cumulative seconds. These are
+diagnostic samples, not additive wall budgets or whole-workflow performance gates.
+Do not add another cache, disable client validation or repeat the rejected duplicate-
+page-cache bypass on this evidence. The public ASC getclass CLI already selects an
+owning DEX; passing an archive does not imply decompiling every DEX.
+
+G10 evidence: artifacts/competitor-gap-g10-20261029. The real F-Droid application-class
+workflow collects every source page and token link after manifest/class/outline handoff.
+It exposes two missing Throws annotations in both current ASC CLI and metadata source.
+A separate raw original-DEX directory/encoded-value reader confirms the Exception and
+Throwable annotations; the comparator shows both. The unequal-source pilot is not an
+equal-correctness timing comparison, despite five product source pages versus one
+comparator response. Existing page limits/defaults stay unchanged.
+
+The installed droidasc package's 57 Python files match upstream 9216fe2. Dadguard's
+installed wheel differs from that Git checkout in two files; both match the wheel
+RECORD. The final overlay retest retains those installed bytes and changes only the
+ASC decompiler file. Its dadguard intentionally leaves
+annotations_directory_item empty; existing ASC annotation rendering only reads that
+field. An isolated upstream candidate lazily loads the selected class directory using
+the existing CM accessor, adding two lines without monkeypatching dadguard or adding
+private core imports to MCP. Two regressions fail before the fix; afterward 48 focused
+tests plus four subtests pass. Fresh public CLI adds only the original annotation lines;
+five real-MCP metadata pages equal the comparator text, and all 660 existing token
+links retain their identities with correctly shifted spans. Originals and failed harness
+attempts are retained. upstream-candidate-verification.json and
+installed-deps-verification.json bind this prototype only:
+the installed dependency, published release and MCP runtime are unchanged. Integrate
+through a distributable upstream dependency before calling this an adopted product fix.
+
+Next small goal: evaluate complete source-pagination reuse through the existing bounded
+public-CLI snapshot machinery, rather than adding a second cache or copying a decompiler.
+Retain the verified upstream annotation patch separately while resolving dependency
+integration. Complete-result correctness and actual workflow benefit decide adoption.
 
 The maintainer subsequently challenged independent reimplementation when the comparator
 already has working code. Subsequent work is reuse-first: identify the exact upstream
@@ -302,11 +372,11 @@ first fail because the profile is absent (`contracts-red.xml`).
 
 | Item | Current record |
 | --- | --- |
-| Current task | B1-B6/G1-G6 and R025 publication complete; G7 development acceptance in progress |
-| Next action | Freeze G7, run fresh final-commit source/canonical-package gates, then reassess the remaining full-concurrent workflow gap before the next reuse slice |
+| Current task | B1-B6/G1-G6/R025 complete; G7 accepted, G8 reassessed, G9 diagnosed; G10 upstream source-annotation candidate verified but not integrated |
+| Next action | Evaluate complete source-pagination reuse through existing bounded public-CLI snapshots; retain the isolated annotation fix for distributable upstream integration |
 | Product changes | Backward-compatible operand/cache/grouped-reference improvements; opt-in 34-tool artifact workflow; measured private archive-hash reuse; explicit multi/all-module AAB union; original-byte native 041 logical views and source/legacy handoff; defaults unchanged |
-| Planning checks | G6 at ead1a91 passes 25/25 CI jobs, 1967 tests per Linux/Windows/source/canonical-sdist/exact-wheel suite with zero skips; all four platform/ABI package pairs match 69 runtime source files; G2 model matrix remains separate 12/12 |
-| Retained residuals | B3 aggregate schema/observed model-latency costs; B4 copy/storage costs; B5 protobuf XML decoding limitation; no real-device large-041 or normal-temperature performance claim; unresolved dynamic/reflection edges |
+| Planning checks | G7 eb8159a passes 25/25 CI jobs, 1975 tests per source/canonical-sdist/exact-wheel suite with zero skips; final stdio/HTTP and package identities pass; G8 accepts 144 complete collections; G2 model matrix remains separate 12/12 |
+| Retained residuals | Douyin default-flat warm latency; B3 aggregate schema/observed model-latency costs; B4 copy/storage; B5 protobuf XML; G10 upstream source annotations/integration and source pagination; no real-device large-041/cool-host claim; dynamic/reflection edges |
 | Fixed architecture decisions | Backward-compatible broad type scope; explicit operand scope; bounded existing selected-set cache; original-input provenance; no resident full-APK pool |
 | Release state | v0.2.5 published at 87b3630; subsequent G7 changes remain unreleased and do not move main or the release tag |
 

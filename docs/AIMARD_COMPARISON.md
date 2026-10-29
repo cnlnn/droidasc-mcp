@@ -1,5 +1,32 @@
 # aimardcr/asc-mcp: source-backed comparison
 
+## Current increment, 2026-10-29
+
+v0.2.5 is published at 87b3630; subsequent development is separate. G7's compact
+artifact inventory is accepted at eb8159a with CI 40787653294, all 25 jobs and 1975
+tests per source/canonical-sdist/exact-wheel suite, plus final real stdio/HTTP checks.
+The pinned comparator remains 848c711f1d80a1c2577283f1fa5f475ff734aa40 for these
+comparisons. See GOAL_02X.md and VALIDATION.md for the current ledger; sections below
+retain historical runtimes, measurements and pre-reuse statements.
+
+G8 freshly checks 24 serial trials / 144 complete original-byte-validated collections.
+Douyin default-flat repeated concurrent batches remain about 7% slower (7.0980 versus
+6.6423 s median); the already adopted upstream-derived grouped option wins its matched
+cell (5.9162 versus 6.6485 s). First complete batches favor the product in both formats.
+WeChat repeated medians are 3.6886/3.9304 s flat and 3.7225/3.8728 s grouped.
+Separate format cells, current-host thermal override and two APKs do not establish
+universal parity, causal format speedup or a before/after G7 optimization ratio.
+
+G9's cached-page diagnosis points to client validation/pagination rather than a
+missing scan cache; no further cache rewrite is adopted. G10's manifest-to-source
+probe identifies a genuine current source-output gap: two original Throws annotations
+are omitted by the installed ASC/dadguard path but shown by the comparator. Original
+DEX bytes independently confirm them. A two-line isolated upstream lazy-directory fix
+passes focused tests, public CLI and complete real-MCP metadata/token-span verification.
+It is not integrated into the installed dependency or published release. The unequal-
+source pilot cannot be used as an equal-correctness latency comparison. Receipts live
+under artifacts/competitor-gap-g{7,8,9,10}-20261029.
+
 ## v0.4.1 cold-query investigation, 2026-10-22
 
 The competitor's main was rechecked at `848c711f1d80a1c2577283f1fa5f475ff734aa40`.
