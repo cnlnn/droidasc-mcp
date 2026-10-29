@@ -2,7 +2,13 @@ name: CI
 
 on:
   push:
+    paths-ignore:
+      - .github/workflows/standard-install.yml
+      - scripts/verify_standard_install.py
   pull_request:
+    paths-ignore:
+      - .github/workflows/standard-install.yml
+      - scripts/verify_standard_install.py
 
 permissions:
   contents: read
