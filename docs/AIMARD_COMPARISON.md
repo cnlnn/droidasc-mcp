@@ -1,6 +1,6 @@
 # aimardcr/asc-mcp: source-backed comparison
 
-## Current increment, 2026-10-29
+## Current increment, 2026-10-30
 
 v0.2.5 is published at 87b3630; subsequent development is separate. G7's compact
 artifact inventory is accepted at eb8159a with CI 40787653294, all 25 jobs and 1975
@@ -14,14 +14,37 @@ change: 102 complete public calls over stdio/HTTP, 36 complete paginated collect
 and independent scans of 69 original DEX files/73,977,365 instructions agree on all
 selected outgoing, incoming and field sites. Twelve exact Smali collections cover
 six distinct methods with matching flags/opcodes/member operands. This is bounded
-workflow evidence, not universal correctness or a new latency claim. The current
-highest-value change is normal installation of the verified upstream source fixes;
-development dependency adoption and its changed-dependency package gates are in
-progress, separate from published v0.2.5. No further corpus goal is needed merely
-because this selected workflow passed.
+workflow evidence, not universal correctness or a new latency claim. D1 now accepts
+normal development dependency adoption of the verified annotation/raw-type fixes,
+separate from published v0.2.5. No further corpus goal is implied by this acceptance.
+
+The dependency is `0.1.2.post3+sourcefixes.2` at immutable source
+`a6f96b864cc317116cd38af143c63fe82b149099`, subdirectory
+`third_party/droidasc_sourcefixes`. Candidate `cdb4f35` passes CI 40908697104:
+25 successful jobs and 24 Linux/Windows Python 3.10-3.13 locked source/package
+suites, each with 2030 tests and zero failures/errors/skips. Separate Linux Python
+3.13 CI 40915579504 (`05c5088`) proves ordinary pip's complete resolver in two fresh
+venvs, using those exact canonical sdist/native-wheel artifacts without seeds,
+`--no-deps` or overlays. Both PEP 610 identities match the pinned SHA/subdirectory;
+80 engine/23 original dadguard/69 MCP source identities and five regressions per
+consumer pass. This ordinary-pip claim is Linux-only, not a Windows pip claim.
+
+The normal locked-uv clean-clone path also passes with its existing ordinary cache,
+not a cold cache. Eight real stdio/HTTP plain/metadata collections preserve the G15
+source bytes, all 656 ordered metadata links and both original Throws annotations.
+Evidence is under `artifacts/competitor-gap-g17-20261029/`: `adoption-ci/ci-acceptance.json`,
+`adoption-pip-ci/acceptance.json`, `adoption-uv-normal-cache/receipt.json` and
+`adoption-uv-workflows/verification.json`. The independent combined closure is
+`artifacts/competitor-gap-g17-20261029/D1-acceptance.json`, SHA-256
+`c4eb9eafa0a2409b5ef180ad91638ab9f68375b8e512ee0b9c3ac4d57e13b63f`.
+Local TLS/download failures remain retained;
+the accepted remote pip result does not rewrite them. Published v0.2.5 assets remain
+unchanged and the development increment is unreleased. The checkpoint-specific
+G10-G16 integration statuses below are historical, superseded by D1 for default
+dependency adoption only; no public-upstream-PR or overall parity claim is added.
 
 G8 freshly checks 24 serial trials / 144 complete original-byte-validated collections.
-Douyin default-flat repeated concurrent batches remain about 7% slower (7.0980 versus
+Douyin default-flat repeated concurrent batches remain about 6.86% slower (7.0980 versus
 6.6423 s median); the already adopted upstream-derived grouped option wins its matched
 cell (5.9162 versus 6.6485 s). First complete batches favor the product in both formats.
 WeChat repeated medians are 3.6886/3.9304 s flat and 3.7225/3.8728 s grouped.

@@ -1,6 +1,6 @@
 # 0.2.x incremental completion goal
 
-## Current implementation plan, 2026-10-27
+## Current implementation plan, 2026-10-30
 
 Status: the agreed B1-B6 plan and G1-G6 small goals are accepted with explicit
 scope/residuals. On 2026-10-29 the maintainer requested small, independently accepted
@@ -19,17 +19,19 @@ residual. G12 metadata/token-link pagination reuse is accepted at 5a96ea6 with c
 matched stdio/HTTP and cross-platform source/package gates, restoring that error-field
 compatibility. G13 prepares the verified upstream annotation contribution without
 modifying installed dependencies or publishing a new version. Its isolated normal-
-wheel integration now passes complete source workflows; default dependency adoption
-and the public upstream contribution remain separate and open. G14 independently
+wheel integration passes complete source workflows; D1 below now closes default
+dependency adoption, not the separate public upstream contribution. G14 independently
 verifies the member-navigation path and finds 25 invalid extra class-link identities.
 G15 accepts the separate upstream raw-type fix in a normal installed Linux candidate;
 G16 accepts its original-byte source-identity check on two larger APK application
-classes. Default upstream integration remains open; these are development candidates.
+classes. Those checks were isolated development candidates; D1 now adopts the verified
+fixes as the normal development dependency.
 G17 now accepts the selected application-member navigation chains: four matched
 transport sessions, 36 complete paginated collections and independent scans of all
-69 original DEX files agree. The finite next increment is normal dependency adoption
-of the already verified fixes, not another sampling goal; its changed-dependency
-source/package gates are pending. Published v0.2.5 remains unchanged.
+69 original DEX files agree. D1 default dependency adoption is now accepted: the
+changed-dependency source/package matrix, ordinary Linux pip consumers and normal
+locked-uv identity/real-MCP workflows pass. Published v0.2.5 remains unchanged; the
+accepted development changes are not a new release or complete competitor parity.
 This section is the
 single current execution ledger and ordered backlog. Older sections below retain
 historical decisions and receipts; their candidate/release statuses do not override
@@ -38,7 +40,7 @@ The maintainer requested continuous goal-mode execution on 2026-10-27: finish ea
 batch's gates and automatically advance to the next without repeated confirmation.
 This approval covers v0.2.5 only, not automatic publication of later changes.
 
-### Publication and next increment, 2026-10-29
+### Publication and current increment, 2026-10-30
 
 | Goal | Deliverable | State |
 | --- | --- | --- |
@@ -46,15 +48,15 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G7 | Reduce artifact-open preparation cost by reusing the compact directory in the upstream-derived handle workflow | accepted at eb8159a; CI 40787653294 passes 25/25 jobs, 1975 tests per source/package cell; final stdio/HTTP and prototype 30-trial/60-collection proof pass; unreleased |
 | G8 | Fresh complete concurrent method/field comparison before another cache port | accepted reassessment: 24 serial real-MCP trials, 144 independently checked complete collections; Douyin flat warm residual remains, grouped option wins in this sample |
 | G9 | Locate the residual flat warm-path cost before selecting a rewrite | diagnosis accepted: 12 cached pages equal G8; client schema validation is prominent in the instrumented sample; no new cache/default change or performance-fix claim |
-| G10 | Complete manifest-to-source workflow and original-byte source-difference check | gap reproduced: two original method annotations are omitted by current ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; dependency integration pending |
+| G10 | Complete manifest-to-source workflow and original-byte source-difference check | historical gap reproduced in the then-installed ASC; isolated two-line upstream fix passes focused tests/public CLI/real MCP; normal dependency adoption now accepted by D1 |
 | G11 | Reuse complete plain-CLI class source across immutable-session pages | accepted at 3709bf2 with scoped later-error optional-field residual; CI 40796945147 passes 25/25 jobs, 1992 tests per source/package suite; 24 complete stdio plus two HTTP collections pass, unreleased |
 | G12 | Reuse complete metadata source and ordered token links with exact Unicode spans | accepted at 5a96ea6; CI 40801161988 passes 25/25 jobs and 2013 tests per source/package suite; 24 matched stdio/two HTTP plus four adopted stdio collections, unreleased |
-| G13 | Integrate the verified annotation fix through upstream rather than a runtime monkeypatch | local contribution 51e2b31 and normal-install dependency wheel prepared; 16 complete plain/metadata stdio/HTTP collections pass with all 660 links; default dependency adoption and public PR open |
-| G14 | Follow real source-token identities into exact method/field source and references | probe accepted: both transports equal, 343 member tokens and nine full query sites match original-byte oracle; 25 additional class-token identities are wrong in the default dependency |
-| G15 | Reuse original upstream type data for source class links | isolated normal-wheel candidate accepted at local upstream 140b05c: correct 21 original types/remove four keyword links, preserve all source bytes and 635 other links; default dependency adoption remains open |
+| G13 | Integrate the verified annotation fix through upstream rather than a runtime monkeypatch | local contribution 51e2b31 and normal-install dependency wheel prepared; 16 complete plain/metadata stdio/HTTP collections pass with all 660 links; D1 closes default adoption, not the separate public PR |
+| G14 | Follow real source-token identities into exact method/field source and references | probe accepted: both transports equal, 343 member tokens and nine full query sites match original-byte oracle; 25 additional class-token identities were wrong in the then-default dependency |
+| G15 | Reuse original upstream type data for source class links | isolated normal-wheel candidate accepted at local upstream 140b05c: correct 21 original types/remove four keyword links, preserve all source bytes and 635 other links; D1 now accepts normal default adoption |
 | G16 | Check the raw-type candidate on manifest-discovered application classes in larger APKs | accepted scoped corpus check: 32 complete source collections, 460 independent member identities, eight additional types corrected/42 keyword links removed; all source bytes and other links unchanged |
 | G17 | Follow selected larger-corpus source members through exact method source and complete references | accepted selected workflow: 102 public calls, 94 response pages, 36 complete collections; all 69 original DEX/73,977,365 instructions independently scanned; selected outgoing/incoming/field sets and exact Smali agree |
-| D1 | Make the verified annotation and raw-type fixes the normal development dependency | in progress: source-only downstream candidate at an immutable preceding Git commit, ordinary pip and locked uv identity/workflow checks plus existing changed-dependency matrix; not a release |
+| D1 | Make the verified annotation and raw-type fixes the normal development dependency | accepted at cdb4f35 with engine a6f96b8: 25-job changed-dependency matrix, two fresh Linux ordinary-pip consumers and eight normal locked-uv MCP collections pass; development only, not a release |
 
 G17 evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
 130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e.
@@ -67,6 +69,47 @@ The Douyin 300-second interrupted oracle attempt is retained; its separate full
 600-second attempt passes in 526.21 seconds. This proves the selected navigation
 chains, not all-class decompiler semantics, runtime dispatch or performance parity.
 No new product mismatch was found, so no new scanner/cache or corpus goal is added.
+
+### D1 default dependency adoption, 2026-10-30
+
+The development dependency now pins `0.1.2.post3+sourcefixes.2` to immutable Git
+source `a6f96b864cc317116cd38af143c63fe82b149099`, subdirectory
+`third_party/droidasc_sourcefixes`. Candidate `cdb4f35` is accepted through separate
+installation and workflow gates, not by treating one install method as another:
+
+- `artifacts/competitor-gap-g17-20261029/adoption-ci/ci-acceptance.json`: CI
+  40908697104 passes all 25 jobs. The Linux/Windows Python 3.10-3.13 locked
+  source/package matrix contains eight source and sixteen installed-package suites;
+  each passes 2030 tests with zero failures, errors or skips.
+- `artifacts/competitor-gap-g17-20261029/adoption-pip-ci/acceptance.json`: separate
+  Linux Python 3.13 CI 40915579504 at helper commit `05c5088` installs the exact
+  canonical sdist and native wheel in two fresh venvs with ordinary pip's complete
+  resolver, without dependency seeds, `--no-deps` or overlays. PEP 610 SHA/subdirectory,
+  all 80 engine files, 23 original dadguard files and 69 MCP sources match; each
+  consumer passes five real-worker/identity regressions with zero skips.
+- `artifacts/competitor-gap-g17-20261029/adoption-uv-normal-cache/receipt.json`:
+  the clean HTTPS clone's normal `uv --locked` path passes using the ordinary
+  existing uv cache. This is not a cold-cache installation claim.
+- `artifacts/competitor-gap-g17-20261029/adoption-uv-workflows/verification.json`:
+  eight complete real-MCP plain/metadata collections across stdio/HTTP match G15;
+  each metadata collection preserves 656 ordered links, and both original Throws
+  annotations remain present. This is the normal uv environment, not a pip workflow.
+
+The independent combined closure is
+`artifacts/competitor-gap-g17-20261029/D1-acceptance.json`, SHA-256
+`c4eb9eafa0a2409b5ef180ad91638ab9f68375b8e512ee0b9c3ac4d57e13b63f`.
+It rechecks the matrix/package, ordinary-pip, uv/workflow and preserved G17 bindings;
+the original main-environment engine's 80 files remain unchanged. Uncached source
+dependency installation still requires Git and GitHub HTTPS.
+
+The retained local TLS/download failures and interrupted attempts remain historical
+evidence; successful remote ordinary-pip acceptance closes their outstanding install
+gate without relabeling those failures. The Windows/Linux locked matrix does not
+imply Windows ordinary-pip verification. Published v0.2.5 assets are unchanged and
+this development increment is unreleased. The approximately 6.86% Douyin default-flat
+warm residual remains; D1 is not a performance fix or an overall competitor-parity claim.
+
+### Historical increment evidence
 
 G7 selection starts with measured private-copy/expanded-archive costs and the actual
 preparation readers. Compare upstream direct-ZIP/per-DEX handling with current bounded
@@ -117,7 +160,7 @@ start-guard waiver are recorded. No product code/default changes are made by G8.
 | WeChat / flat | 4.6458 / 10.5124 s | 3.6886 / 3.9304 s |
 | WeChat / grouped | 4.4254 / 10.3207 s | 3.7225 / 3.8728 s |
 
-Douyin's default flat warm batch remains about 7% slower; the already accepted,
+Douyin's default flat warm batch remains about 6.86% slower; the already accepted,
 upstream-derived grouped option is about 11% faster in its matched cell. Format cells
 are separate, not a paired flat-to-grouped optimization experiment. This is neither
 universal/cool-host parity nor a before/after G7 speed claim. Historical Taobao field

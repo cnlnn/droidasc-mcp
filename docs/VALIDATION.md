@@ -3,6 +3,50 @@
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
+## Default dependency adoption, 2026-10-30
+
+D1 is accepted for the development dependency `0.1.2.post3+sourcefixes.2`, pinned to
+Git source `a6f96b864cc317116cd38af143c63fe82b149099` and subdirectory
+`third_party/droidasc_sourcefixes`. The candidate is `cdb4f35`; the independently
+accepted gates have deliberately different scopes:
+
+| Gate | Verified scope | Evidence under artifacts/competitor-gap-g17-20261029 |
+| --- | --- | --- |
+| Existing changed-dependency matrix | CI 40908697104, 25 successful jobs; eight source and sixteen installed-package suites across Linux/Windows Python 3.10-3.13, each 2030 tests with zero failures/errors/skips | adoption-ci/ci-acceptance.json |
+| Ordinary pip consumers | Linux Python 3.13 CI 40915579504, helper commit 05c5088; two fresh venvs install the canonical sdist/native wheel with the complete resolver and no seeds, --no-deps or overlays; each passes four real-worker regressions plus one installed-identity case with zero skips | adoption-pip-ci/acceptance.json |
+| Normal locked uv | Clean HTTPS clone at cdb4f35, ordinary existing uv cache and verified Git dependency identity; no cold-cache claim | adoption-uv-normal-cache/receipt.json |
+| Normal uv MCP workflows | Eight complete plain/metadata collections over stdio/HTTP, all source bytes/page fields match G15 after checked session mapping, 656 ordered links per metadata collection and both original Throws annotations preserved | adoption-uv-workflows/verification.json |
+
+Independent combined closure:
+`artifacts/competitor-gap-g17-20261029/D1-acceptance.json`, SHA-256
+`c4eb9eafa0a2409b5ef180ad91638ab9f68375b8e512ee0b9c3ac4d57e13b63f`.
+It rechecks the CI ZIP/download bindings, ordinary-pip evidence, normal-uv install
+and workflow bindings, and the preserved G17 navigation receipt. The original local
+main-environment engine's 80 files remain unchanged; default adoption is verified
+through the development dependency definition and the separately proven clean installs.
+
+The ordinary-pip job reuses the exact already-accepted matrix artifacts, not a local
+replacement build. Canonical sdist SHA-256 is
+`cc4f8011dff1f2834a090bcaf54ce39225c4dc18edbd646cf8b2064b90ef0326`;
+Linux cp311-abi3 native-wheel SHA-256 is
+`e194ecb95cceee0efe855c074b575fbc2f9793afbf9789ee5ecbd6e9efa6689f`.
+Both fresh consumers verify PEP 610 URL/SHA/subdirectory, all 80 engine Python files,
+all 23 original dadguard files, all 69 MCP runtime sources and matching
+`Requires-Dist`. Their ten targeted test executions are separate from the 24 full
+matrix suites; neither is counted as a replacement for the other.
+
+The local direct-network/TLS failures, cold-cache attempts and interrupted consumers
+remain preserved under the adoption evidence directories. They are not relabeled as
+successful installs; the remote ordinary-pip gate now supplies the missing proof.
+The Linux/Windows locked source/package matrix does not establish Windows ordinary
+pip acceptance, and the eight MCP collections use the verified uv environment rather
+than the pip consumers. Published v0.2.5 assets are unchanged; this accepted development
+increment is not released. The approximately 6.86% default-flat Douyin warm residual
+remains, so D1 establishes neither a latency improvement nor overall competitor parity.
+Uncached source-dependency installation still requires Git and GitHub HTTPS; no public
+upstream PR or new package release is claimed by this downstream adoption.
+Earlier sections below retain their original checkpoint-specific scope and failures.
+
 ## Selected member navigation, 2026-10-30
 
 G17 completes four real stdio/HTTP sessions on the manifest-discovered WeChat and
@@ -20,9 +64,9 @@ Evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
 130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e;
 independent/verify_acceptance.py replays the sealed checks without another APK scan.
 Scope is the selected source-member navigation chain, not all classes, dynamic
-dispatch resolution or a performance claim. The next finite gate is default
-development dependency adoption of the already verified source fixes, rather than
-another corpus expansion. That changed-dependency gate remains pending.
+dispatch resolution or a performance claim. D1 above now accepts default development
+dependency adoption of these verified fixes through separate installation/package
+gates, without adding another corpus expansion or a performance claim to G17.
 
 ## Original type-link package check, 2026-10-29
 
