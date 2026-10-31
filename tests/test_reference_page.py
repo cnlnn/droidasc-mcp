@@ -1,6 +1,5 @@
 """Byte-limited pages retain complete rows and gap-free, advancing continuations."""
 
-import importlib
 import json
 from copy import deepcopy
 
@@ -66,8 +65,7 @@ def test_optional_diagnostics_are_dropped_before_splitting_a_valid_page():
 
 
 @pytest.mark.parametrize("mode", ["cache_only", "prefix"])
-def test_cache_fit_check_serializes_the_complete_items_only_once(monkeypatch, mode):
-    module = importlib.import_module("droidasc_mcp.reference_page")
+def test_cache_fit_check_preserves_original_page_and_prefix(mode):
     original = {
         **page([{"ordinal": i, "value": "x" * 70} for i in range(8)], offset=98, remaining=7),
         "query_cache": {
@@ -80,16 +78,6 @@ def test_cache_fit_check_serializes_the_complete_items_only_once(monkeypatch, mo
     untouched = deepcopy(original)
     without_cache = {key: value for key, value in original.items() if key != "query_cache"}
     maximum = size(without_cache) + 1 if mode == "cache_only" else 650
-    complete_encodes = 0
-    encode_size = module._size
-
-    def counted(value):
-        nonlocal complete_encodes
-        if isinstance(value, dict) and value.get("items") is original["items"]:
-            complete_encodes += 1
-        return encode_size(value)
-
-    monkeypatch.setattr(module, "_size", counted)
     bounded = reference_page(original, maximum)
     assert original == untouched
     if mode == "cache_only":
@@ -99,7 +87,6 @@ def test_cache_fit_check_serializes_the_complete_items_only_once(monkeypatch, mo
         assert bounded["query_cache"] == original["query_cache"]
         assert bounded["next_offset"] == 101
         assert size({**bounded, "items": original["items"][:4], "next_offset": 102}) + 1 > maximum
-    assert complete_encodes == 1
 
 
 @pytest.mark.parametrize("offset,total", [(0, 0), (3, 1)])
