@@ -1,6 +1,45 @@
 # aimardcr/asc-mcp: source-backed comparison
 
-## Current increment, 2026-10-30
+## Current increment, 2026-10-31
+
+W2 corrects a measurement bias before another cache rewrite. Timing-v2 performed
+two synchronous RSS process-tree walks per page, excluded from individual call
+durations but included between pages in whole-batch timing. The default-flat
+product needs 73 pages per batch versus 12 comparator pages. Timing-v3 removes
+only these redundant diagnostic walks, retaining periodic resource enforcement,
+external call deadlines and cleanup. Old receipts remain historical, not
+arithmetically adjusted.
+
+With the unchanged W1 `b325c012` runtime and fixed comparator `848c711`, a fresh
+six-server/36-complete-collection v3 run passes sealed original-byte truth and
+current provenance/continuation replay. Second-warm medians are 4.2771/5.0342 s
+(product/comparator): this cell now favors the product by about 15.0%. The old
+8.31% result is not evidence that the product is still behind on this cell.
+This refresh changes the observer, not product performance. The first startup/open
+window partially overlaps a disclosed preparation probe; all query/warm batches
+start after it finishes. No startup causal improvement is inferred.
+
+An independent one-source byte-sizing candidate passes the preset prototype
+screen, with 1314 equal page attempts and second-warm median 4.7029 -> 4.3041 s.
+Its final committed-runtime A/B fails the original screen: second warm regresses
+12.34%, first complete 3.84%, despite complete data equality. This does not isolate
+a causal code regression, but it does not justify adoption. The sizing change is
+withdrawn at `99d51aa`, restoring every W1 runtime byte. Only the corrected v3
+harness and compatibility regressions remain. Final CI 41176309158 passes all
+25 jobs and 24 source/package suites of 2167 tests without failures, errors or
+skips. Prototype and final within-product times are not combined with either
+old or fresh competitor ratios. Evidence is under
+`artifacts/competitor-gap-w2-20261031/`. W1 observations below retain timing-v2
+scope; published v0.2.5 is unchanged.
+
+A single bounded prepare-only diagnostic completes with unchanged input/runtime
+identities and clean owned processes/temporary files. Its profiled preparation
+takes 4.5953 s; several cumulative entries exceed that wall time and include
+background-thread frames. This is not an additive cost budget or a measured
+SQLite share. The source audit finds the useful streaming, hash/copy fusion and
+bounded prefetch already present; no new safely removable full-input pass or
+high-yield drop-in competitor function is established. Startup/storage remains
+a scoped tradeoff, not a reason to weaken identity, CRC or ownership checks.
 
 v0.2.5 is published at 87b3630; subsequent development is separate. G7's compact
 artifact inventory is accepted at eb8159a with CI 40787653294, all 25 jobs and 1975

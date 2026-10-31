@@ -1,6 +1,69 @@
 # 0.2.x incremental completion goal
 
-## Current implementation plan, 2026-10-30
+## Current implementation plan, 2026-10-31
+
+W2 is the bounded increment at final harness-only candidate `99d51aa`.
+Experimental product candidate `b387a9f` is not adopted. W2's first finding
+corrects the measurement, not the product: timing-v2 walked the owned process
+tree twice per page outside call timing but inside complete-batch timing. The
+product makes 73 pages per batch versus the comparator's 12, so the old +8.31%
+second-warm result is not an isolated product deficit. Original receipts remain
+unchanged. Timing-v3 keeps the background RSS/client/CPU/disk/deadline and cleanup
+guards, removes only those redundant walks, and labels operation RSS as a
+cumulative sampled trial peak with its sample count.
+
+The unchanged W1 product's fresh v3 comparison passes all 36 complete collections
+against sealed G8 truth. Second-warm medians are 4.2771/5.0342 seconds
+(product/comparator), about 15.0% lower for the product in this cell. This is a
+measurement refresh, not a product speedup. A disclosed preparation probe overlaps
+part of the first trial's startup/open window, ending before every query batch;
+startup values from this run are not isolated causal measurements.
+
+The separate byte-sizing prototype passes full 1314-page equality and its
+predeclared performance screen: second-warm median 4.7029 -> 4.3041 seconds
+(-8.48%), improving in all three pairs. The production candidate uses the same
+arithmetic with an AST-verified short-circuit spelling required by Ruff. It sizes
+the removed cache-diagnostic fragment instead of serializing the complete row
+list twice; cache/prefix boundaries, unknown fields, cancellation, validation and
+quotas stay unchanged. However, final committed-runtime A/B does not reproduce
+stable benefit: second-warm median regresses 12.34% with only one improving pair,
+and first-complete median regresses 3.84%. The unchanged predeclared screen fails.
+All data/identity checks pass; these noisy observations do not establish that the
+code caused every regression. The optimization is withdrawn rather than rerun
+until green. Final `99d51aa` restores all 69 runtime files exactly to W1, retaining
+only timing-v3 and cache/prefix compatibility regressions.
+
+The final matrix, CI 41176309158, passes all 25 jobs: eight source suites and
+16 canonical-sdist/exact-native-wheel suites, each with 2167 tests and zero
+failures/errors/skips. It verifies all 69 unchanged runtime files, 80 adopted
+engine files, including 23 unchanged official dadguard files, plus
+signing/Rust/stability gates.
+It does not add fresh per-suite PEP610 or ordinary-pip consumer evidence.
+W1's accepted stdio/HTTP runtime coverage carries forward only because all runtime
+bytes, native source, dependencies and schemas are unchanged; no new smoke or
+performance acceptance is claimed for the discarded product candidate. No new
+release, main merge or tag change is authorized.
+Four of W1's eight historical comparison cells directly execute this final
+runtime; the other four execute W1's older comparison baseline, not this runtime.
+
+The next-priority audit finds no safely removable whole-input hash/copy/inflate
+pass on this flat-open path: streaming copy/hash fusion and bounded overlap are
+already implemented. One bounded prepare-only profile completes in 4.5953 s,
+preserving input/runtime identities and removing its owned processes/temp tree.
+Several cumulative entries exceed wall time and include background frames, so
+this observer does not establish a critical-path split or SQLite share. No new
+startup optimization is adopted from it. A small inventory-key-set allocation
+candidate is outside this measured flat-open path and remains unmeasured; it is
+not a high-yield solution or a new competitor port. Stop speculative cache/copy
+rewrites rather than manufacture a gain by removing integrity checks.
+
+W2 evidence root: `artifacts/competitor-gap-w2-20261031/`. The earlier W1 timing-v2
+numbers below retain their historical scope; W2 supersedes their interpretation
+as the current competitor gap, without rewriting those measurements.
+Combined closure passes in `W2-acceptance.json`, SHA-256
+`9a0ebd08a9857ec372c4f6506441fdb13fd9a87f64be09fee00d713bd0562eeb`.
+The measurement/rejection/diagnosis increment is accepted; no new product
+performance improvement or universal competitor parity is claimed.
 
 Status: the agreed B1-B6 plan and G1-G6 small goals are accepted with explicit
 scope/residuals. On 2026-10-29 the maintainer requested small, independently accepted
@@ -65,6 +128,7 @@ This approval covers v0.2.5 only, not automatic publication of later changes.
 | G17 | Follow selected larger-corpus source members through exact method source and complete references | accepted selected workflow: 102 public calls, 94 response pages, 36 complete collections; all 69 original DEX/73,977,365 instructions independently scanned; selected outgoing/incoming/field sets and exact Smali agree |
 | D1 | Make the verified annotation and raw-type fixes the normal development dependency | accepted at cdb4f35 with engine a6f96b8: 25-job changed-dependency matrix, two fresh Linux ordinary-pip consumers and eight normal locked-uv MCP collections pass; development only, not a release |
 | W1 | Reduce the demonstrated default-flat row-schema cost without changing validation or payloads | accepted b325c012; production A/B, fresh pinned comparator and eight transport smoke cells pass; CI 40922087963 passes 25 jobs and 24 suites x 2162 without failures/errors/skips; combined seal passes, unreleased |
+| W2 | Correct asymmetric benchmark overhead and screen one bounded follow-up before adoption | final 99d51aa passes CI 41176309158, 25 jobs and 24 suites x 2167; fresh v3 second-warm cell favors unchanged product by 15.0%; sizing experiment rejected after failed final screen; startup observation finds no adopted high-yield rewrite; unreleased |
 
 G17 evidence: artifacts/competitor-gap-g17-20261029/g17-acceptance.json, SHA-256
 130392e03f2bbfab69c82e4933e2f1e2636aa478956a1c62b77f00d5fc09ea0e.

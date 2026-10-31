@@ -1,5 +1,85 @@
 # Local acceptance checks
 
+## W2 measurement and sizing increment, 2026-10-31
+
+Final harness-only candidate `99d51aa` passes CI 41176309158: all 25 jobs,
+eight source suites and 16 canonical-sdist/exact-native-wheel suites, each with
+2167 tests and zero failures/errors/skips. The collector verifies 12 artifact ZIP
+server digests, all 69 runtime files, shipped tests/scripts and four native
+wheels against the frozen commit. The unchanged adopted engine has 80 verified
+files, including 23 unchanged official dadguard files; 120 explicit upstream regression executions,
+56 signing variants and Linux/Windows Rust/stability checks pass. This unchanged-
+dependency matrix is not a fresh per-suite PEP610 or ordinary-pip consumer gate.
+`final-ci/ci-acceptance.json` SHA-256:
+`76fe8dd5c97653c6c0ea1315e3ba01c2143a033e87039b5914445acc857168b8`.
+Experimental product candidate `b387a9f` is not adopted. Timing-v3 removes redundant
+per-page RSS walks without changing monitor limits, external deadlines or cleanup.
+The precise regression fails twice on the old harness; the final harness suite
+passes 86 tests. Two sizing regressions first fail on duplicate full-item encoding;
+the changed limiter/cache/harness unit selection passes 123 tests without skips.
+The wider initial local selection has 231 passes and 30 explicitly skipped
+optional instruction-fixture cases; it is not the full acceptance gate. Both
+compiled schema checks pass unchanged: 49 inputs and 20 output contracts.
+
+The fresh v3 comparison uses the unchanged accepted W1 runtime. Its 36 complete
+collections, original-byte truth, current provenance, quotas and cleanup pass:
+`fresh-comparator/acceptance.json`, SHA-256
+`228ed1ad84d33e18375e6880501b0de3581504bf0f5f0d929800b71b8efcce7a`.
+The separate startup-overlap disclosure is bound by
+`fresh-comparator/independent-review-addendum.json`, SHA-256
+`95f50309419648c37b2f7227bbd49590de510c0b1cc05230a1d99521e44a41f1`.
+All query batches are outside that preparation overlap. This is observer
+correction, not product speedup, and does not rewrite timing-v2 receipts.
+
+The byte-sizing prototype preserves 36 complete collections, 1314 query-page
+attempts and 12 open/close structures. All three second-warm pairs improve and
+the predeclared screen passes; close median regresses by 2.15%. The original
+prototype acceptance is `prototype/acceptance.json`, SHA-256
+`bf6055cc18f3709a74204d46bcebd07bc116aac1b46ed62beca81f3d0c994f31`.
+Production syntax differs only by the independently audited nested-if to
+short-circuit transformation, but its separate final A/B fails the predeclared
+screen: second-warm median 4.2591 -> 4.7845 s (+12.34%), first complete +3.84%.
+All 36 collections, 1314 pages and identity/resource checks pass. The original
+final result is `final-performance/acceptance.json`, SHA-256
+`abe005334aa2cfd154459bc5d4fcd2c62314667f0168ad3d7ee0b6d716c8602c`.
+There is no accepted product gain and no remeasurement to select a green run.
+
+Commit `99d51aa` restores all 69 runtime files exactly to accepted W1. The final
+123-case limiter/cache/harness selection passes with zero skips, and the original
+main environment's 80 engine files remain identical to the original release
+sdist. Four of W1's eight historical transport comparison cells directly execute
+this final runtime; the other four use the older comparison baseline. Runtime
+transport evidence carries forward by exact identity;
+the prepared additional smoke for the discarded change is not an acceptance
+claim. The superseded product-candidate CI was cancelled to release its runners,
+not treated as a test failure; the final harness-only matrix is separately accepted.
+Inherited native execution evidence applies to the normal-clone/frozen binary
+`edac0338...`, not the differing ignored `src/droidasc_mcp/_dexscan.abi3.so` in
+the main checkout (`88d5585e...`). Native C source is unchanged; that ignored
+binary was not replaced or newly accepted by the transport identity review.
+
+The separate single prepare-only diagnostic completes without an install, sync,
+server or second APK run. The unused first launcher was rejected before execution
+because its inherited 128 MiB per-file guard would truncate a valid DEX bundle;
+v2 keeps an 8 GiB per-file/temp bound and separate sampled 128 MiB artifact bound.
+Its entire guarded attempt takes 8.0169 s, including before/after identity probes;
+the profiled preparation reports 4.5953 s. All APK/runtime/native/SDK identities
+match, all owned processes are reaped and temporary files are removed. Receipt:
+`open-diagnostic-v2/attempt1/execution.json`, SHA-256
+`b9835cca37132d2e56cddf72f5b18dfba182d2a48e582b759b22ae5f0faf3584`.
+The pstats has background frames and cumulative entries exceeding wall time;
+thread attribution and overlapping waits prevent an additive phase budget or
+causal SQLite-share claim. It is an observation, not an MCP/performance adoption
+gate. No startup candidate is adopted, and no compression/block-size or weakened
+validation experiment is reopened.
+
+All W2 paths above are relative to
+`artifacts/competitor-gap-w2-20261031/`; no new publication is implied.
+The combined evidence recheck passes in `W2-acceptance.json`, SHA-256
+`9a0ebd08a9857ec372c4f6506441fdb13fd9a87f64be09fee00d713bd0562eeb`.
+It accepts the measurement correction and preserved runtime while rejecting
+the sizing optimization, not a new product speedup.
+
 Current completion scope: [GOAL_02X.md](GOAL_02X.md). Competitor workflow closure,
 ergonomics, performance and independent accuracy remain the overall completion criteria.
 
