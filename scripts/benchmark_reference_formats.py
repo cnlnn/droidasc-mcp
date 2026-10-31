@@ -83,7 +83,7 @@ async def main(args):
         "benchmark_client_memory_cap_mib": args.client_memory_mib,
         "timeout_per_call_seconds": args.timeout,
         "timeout_per_complete_trial_seconds": args.trial_timeout,
-        "timing_version": 2,
+        "timing_version": benchmark.TIMING_VERSION,
         "receipt_storage_version": 2,
         "cpu_budget_version": 1,
         "trials": [],

@@ -30,6 +30,7 @@ from mcp.client.stdio import StdioServerParameters
 METHOD = "Ljava/lang/String;->equals(Ljava/lang/Object;)Z"
 FIELD = "Landroid/os/Build;->MODEL:Ljava/lang/String;"
 GRAPH_ROOT = "Landroid/taobao/safemode/SafeModeActivity;->onCreate(Landroid/os/Bundle;)V"
+TIMING_VERSION = 3
 
 
 class CallDeadline:
@@ -381,6 +382,8 @@ async def trial(args, implementation, scenario, round_number, report, save):
         "round": round_number,
         "operations": [],
         "peak_descendant_rss_bytes": 0,
+        "descendant_rss_samples": 0,
+        "resource_sampling_mode": "periodic_background",
         "sampled_peak_client_rss_bytes": 0,
         "sampled_peak_temporary_logical_bytes": 0,
         "sampled_peak_temporary_allocated_bytes": None,
@@ -426,13 +429,6 @@ async def trial(args, implementation, scenario, round_number, report, save):
             )
         printed_operations = len(metric["operations"])
 
-    def current_rss():
-        total = 0
-        for child in children():
-            with suppress(psutil.Error):
-                total += child.memory_info().rss
-        return total
-
     async def monitor():
         nonlocal peak, next_affinity_check
         next_disk_sample = 0
@@ -454,6 +450,7 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 with suppress(psutil.Error):
                     total += child.memory_info().rss
             peak = max(peak, total)
+            metric["descendant_rss_samples"] += 1
             metric["peak_descendant_rss_bytes"] = max(metric["peak_descendant_rss_bytes"], total)
             if total > args.memory_mib * 1024**2:
                 metric["safety_stop"] = "aggregate_descendant_rss"
@@ -536,8 +533,6 @@ async def trial(args, implementation, scenario, round_number, report, save):
                 metric["transport_start_seconds"] = round(time.monotonic() - started, 4)
 
                 async def call(label, tool, params, *, allow_response_limit=False):
-                    nonlocal peak
-                    peak = current_rss()
                     start = time.monotonic()
                     operation = {"label": label, "tool": tool, "arguments": params, "progress": []}
                     metric["operations"].append(operation)
@@ -602,7 +597,10 @@ async def trial(args, implementation, scenario, round_number, report, save):
                         operation["seconds"] = round(
                             response_times.get(label, time.monotonic()) - start, 4
                         )
-                        operation["peak_descendant_rss_bytes"] = max(peak, current_rss())
+                        samples = metric["descendant_rss_samples"]
+                        operation["peak_descendant_rss_bytes"] = peak if samples else None
+                        operation["descendant_rss_samples"] = samples
+                        operation["peak_descendant_rss_sampling"] = "trial_background_peak"
 
                 ours = implementation == "ours"
                 artifact_handle = ours and getattr(args, "artifact_handles", False)
@@ -726,7 +724,7 @@ async def main(args):
         "competitor_runtime": competitor_runtime,
         "ours_runtime_sha256": runtime_identity(),
         "harness_sha256": digest(Path(__file__)),
-        "timing_version": 2,
+        "timing_version": TIMING_VERSION,
         "receipt_storage_version": 2,
         "external_call_deadline_version": 1,
         "temporary_usage_sampling_seconds": 0.2,
@@ -754,6 +752,10 @@ async def main(args):
         "can contain more processes than workers, but cannot exceed this logical-CPU set. "
         "The common Python/psutil wrapper overhead is included in time and RSS. "
         "Timing stops on decoded MCP response arrival; full receipt I/O is outside measured calls. "
+        "RSS/client caps are sampled nominally every 0.02 s; CPU affinity/disk every 0.2 s. "
+        "No additional synchronous process-tree walk is performed per page. Operation RSS "
+        "is the cumulative sampled trial peak at response completion, not a per-call peak; "
+        "its sample count is recorded, with null when no sample has completed. "
         "RSS sums all owned descendants (shared pages can be counted more than once). "
         "Temporary regular files are sampled separately in a background thread every 0.2 s, "
         "not added to RSS; peaks are lower bounds and include indexes/private snapshots. "

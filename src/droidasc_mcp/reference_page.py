@@ -41,12 +41,15 @@ def reference_page(result, maximum, *, check=lambda: None):
             "page_limited_by": "response_bytes",
             "response_byte_limit": maximum,
         }
-    if _size(result) <= maximum:
+    encoded_size = _size(result)
+    if encoded_size <= maximum:
         return result
-    if "query_cache" in result:
-        without_cache = {k: v for k, v in result.items() if k != "query_cache"}
-        if _size(without_cache) <= maximum:
-            return without_cache
+    # Removing one member also removes a separator, cancelling the fragment's braces.
+    if (
+        "query_cache" in result
+        and encoded_size - _size({"query_cache": result["query_cache"]}) <= maximum
+    ):
+        return {k: v for k, v in result.items() if k != "query_cache"}
     base = {
         **result,
         "items": [],

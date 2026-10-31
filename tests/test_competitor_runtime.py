@@ -435,7 +435,8 @@ def test_legacy_inline_operations_remain_readable(benchmark, tmp_path):
 @pytest.mark.anyio
 @pytest.mark.parametrize("implementation", ["ours", "competitor"])
 @pytest.mark.parametrize(
-    "sampling", ["normal", "in_flight_at_close", "late_error", "late_disk_limit"]
+    "sampling",
+    ["normal", "in_flight_at_close", "late_error", "late_disk_limit", "no_per_call_process_walk"],
 )
 async def test_full_reference_trial_measures_last_response_and_all_recovery_attempts(
     benchmark, tmp_path, monkeypatch, implementation, sampling
@@ -445,7 +446,25 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
     elapsed = 0.0
     monkeypatch.setattr(benchmark, "time", SimpleNamespace(monotonic=lambda: elapsed))
     close_seen = asyncio.Event()
-    if sampling != "normal":
+    if sampling == "no_per_call_process_walk":
+        import sys
+
+        def children(**kwargs):
+            frame = sys._getframe(1)
+            while frame is not None:
+                assert not (
+                    frame.f_code.co_name == "call"
+                    and frame.f_code.co_filename == benchmark.__file__
+                ), "Per-call process-tree walk delays the next reference page"
+                frame = frame.f_back
+            return []
+
+        monkeypatch.setattr(
+            benchmark.psutil,
+            "Process",
+            lambda: SimpleNamespace(children=children, memory_info=lambda: SimpleNamespace(rss=0)),
+        )
+    if sampling in {"in_flight_at_close", "late_error", "late_disk_limit"}:
 
         async def delayed_sample(function, *args):
             await close_seen.wait()
@@ -521,6 +540,8 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
     report = {"trials": []}
 
     def save():
+        if sampling == "no_per_call_process_walk" and not calls:
+            return
         assert calls[-1][0] == ("asc_close_dex_session" if ours else "close_artifact")
 
     await benchmark.trial(args, implementation, "full_method", 0, report, save)
@@ -534,6 +555,17 @@ async def test_full_reference_trial_measures_last_response_and_all_recovery_atte
             assert metric["safety_stop"] == "temporary_logical_bytes"
         return
     assert metric["status"] == "passed", metric.get("error", metric)
+    if sampling == "no_per_call_process_walk":
+        assert metric["resource_sampling_mode"] == "periodic_background"
+        assert all(
+            op["peak_descendant_rss_sampling"] == "trial_background_peak"
+            for op in metric["operations"]
+        )
+        assert metric["descendant_rss_samples"] > 0
+        assert all(
+            op["descendant_rss_samples"] > 0 and op["peak_descendant_rss_bytes"] == 0
+            for op in metric["operations"]
+        )
     assert metric["temporary_usage_samples"] > 0
     assert metric["temporary_usage_errors"] == 0
     assert len(metric["reference_collections"]) == len(metric["batch_seconds"]) == 2
@@ -649,6 +681,7 @@ async def test_full_receipt_only_saved_after_measured_responses(
         "unsupported",
         "exited",
         "client_memory",
+        "server_memory",
         "deadline",
         "leaked",
     ],
@@ -668,7 +701,7 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
         pid = 12345
 
         def memory_info(self):
-            return SimpleNamespace(rss=0)
+            return SimpleNamespace(rss=4096 * 1024**2 + 1 if condition == "server_memory" else 0)
 
         def cpu_affinity(self):
             state["affinity_calls"] += 1
@@ -683,6 +716,7 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
                 "escaped": [0, 2],
                 "empty": [],
                 "client_memory": [1],
+                "server_memory": [1],
                 "deadline": [1],
                 "leaked": [1],
             }[condition]
@@ -762,6 +796,8 @@ async def test_descendant_cpu_monitor_stops_unmatched_or_unverifiable_trials(
             if condition in {"escaped", "empty"}
             else "benchmark_client_rss"
             if condition == "client_memory"
+            else "aggregate_descendant_rss"
+            if condition == "server_memory"
             else "complete_trial_deadline"
             if condition == "deadline"
             else "unverifiable_cpu_affinity"

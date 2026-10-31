@@ -140,7 +140,7 @@ async def main(args):
         "python": sys.version,
         "python_executable": sys.executable,
         "platform": platform.platform(),
-        "timing_version": 2,
+        "timing_version": benchmark.TIMING_VERSION,
         "cpu_budget_version": 1,
         "receipt_storage_version": 2,
         "cpu_affinity": args.cpu_affinity,
